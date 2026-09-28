@@ -1,0 +1,37 @@
+# Consumer-sandbox workflow: query -> stage in real S3 -> format -> email via MailHog.
+document:
+  dsl: '1.0.0'
+  namespace: sandbox
+  name: query-report-email
+  version: '1.0.0'
+do:
+  - extractData:
+      call: remote
+      with:
+        task: query-and-stage
+        input:
+          query: ${ $context.reportQuery }
+      export:
+        as: '${ $context + {pointer, rows} }'
+
+  - formatFile:
+      call: remote
+      with:
+        task: format-file
+        input:
+          source: ${ $context.pointer }
+          format: ${ $context.outputFormat }
+      export:
+        as: '${ $context + {file} }'
+
+  - sendEmail:
+      call: remote
+      with:
+        task: send-email
+        input:
+          to: ${ $context.recipient }
+          subject: ${ $context.subject }
+          body: '${ "Report ready, see attachment: " + $context.file }'
+          attachment: ${ $context.file }
+      export:
+        as: '${ $context + {messageId} }'

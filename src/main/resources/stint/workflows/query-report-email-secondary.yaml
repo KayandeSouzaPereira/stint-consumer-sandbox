@@ -1,0 +1,61 @@
+# A genuinely distinct contract (different namespace:name:version, exercises switch/set/goto too),
+# used alongside the primary one to prove two DIFFERENT DSL definitions run concurrently, sharing
+# the same WorkflowRegistry/StateStore/handlers, without cross-talk between instances.
+document:
+  dsl: '1.0.0'
+  namespace: sandbox
+  name: query-report-email-secondary
+  version: '1.0.0'
+do:
+  - extractData:
+      call: remote
+      with:
+        task: query-and-stage
+        input:
+          query: ${ $context.reportQuery }
+      export:
+        as: '${ $context + {pointer, rows} }'
+
+  - formatFile:
+      call: remote
+      with:
+        task: format-file
+        input:
+          source: ${ $context.pointer }
+          format: ${ $context.outputFormat }
+      export:
+        as: '${ $context + {file} }'
+
+  - classifyUrgency:
+      switch:
+        - highVolume:
+            when: $context.rows > 15
+            then: markHighUrgency
+        - default:
+            then: markNormalUrgency
+
+  - markHighUrgency:
+      set:
+        urgency: "URGENT"
+      export:
+        as: '${ $context + {urgency: .urgency} }'
+      then: sendEmail
+
+  - markNormalUrgency:
+      set:
+        urgency: "normal"
+      export:
+        as: '${ $context + {urgency: .urgency} }'
+      then: sendEmail
+
+  - sendEmail:
+      call: remote
+      with:
+        task: send-email
+        input:
+          to: ${ $context.recipient }
+          subject: '${ $context.urgency + ": " + $context.subject }'
+          body: '${ "Report ready, see attachment: " + $context.file }'
+          attachment: ${ $context.file }
+      export:
+        as: '${ $context + {messageId} }'
