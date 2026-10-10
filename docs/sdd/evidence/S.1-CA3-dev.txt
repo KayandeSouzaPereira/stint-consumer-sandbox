@@ -1,0 +1,10 @@
+== orders quarkus:dev (Maven 3.9.15)
+Profile dev activated
+{"status":"UP","checks":[{"name":"orders-engine","status":"UP","data":{"engine":"started","worker":"running","connectors":"aws"}}]}
+"message":"Orders engine started with 0 workflow definition(s)"
+"message":"Orders domain started: engine=true worker=true, over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource"
+== billing quarkus:dev (Maven 3.9.15)
+Profile dev activated
+{"status":"UP","checks":[{"name":"billing-engine","status":"UP","data":{"engine":"started","worker":"running","connectors":"aws"}}]}
+"message":"Billing engine started with 0 workflow definition(s)"
+"message":"Billing domain started: engine=true worker=true, over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource"

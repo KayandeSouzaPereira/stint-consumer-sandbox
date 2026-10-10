@@ -1,0 +1,15 @@
+== put-events invoice-requested.v1 on sandbox-domain
+{
+    "FailedEntryCount": 0,
+    "Entries": [
+        {
+            "EventId": "a353d691-9f3c-4fc7-ae84-fc225ecb4b20"
+        }
+    ]
+}
+== receive billing-domain-events
+{"specversion":"1.0","id":"ca4-1","source":"https://sandbox.stintflow.io/orders","type":"io.sandbox.billing.invoice-requested.v1","datacontenttype":"application/json","data":{"orderId":"o-ca4","customerId":"c-1","amount":10.0,"currency":"BRL"}}
+== receive sandbox-spy
+{"specversion":"1.0","id":"ca4-1","source":"https://sandbox.stintflow.io/orders","type":"io.sandbox.billing.invoice-requested.v1","datacontenttype":"application/json","data":{"orderId":"o-ca4","customerId":"c-1","amount":10.0,"currency":"BRL"}}
+== receive orders-domain-events
+None

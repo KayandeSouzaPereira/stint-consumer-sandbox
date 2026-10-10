@@ -1,0 +1,8 @@
+== stint jars packaged
+orders: io.github.stintflow.stint-aws- io.github.stintflow.stint-bundle-aws- io.github.stintflow.stint-core- io.github.stintflow.stint-dsl- io.github.stintflow.stint-otel- io.github.stintflow.stint-spi- io.github.stintflow.stint-wire- io.github.stintflow.stint-worker-sdk- 
+billing: io.github.stintflow.stint-aws- io.github.stintflow.stint-bundle-aws- io.github.stintflow.stint-core- io.github.stintflow.stint-dsl- io.github.stintflow.stint-otel- io.github.stintflow.stint-spi- io.github.stintflow.stint-wire- io.github.stintflow.stint-worker-sdk- 
+== Jaeger
+sandbox-orders traces with sandbox.dev-span: 2 ['b4fd9f496bc6f40c9b43916286d0087f', '56e4c84873f060ad1959be7c0a7c4c63']
+sandbox-billing traces with sandbox.dev-span: 1 ['74575be71fb0c1d6ba9c85cf52acd81f']
+== billing consumed the CA4 event
+Domain event ca4-1 (io.sandbox.billing.invoice-requested.v1) from https://sandbox.stintflow.io/orders matched no binding or wait; dropped

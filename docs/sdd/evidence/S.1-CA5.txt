@@ -1,0 +1,4 @@
+[WARNING] The POM for io.stintflow.sandbox:sandbox-billing:jar:1.0.0-SNAPSHOT is missing, no dependency information available
+[INFO] BUILD FAILURE
+[ERROR] Rule 0: org.apache.maven.enforcer.rules.dependency.BannedDependencies failed with message:
+[ERROR]    io.stintflow.sandbox:sandbox-billing:jar:1.0.0-SNAPSHOT <--- banned via the exclude/include list
