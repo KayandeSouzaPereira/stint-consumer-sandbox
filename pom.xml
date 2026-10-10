@@ -13,6 +13,8 @@
 
     <modules>
         <module>sandbox-reports</module>
+        <module>sandbox-orders</module>
+        <module>sandbox-billing</module>
     </modules>
 
     <properties>
