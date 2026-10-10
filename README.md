@@ -8,11 +8,11 @@ library.
 |---|---|---|
 | `sandbox-reports` | 8080 | Phase 1 regression: YAML contracts, remote task handlers, in-memory engine, real S3 and real SMTP |
 | `sandbox-orders` | 8081 | Phase 2: the Orders domain, its own engine over Stint's AWS connectors |
-| `sandbox-billing` | 8082 | Phase 2: the Billing domain, its own engine over Stint's AWS connectors |
+| `sandbox-billing` | 8082 | Phase 2: the Billing domain (S.2): invoices with retry, rejection and a scheduled summary. See [its README](sandbox-billing/README.md) |
 
 Orders and Billing never depend on each other (the build fails if they do). They coordinate only through the
-domain events in [`contracts/events.md`](contracts/events.md). Their business workflows arrive in SDDs S.2/S.3; the
-specs live in [`docs/sdd`](docs/sdd).
+domain events in [`contracts/events.md`](contracts/events.md). Billing's workflows are in place (S.2); Orders' arrive in
+S.3. The specs live in [`docs/sdd`](docs/sdd).
 
 ## Stint version
 
@@ -60,10 +60,11 @@ The bootstrap creates, with the schemas documented by Stint (`docs/connectors.md
 
 | Resource | Names |
 |---|---|
-| S3 buckets | `stint-sandbox-reports`, `sandbox-facts` (facts too large for the bus), `sandbox-<domain>-blobs` |
+| S3 buckets | `stint-sandbox-reports`, `sandbox-facts` (facts too large for the bus, invoice documents; declarative policy from `infra/policies/`), `sandbox-<domain>-blobs` |
 | DynamoDB, per domain | `<domain>-instances`, `<domain>-waits` (GSI `byInstance-index`), `<domain>-outbox` (GSI `pending-by-age`), `<domain>-inbox` (TTL `expiresAt`) |
+| DynamoDB, Billing | `billing-invoices`, `billing-effects` |
 | SQS, per domain (each with a `-dlq`) | `<domain>-tasks`, `<domain>-results`, `<domain>-timers`, `<domain>-schedules`, `<domain>-domain-events` |
-| EventBridge | bus `sandbox-domain`; rules `invoice-requested-to-billing`, `invoice-issued-to-orders`; `spy-all` → queue `sandbox-spy` |
+| EventBridge | bus `sandbox-domain`; rules `invoice-requested-to-billing`, `invoice-issued-to-orders`, `invoice-rejected-to-orders`; `spy-all` → queue `sandbox-spy` |
 | EventBridge Scheduler | groups `<domain>-schedules`, `<domain>-timers` |
 
 If your AWS CLI isn't on the `PATH` as `aws`, point the scripts at it, e.g.
@@ -116,8 +117,8 @@ aws --endpoint-url http://localhost:4566 events put-events --entries '[{
 aws --endpoint-url http://localhost:4566 sqs receive-message --queue-url http://localhost:4566/000000000000/sandbox-spy
 ```
 
-If Billing is running, it consumes its queue immediately. Until S.2 there is no workflow bound to the type, so it
-acknowledges and logs `matched no binding or wait; dropped`.
+If Billing is running, it consumes its queue right away and issues the invoice: `invoice-issued.v1` shows up in the
+spy. See the [Billing README](sandbox-billing/README.md) for rejections, injected faults and the summary e-mail.
 
 ### Tracing
 
