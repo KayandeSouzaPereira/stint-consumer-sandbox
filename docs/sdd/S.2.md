@@ -229,3 +229,30 @@ A spec não diz o que acontece depois da 3ª falha.
 **Proposta:** a instância falha (status de falha do engine, erro "Retry limit exhausted"), sem fatura e sem evento. Orders trata pelo timeout do seu `listen` (S.3). O `invoice-rejected` fica reservado a pedido inválido.
 
 O CA8 "retry esgotado" verifica isso com 3 falhas forçadas pelo handler de teste.
+
+### 8h. ACHADO no Stint: `with.input` de uma `call: remote` dentro de `try` é ignorado (registrado em 10/10/2026)
+**Onde:** Stint `d455dc0`. A regra de `try`/`catch`/`retry` é do SDD 1.3; a página do Stint está no Notion, que está inacessível. O achado será copiado para a seção 8 do SDD 1.3 quando o Notion voltar.
+
+**Comportamento:**
+- Numa `call: remote` **dentro de um `try`**, o worker recebe a entrada efetiva do próprio `try`, não o `with.input` declarado na call.
+- O `export` da call é aplicado normalmente.
+- O `DslLoader` com `LoadOptions.STRICT` carrega o YAML sem erro nem aviso.
+- Fora do `try`, o mesmo `with.input` funciona (ex.: `record-invoice`).
+- No código: `TreeInterpreter` devolve `InterpretResult.suspendInTry(tryNode, effectiveInput, …)`, e o redispatch do retry usa `tryNode.dataFlow().inputFrom()`. Nenhum dos dois avalia o `inputFrom` do corpo, que é onde o `DslLoader.compileCallRemote` guarda o `with.input`.
+
+**Reprodução** (`IssueInvoiceWorkflowTest.valid_request_issues_the_invoice_on_the_request_chain`, YAML de `048a838`):
+```yaml
+- render:
+    try:
+      - render-invoice:
+          call: remote
+          with:
+            task: render-invoice
+            input:
+              request: '${ $context }'
+```
+- Esperado no invoke: `{"request":{"orderId":"o-valid",…}}`.
+- Observado: `{"orderId":"o-valid",…}` (o contexto, sem o envelope `request`).
+- Resultado: `orderId` vazio no handler, `invoiceId` = `inv-e3b0c44298fc1c14` (sha256 de ""), e o retry do `fail503-` nunca acontece.
+
+**Contorno possível (não aplicado, aguarda decisão):** `input.from: '${ {request: $context} }'` na própria task `try`. É DSL 1.0 padrão (transformação de entrada da task), e com ele os 8 testes unitários passam. Não é configuração documentada pelo Stint, por isso não foi aplicado sem aprovação.
