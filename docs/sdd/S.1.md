@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.1 |
-| Status | **Em especificação** (aguardando aprovação da seção 8) |
+| Status | **Spec aprovada** por Kayan no chat em 10/10/2026, com a proposta de 8a para o `order-confirmed.v1` (só a fila espiã). Implementação parada no RF1: o SHA `d455dc0` do Stint ainda não está no remoto |
 | Bloqueia | S.2 (Billing), S.3 (Orders), S.4 (cenários ponta a ponta) |
 | Branch | `phase-2-validation` (a partir de `main` `0708a2d`) |
 | Commits analisados | sandbox `0708a2d` · Stint `d455dc0` (`phase-2/federated-orchestration`, **local, ainda sem push**) |
@@ -123,7 +123,7 @@ Prefixo = domínio (`orders`, `billing`). Os mesmos nomes valem para os dois:
 | Regra → Orders | `invoice-issued-to-orders`: `detail-type` = `io.sandbox.billing.invoice-issued.v1` → `orders-domain-events` | idem |
 | Regra espiã | `spy-all`: `{"source":[{"prefix":""}]}` → `sandbox-spy` (sem DLQ) | `FlociEmitIT` |
 
-**Pergunta:** o `io.sandbox.orders.order-confirmed.v1` é emitido por Orders, mas a spec não diz quem consome. **Proposta:** no S.1 ele só vai para a espiã (nenhuma regra de domínio), e o `contracts/events.md` registra "consumidor: nenhum (observação)". Se o S.3/S.4 previr um consumidor, a regra entra lá.
+**Decidido (10/10/2026, opção a):** o `io.sandbox.orders.order-confirmed.v1` é emitido por Orders, mas a spec não diz quem consome. **Proposta:** no S.1 ele só vai para a espiã (nenhuma regra de domínio), e o `contracts/events.md` registra "consumidor: nenhum (observação)". Se o S.3/S.4 previr um consumidor, a regra entra lá.
 
 ### (b) Suporte do floci ao RF5
 - **Provado pelas ITs do Stint:**
