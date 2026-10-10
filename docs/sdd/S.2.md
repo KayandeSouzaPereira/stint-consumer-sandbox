@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.2 |
-| Status | **Em especificação**, aguardando aprovação do Kayan (seção 8) |
+| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8g) |
 | Depende de | S.1 (Implementado) |
 | Bloqueia | S.3 (Orders), S.4 (cenários ponta a ponta) |
 | Branch | `phase-2-validation` |
