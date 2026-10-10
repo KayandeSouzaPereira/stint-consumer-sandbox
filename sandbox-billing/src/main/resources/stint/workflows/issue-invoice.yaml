@@ -1,0 +1,80 @@
+# SDD S.2, RF1/RF2: issues the invoice of an order, or rejects an invalid order.
+# Started by schedule.on (Stint SDD 2.4) on the contract's invoice-requested.v1: it knows the type only, never who
+# publishes it (contracts/events.md is the only agreement). An event-started instance's input is [the event], and
+# it inherits the event's chain (Stint SDD 2.5).
+document:
+  dsl: '1.0.0'
+  namespace: billing
+  name: issue-invoice
+  version: '1.0.0'
+schedule:
+  on:
+    one:
+      with:
+        type: io.sandbox.billing.invoice-requested.v1
+do:
+  - request:
+      set: '${ $workflow.input[0].data }'
+      export:
+        as: '${ . }'
+
+  # RF1: amount > 0 and a currency present; anything else is rejected (RF2, S.2 8b).
+  - validate:
+      switch:
+        - invalid:
+            when: '($context.amount | type) != "number" or $context.amount <= 0 or ($context.currency | type) != "string" or $context.currency == ""'
+            then: reject
+        - valid:
+            then: render
+
+  - reject:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/billing
+            type: io.sandbox.billing.invoice-rejected.v1
+            data: '${ {orderId: $context.orderId, reason: (if ($context.amount | type) != "number" or $context.amount <= 0 then "invalid-amount" else "missing-currency" end)} }'
+      then: end
+
+  # RF1: a 503 from the renderer is transient: exponential retry, at most 3 attempts in all. Exhausted, the
+  # instance fails (S.2 8g); anything else is not caught and fails it too.
+  - render:
+      try:
+        - render-invoice:
+            call: remote
+            with:
+              task: render-invoice    # routing key -> CloudEvent subject -> selects the worker
+              input:
+                request: '${ $context }'
+            export:
+              as: '${ $context + {invoiceId, invoiceDocument, renderAttempt} }'
+      catch:
+        errors:
+          with:
+            type: https://serverlessworkflow.io/spec/1.0.0/errors/communication
+            status: 503
+        retry:
+          delay:
+            seconds: 1
+          backoff:
+            exponential: {}
+          limit:
+            attempt:
+              count: 3
+
+  - record:
+      call: remote
+      with:
+        task: record-invoice
+        input:
+          invoice: '${ $context | {invoiceId, orderId, amount, currency} }'
+      export:
+        as: '${ $context + {issuedAt} }'
+
+  - issued:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/billing
+            type: io.sandbox.billing.invoice-issued.v1
+            data: '${ $context | {orderId, invoiceId, amount, currency, issuedAt, invoiceDocument} }'

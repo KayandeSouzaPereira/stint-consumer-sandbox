@@ -1,0 +1,31 @@
+# SDD S.2, RF3: every minute, e-mails finance how many invoices were issued in the minute before the occurrence.
+# The window is [T - 1 min, T), T being the occurrence's scheduled instant (S.2 8d): the synthetic schedule event
+# (Stint SDD 2.4) carries it as its time, so a duplicated or repeated occurrence counts the same window, with no
+# stored state. Each occurrence is its own instance and chain.
+document:
+  dsl: '1.0.0'
+  namespace: billing
+  name: billing-summary
+  version: '1.0.0'
+schedule:
+  every:
+    minutes: 1
+do:
+  - count:
+      call: remote
+      with:
+        task: count-invoices
+        input:
+          windowEnd: '${ $workflow.input[0].time }'
+          windowMinutes: 1
+      export:
+        as: '${ . }'
+
+  - notify:
+      call: remote
+      with:
+        task: send-summary
+        input:
+          summary: '${ $context }'
+      export:
+        as: '${ $context + {mailed} }'
