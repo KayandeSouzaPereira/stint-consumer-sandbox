@@ -7,7 +7,7 @@
 #   - SQS: docs/connectors.md "SQS setup" (redrive maxReceiveCount 5, visibility 30 s, retention 4 d; DLQ 14 d)
 #   - EventBridge -> SQS with InputPath $.detail: docs/connectors.md; catch-all pattern from FlociEmitIT
 #   - Scheduler groups: SDD 2.4 / 2.7
-# Event routing follows contracts/events.md.
+# Event routing and the sandbox-facts access policy follow contracts/events.md.
 #
 # Requires the AWS CLI v2. Credentials are floci's dummy values; never point this at a real account.
 set -euo pipefail
@@ -32,6 +32,16 @@ say() { printf '%-9s %s\n' "$1" "$2"; }
 ensure_bucket() {
   if aws_ s3api head-bucket --bucket "$1" >/dev/null 2>&1; then say exists "s3://$1"
   else aws_ s3api create-bucket --bucket "$1" >/dev/null; say created "s3://$1"; fi
+}
+
+# Applies the policy only when it differs from the bucket's (floci stores it but doesn't enforce IAM:
+# the policy is declarative, see contracts/events.md).
+ensure_bucket_policy() { # bucket, policy file
+  local wanted current
+  wanted=$(tr -d '[:space:]' < "$2")
+  current=$(aws_ s3api get-bucket-policy --bucket "$1" --query Policy --output text 2>/dev/null | tr -d '[:space:]' || true)
+  if [ "$current" = "$wanted" ]; then say exists "policy:s3://$1"
+  else aws_ s3api put-bucket-policy --bucket "$1" --policy "file://$2" >/dev/null; say ensured "policy:s3://$1"; fi
 }
 
 # --- DynamoDB ---------------------------------------------------------------------------------------------
@@ -70,6 +80,16 @@ domain_tables() { # domain
     --attribute-definitions AttributeName=waitKey,AttributeType=S AttributeName=eventId,AttributeType=S \
     --key-schema AttributeName=waitKey,KeyType=HASH AttributeName=eventId,KeyType=RANGE
   ensure_ttl "$d-inbox" expiresAt
+}
+
+# SDD S.2, 8c: Billing's business records (invoices) and its worker's effect markers (RF5).
+billing_tables() {
+  ensure_table billing-invoices \
+    --attribute-definitions AttributeName=invoiceId,AttributeType=S \
+    --key-schema AttributeName=invoiceId,KeyType=HASH
+  ensure_table billing-effects \
+    --attribute-definitions AttributeName=effectKey,AttributeType=S \
+    --key-schema AttributeName=effectKey,KeyType=HASH
 }
 
 # --- SQS --------------------------------------------------------------------------------------------------
@@ -118,7 +138,8 @@ ensure_schedule_group() {
 echo "Bootstrapping sandbox resources on $ENDPOINT"
 
 ensure_bucket stint-sandbox-reports   # sandbox-reports (Phase 1 regression)
-ensure_bucket sandbox-facts           # facts too large for the bus (dataref), shared
+ensure_bucket sandbox-facts           # facts too large for the bus (dataref) and invoice documents, shared
+ensure_bucket_policy sandbox-facts "$(dirname "$0")/policies/sandbox-facts.json"
 for d in "${DOMAINS[@]}"; do
   ensure_bucket "sandbox-$d-blobs"
   domain_tables "$d"
@@ -127,6 +148,8 @@ for d in "${DOMAINS[@]}"; do
   ensure_schedule_group "$d-timers"
 done
 
+billing_tables
+
 ensure_queue sandbox-spy
 ensure_bus
 # Routing (contracts/events.md): each type to the inbound queue of the domain that consumes it.
@@ -134,6 +157,8 @@ ensure_rule invoice-requested-to-billing \
   '{"detail-type":["io.sandbox.billing.invoice-requested.v1"]}' billing-domain-events
 ensure_rule invoice-issued-to-orders \
   '{"detail-type":["io.sandbox.billing.invoice-issued.v1"]}' orders-domain-events
+ensure_rule invoice-rejected-to-orders \
+  '{"detail-type":["io.sandbox.billing.invoice-rejected.v1"]}' orders-domain-events
 # The spy sees everything that reaches the bus (catch-all pattern proven by Stint's FlociEmitIT).
 ensure_rule spy-all '{"source":[{"prefix":""}]}' sandbox-spy
 

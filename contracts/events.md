@@ -53,6 +53,25 @@ depende do outro em código: cada um conhece só os tipos, `source` e campos de 
 | `amount` | number | sim | valor faturado |
 | `currency` | string | sim | ISO 4217 |
 | `issuedAt` | string | sim | instante de emissão, ISO-8601 UTC |
+| `invoiceDocument` | string | não | URI do documento da fatura, `s3://sandbox-facts/billing/invoices/<invoiceId>.html` (S.2, 8a). Leitura conforme "Bucket `sandbox-facts`" |
+
+## `io.sandbox.billing.invoice-rejected.v1`
+| Campo | Valor |
+|---|---|
+| Publica | `sandbox-billing` (pedido inválido: nenhuma fatura é emitida) |
+| `source` | `https://sandbox.stintflow.io/billing` |
+| Consome | `sandbox-orders` (retoma o `listen` do pedido que espera a fatura) |
+| Regra | `invoice-rejected-to-orders` → `orders-domain-events` |
+| Correlação | `data.orderId` |
+
+`data`:
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `orderId` | string | sim | o pedido rejeitado |
+| `reason` | string | sim | `invalid-amount` (`amount` ausente, não numérico ou ≤ 0) ou `missing-currency` (`currency` ausente ou vazia) |
+| `rejectedAt` | string | não | instante da rejeição, ISO-8601 UTC |
+
+Um consumidor trata um `reason` desconhecido como rejeição genérica. Por isso, um valor novo de `reason` é compatível.
 
 ## `io.sandbox.orders.order-confirmed.v1`
 | Campo | Valor |
@@ -69,6 +88,19 @@ depende do outro em código: cada um conhece só os tipos, `source` e campos de 
 | `orderId` | string | sim | o pedido confirmado |
 | `invoiceId` | string | sim | a fatura que o confirmou |
 | `confirmedAt` | string | sim | instante da confirmação, ISO-8601 UTC |
+
+## Bucket `sandbox-facts`: política de acesso (S.2, 8a)
+Bucket compartilhado entre os domínios. Cada prefixo tem um único dono que escreve:
+
+| Prefixo | Escreve | Lê |
+|---|---|---|
+| `facts/<namespace>/…` | o engine do domínio dono do namespace (`dataref` do `emit`, SDD 2.2) | qualquer consumidor do fato |
+| `billing/…` | só `sandbox-billing` | `sandbox-orders`, só os objetos citados em `invoiceDocument` |
+| `orders/…` | só `sandbox-orders` (reservado) | `sandbox-billing`, se um contrato futuro citar |
+
+A política equivalente está em `infra/policies/sandbox-facts.json` e é aplicada pelo bootstrap. **No floci ela é
+declarativa**: o emulador guarda a política mas não aplica IAM (todos usam `test`/`test`). No sandbox, a garantia
+real é esta convenção mais o teste de isolamento de cada domínio.
 
 ## Mudanças
 Um campo novo e opcional em `data` é compatível. Remover ou renomear campo, mudar tipo ou mudar a correlação
