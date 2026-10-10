@@ -98,7 +98,7 @@ do:
         - render-invoice: { call: remote, with: { task: render-invoice, input: '${ . }' } }
       catch:
         errors: { with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication, status: 503 } }
-        retry:  { delay: { seconds: 1 }, backoff: { exponential: {} }, limit: { attempt: { count: 3 } } }
+        retry:  { delay: { seconds: 2 }, backoff: { exponential: {} }, limit: { attempt: { count: 3 } } }
   - record:  { call: remote, with: { task: record-invoice, input: '${ . }' } }
   - issued:  { emit: ...invoice-issued.v1 { orderId, invoiceId, amount, currency, issuedAt, invoiceDocument } }
 ```
@@ -278,6 +278,8 @@ Isso viola o at-least-once: o timer foi entregue e confirmado sem que o efeito e
 	- log: nenhum aviso ou erro do poller nem do engine.
 - É intermitente, porque depende de o poller receber a mensagem antes de o `PutItem` da espera terminar.
 
-**Contornos possíveis (nenhum aplicado; aguarda decisão):**
+**Contorno aplicado** (decisão do Kayan em 10/10/2026): opção 1, `delay: {seconds: 2}` em `issue-invoice`. A corrida continua possível, só menos provável. A correção (opção 2) fica para um SDD do Stint.
+
+**Contornos avaliados:**
 1. `delay` do retry ≥ 2 s no YAML do sandbox: `DelaySeconds` ≥ 1 deixa uma folga de ~1 s para o `save`. Reduz a probabilidade, mas a corrida continua. Não é configuração documentada pelo Stint.
 2. Corrigir no Stint, num SDD do Stint: salvar a espera antes de armar, ou arredondar para cima o atraso SQS, ou fazer o timer sem espera ser reentregue em vez de apagado.

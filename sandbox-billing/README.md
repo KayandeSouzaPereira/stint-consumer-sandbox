@@ -84,3 +84,6 @@ The handlers log inside Stint's log context, so every JSON line carries `stint.c
 
 At Stint `d455dc0`, a `call: remote` inside a `try` ignores its `with.input` (SDD S.2, 8h). `issue-invoice` shapes the
 renderer's input with the `try` task's DSL 1.0 `input.from` instead.
+
+At the same SHA, a 1 s retry timer on SQS can fire before its wait is saved and be lost, which leaves the instance
+waiting forever (S.2, 8i). The retry starts at 2 s to narrow that race; it does not close it.
