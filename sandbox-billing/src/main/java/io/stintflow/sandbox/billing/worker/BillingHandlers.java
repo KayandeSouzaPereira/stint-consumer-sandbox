@@ -9,8 +9,6 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.jboss.logging.Logger;
@@ -81,12 +79,10 @@ public final class BillingHandlers {
     }
 
     CompletionStage<JsonNode> renderInvoice(TaskContext ctx) {
-        JsonNode request = ctx.input().path("request");
-        String orderId = request.path("orderId").asText();
-        Duration delay = faults.delayFor(orderId);
-        Executor executor = delay.isZero() ? Runnable::run
-                : CompletableFuture.delayedExecutor(delay.toMillis(), TimeUnit.MILLISECONDS);
-        return CompletableFuture.supplyAsync(() -> {
+        return call(() -> {
+            JsonNode request = ctx.input().path("request");
+            String orderId = request.path("orderId").asText();
+            slowDown(faults.delayFor(orderId));
             faults.beforeRender(orderId, ctx.attempt());
             String invoiceId = Billing.invoiceId(orderId);
             URI document = documents.put(invoiceId, InvoiceDocument.html(invoiceId, request));
@@ -95,8 +91,24 @@ public final class BillingHandlers {
             out.put("invoiceId", invoiceId);
             out.put("invoiceDocument", document.toString());
             out.put("renderAttempt", ctx.attempt());
-            return (JsonNode) out;
-        }, executor);
+            return out;
+        });
+    }
+
+    /**
+     * RF4's slow renderer. It blocks the calling worker thread on purpose: that thread holds Stint's log context
+     * (the render's log line keeps its stint.* fields), and a slow dependency holds the worker the same way.
+     */
+    private static void slowDown(Duration delay) {
+        if (delay.isZero()) {
+            return;
+        }
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while slowing the render down", e);
+        }
     }
 
     JsonNode recordInvoice(TaskContext ctx) {
