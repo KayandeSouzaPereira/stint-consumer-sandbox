@@ -256,3 +256,28 @@ O CA8 "retry esgotado" verifica isso com 3 falhas forçadas pelo handler de test
 - Resultado: `orderId` vazio no handler, `invoiceId` = `inv-e3b0c44298fc1c14` (sha256 de ""), e o retry do `fail503-` nunca acontece.
 
 **Contorno aplicado** (decisão do Kayan em 10/10/2026): `input.from: '${ {request: $context} }'` na própria task `try`. É DSL 1.0 padrão (transformação de entrada da task). A call ficou sem `with.input`, para não sugerir um efeito que não existe. A correção no Stint fica para um SDD do Stint: aplicar o `with.input` do corpo do `try`, ou rejeitá-lo no `STRICT`.
+
+### 8i. ACHADO no Stint: um timer de retry de 1 s pode disparar antes de a espera existir e se perder (registrado em 10/10/2026)
+**Onde:** Stint `d455dc0`. Envolve `WorkflowEngine.armThenSave`, `SqsDelayTimerService.schedule` e o caminho de retry do SDD 1.3. A página do Stint está no Notion, inacessível; o achado vai para a seção 8 do SDD 1.3 do Stint quando ele voltar.
+
+**Comportamento:**
+1. Um `retry` com `delay: {seconds: 1}` arma o timer `retry:<id>` para `fireAt = now + 1 s`.
+2. `armThenSave` **arma o timer antes** de salvar a espera (`timer.schedule(...)` e depois `state.save(...)`).
+3. `SqsDelayTimerService.schedule` calcula `Duration.between(Instant.now(), fireAt).getSeconds()`. O `getSeconds()` trunca: com alguns milissegundos já decorridos, sai `0`, e a mensagem vai com `DelaySeconds=0`, visível na hora.
+4. O poller (`stint-sqs-timer-poller`) pode recebê-la antes do `save`. Então `resumeWithRetry` não encontra a espera (`findWait` vazio → `done()`, "unknown or stale"), e a mensagem é **apagada**.
+5. A espera `retry:<id>` é salva logo depois, mas nenhum timer vai dispará-la. A instância fica `WAITING` para sempre, sem log de erro.
+
+Isso viola o at-least-once: o timer foi entregue e confirmado sem que o efeito existisse. A truncagem também encurta todo atraso SQS em até 1 s (N s vira N − 1 s).
+
+**Reprodução** (`FlociBillingIT.ca3_a_transient_503_succeeds_on_the_third_attempt`, `mvn verify -Pfloci -pl sandbox-billing`):
+- Na 1ª execução passou. Na 2ª, a instância `evt-e4f1a7a1-6e92-366f-a9a3-2002c27d2f9c` parou depois da tentativa 1 (falha 503 às 23:25:12.290Z), com timeout do teste em 90 s.
+- Estado no floci depois do teste:
+	- `billing-instances`: `status=WAITING`, `waitingKey=retry:98dc9c24-…`, `retryState.attempt=1`, `updatedAt` 23:25:12.351Z;
+	- `billing-waits`: a espera `retry:98dc9c24-…` existe (`createdAt` 23:25:12.357Z);
+	- `billing-timers` e `billing-timers-dlq`: **nenhuma** mensagem desse timer, só timeouts de task de outras instâncias;
+	- log: nenhum aviso ou erro do poller nem do engine.
+- É intermitente, porque depende de o poller receber a mensagem antes de o `PutItem` da espera terminar.
+
+**Contornos possíveis (nenhum aplicado; aguarda decisão):**
+1. `delay` do retry ≥ 2 s no YAML do sandbox: `DelaySeconds` ≥ 1 deixa uma folga de ~1 s para o `save`. Reduz a probabilidade, mas a corrida continua. Não é configuração documentada pelo Stint.
+2. Corrigir no Stint, num SDD do Stint: salvar a espera antes de armar, ou arredondar para cima o atraso SQS, ou fazer o timer sem espera ser reentregue em vez de apagado.
