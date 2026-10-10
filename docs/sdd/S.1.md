@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.1 |
-| Status | **Spec aprovada** por Kayan no chat em 10/10/2026, com a proposta de 8a para o `order-confirmed.v1` (só a fila espiã). Implementação parada no RF1: o SHA `d455dc0` do Stint ainda não está no remoto |
+| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026; o SHA `d455dc0` do Stint está no remoto desde 10/10/2026) |
 | Bloqueia | S.2 (Billing), S.3 (Orders), S.4 (cenários ponta a ponta) |
 | Branch | `phase-2-validation` (a partir de `main` `0708a2d`) |
 | Commits analisados | sandbox `0708a2d` · Stint `d455dc0` (`phase-2/federated-orchestration`, **local, ainda sem push**) |
