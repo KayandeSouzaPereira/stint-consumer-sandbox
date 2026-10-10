@@ -255,4 +255,4 @@ O CA8 "retry esgotado" verifica isso com 3 falhas forçadas pelo handler de test
 - Observado: `{"orderId":"o-valid",…}` (o contexto, sem o envelope `request`).
 - Resultado: `orderId` vazio no handler, `invoiceId` = `inv-e3b0c44298fc1c14` (sha256 de ""), e o retry do `fail503-` nunca acontece.
 
-**Contorno possível (não aplicado, aguarda decisão):** `input.from: '${ {request: $context} }'` na própria task `try`. É DSL 1.0 padrão (transformação de entrada da task), e com ele os 8 testes unitários passam. Não é configuração documentada pelo Stint, por isso não foi aplicado sem aprovação.
+**Contorno aplicado** (decisão do Kayan em 10/10/2026): `input.from: '${ {request: $context} }'` na própria task `try`. É DSL 1.0 padrão (transformação de entrada da task). A call ficou sem `with.input`, para não sugerir um efeito que não existe. A correção no Stint fica para um SDD do Stint: aplicar o `with.input` do corpo do `try`, ou rejeitá-lo no `STRICT`.

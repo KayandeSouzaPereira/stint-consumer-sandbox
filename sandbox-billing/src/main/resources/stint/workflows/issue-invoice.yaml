@@ -38,14 +38,16 @@ do:
 
   # RF1: a 503 from the renderer is transient: exponential retry, at most 3 attempts in all. Exhausted, the
   # instance fails (S.2 8g); anything else is not caught and fails it too.
+  # S.2 8h (finding at Stint d455dc0): a remote call inside a try is dispatched with the try's own input and its
+  # with.input is ignored, so the renderer's input is shaped here, by the try's DSL 1.0 input.from.
   - render:
+      input:
+        from: '${ {request: $context} }'
       try:
         - render-invoice:
             call: remote
             with:
               task: render-invoice    # routing key -> CloudEvent subject -> selects the worker
-              input:
-                request: '${ $context }'
             export:
               as: '${ $context + {invoiceId, invoiceDocument, renderAttempt} }'
       catch:
