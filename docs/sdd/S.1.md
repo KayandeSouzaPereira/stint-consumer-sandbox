@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.1 |
-| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026; o SHA `d455dc0` do Stint está no remoto desde 10/10/2026) |
+| Status | **Implementado** em 10/10/2026 (spec aprovada por Kayan em 10/10/2026). Validado e Mergeado ficam com o Kayan |
 | Bloqueia | S.2 (Billing), S.3 (Orders), S.4 (cenários ponta a ponta) |
 | Branch | `phase-2-validation` (a partir de `main` `0708a2d`) |
 | Commits analisados | sandbox `0708a2d` · Stint `d455dc0` (`phase-2/federated-orchestration`, **local, ainda sem push**) |
@@ -177,4 +177,20 @@ Para o S.4 poder separar papéis **sem código novo**, cada módulo lê `<d>.wor
 - **Bootstrap em `bash`** no Windows: roda no Git Bash, que já é pré-requisito no README, e usa o aws CLI do host (`--endpoint-url`).
 
 ## 9. Registro de validação
-(preencher na implementação)
+**Implementado em 10/10/2026** na branch `phase-2-validation`, commits `7e95d5d` → `ba0b1dd`, mais o commit desta seção (sem push). Stint fixado em `d455dc0` (`phase-2/federated-orchestration`, no remoto desde 10/10/2026). As evidências estão em `docs/sdd/evidence/`.
+
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **OK.** Na primeira execução o bootstrap cria 40 recursos e 3 regras. A segunda e a terceira criam 0 (40 "exists", 3 regras reafirmadas). A listagem mostra 4 buckets, 8 tabelas, 21 filas (10 + 10 DLQs + espiã), o barramento `sandbox-domain` com as 3 regras e 4 grupos do Scheduler | `S.1-CA1.txt`, `infra/list-resources.sh` |
+| CA2 | **OK.** `/reports` e `/reports/secondary` devolvem 25 linhas. Os dois e-mails chegam no MailHog com `final.csv` anexado; o secundário com o assunto `URGENT:` | `S.1-CA2.txt`, e de novo em `S.1-CA7.txt` |
+| CA3 | **OK.** Orders e Billing sobem em `quarkus:dev` (Maven 3.9.15) e como jar. `/q/health/ready` dá `UP` (`engine: started`, `worker: running`, `connectors: aws`). No log JSON aparece "Orders/Billing engine started" e "... over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource". Nenhum `stint-inmemory` é empacotado em `quarkus-app/lib` | `S.1-CA3-dev.txt`, `S.1-CA3-jar.txt`, `S.1-CA6.txt` (jars empacotados) |
+| CA4 | **OK.** Um `put-events` de `invoice-requested.v1` no `sandbox-domain` chega como CloudEvent puro (sem envelope, `InputPath $.detail`) a `billing-domain-events` e a `sandbox-spy`; `orders-domain-events` fica vazia. Com o Billing no ar, ele consome e descarta ("matched no binding or wait; dropped"), como esperado sem workflow | `S.1-CA4.txt`, `S.1-CA6.txt`, `S.1-CA7.txt` |
+| CA5 | **OK.** Na branch descartável `s1-enforcer-check` (já apagada), o Orders dependendo do Billing dá `BUILD FAILURE`: `sandbox-billing ... <--- banned via the exclude/include list` | `S.1-CA5.txt` |
+| CA6 | **OK.** `POST /dev/span` em cada módulo: o span `sandbox.dev-span` aparece no Jaeger em `sandbox-orders` e `sandbox-billing`, com o mesmo trace id devolvido pelo endpoint (exportação em lote, alguns segundos) | `S.1-CA6.txt` |
+| CA7 | **OK.** O README foi seguido do zero: floci zerado (`docker compose down -v`), artefatos do Stint removidos do `~/.m2` e reinstalados de um clone limpo em `d455dc0`. Passos 1–5 sem desvio, com health `UP`, CA2 e CA4 reproduzidos | `S.1-CA7.txt` |
+
+### Notas
+- **CA7, limites:** a "máquina limpa" foi simulada (floci zerado, Stint reinstalado), não uma VM nova. O `aws` do Git Bash desta máquina não está no `PATH`, então foi usado `AWS_CLI=...`, como o README documenta. O `mvn` do `PATH` é o 3.8.8, e o `quarkus:dev` exige 3.9+ (pré-requisito do README); foi usado o Maven 3.9.15 da máquina.
+- **Dependências novas no sandbox** (8c): `stint-bundle-aws`, `stint-otel`, `quarkus-opentelemetry` e `quarkus-smallrye-health`. Todas vêm do BOM do Quarkus 3.33.2 ou do Stint fixado.
+- **Achados do Stint:** nenhum comportamento divergente da documentação. Tudo foi montado com a configuração documentada pelo Stint (esquemas, filas, regras, prefixos das extensões e o fallback do Scheduler no floci).
+- **Notion:** inacessível durante toda a sessão (MCP desconectado). A página S.1 na base "Stint · SDDs" e o Log não foram criados; ficam pendentes.
