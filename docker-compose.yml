@@ -1,3 +1,8 @@
+# SDD S.1: local infrastructure for the sandbox.
+# - floci: AWS emulator (S3, DynamoDB, SQS, EventBridge, EventBridge Scheduler) on 4566
+# - MailHog: SMTP on 1025, web UI on 8025
+# - Jaeger: OTLP gRPC 4317 / HTTP 4318, UI on 16686
+# Resources are created by infra/bootstrap.sh, not by the apps.
 services:
   floci:
     image: floci/floci:latest
@@ -8,3 +13,11 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "16686:16686"
