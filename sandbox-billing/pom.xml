@@ -53,7 +53,34 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-opentelemetry</artifactId>
         </dependency>
+        <!-- SDD S.2, 8e: the summary e-mail over SMTP (MailHog); the same extension sandbox-reports uses -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-mailer</artifactId>
+        </dependency>
+
+        <!-- Tests. stint-inmemory only in test scope (CA8): the enforcer below bans it from compile/runtime. -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-inmemory</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <properties>
+        <billing.tests.excluded>floci</billing.tests.excluded>
+        <billing.tests.groups></billing.tests.groups>
+    </properties>
 
     <build>
         <plugins>
@@ -68,6 +95,19 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <!-- Unit tests by default; the floci tests (tag "floci") only with -Pfloci. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <excludedGroups>${billing.tests.excluded}</excludedGroups>
+                    <groups>${billing.tests.groups}</groups>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
             <!-- SDD S.1, RF7: Billing never depends on Orders, nor on Stint's in-memory connectors at runtime.
                  The two domains share only contracts/events.md. -->
@@ -96,4 +136,16 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- SDD S.2, CA1-CA5: the floci tests. Need docker compose up, infra/bootstrap.sh, and no other
+             sandbox-billing running (it would consume the same queues). -->
+        <profile>
+            <id>floci</id>
+            <properties>
+                <billing.tests.excluded></billing.tests.excluded>
+                <billing.tests.groups>floci</billing.tests.groups>
+            </properties>
+        </profile>
+    </profiles>
 </project>

@@ -12,7 +12,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.cloudevents.CloudEvent;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.opentelemetry.api.OpenTelemetry;
+import io.quarkus.mailer.Mailer;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.stintflow.aws.DynamoDbStateStore;
@@ -39,10 +42,17 @@ import io.stintflow.core.trigger.TriggerBindings;
 import io.stintflow.dsl.DslLoader;
 import io.stintflow.dsl.LoadOptions;
 import io.stintflow.otel.OpenTelemetryExecutionTracer;
+import io.stintflow.sandbox.billing.aws.DynamoDbEffectMarkers;
+import io.stintflow.sandbox.billing.aws.DynamoDbInvoiceRecords;
+import io.stintflow.sandbox.billing.aws.QuarkusMailSender;
+import io.stintflow.sandbox.billing.aws.S3InvoiceDocuments;
+import io.stintflow.sandbox.billing.worker.BillingHandlers;
+import io.stintflow.sandbox.billing.worker.FaultInjection;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.spi.ExecutionTracer;
+import io.stintflow.spi.wire.StintEvents;
 import io.stintflow.wire.CeWire;
-import io.stintflow.worker.TaskHandlerRegistry;
+import io.stintflow.wire.Json;
 import io.stintflow.worker.WorkerRuntime;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -67,6 +77,9 @@ import software.amazon.awssdk.services.sqs.model.Message;
  *   <li>cron schedules reconciled into EventBridge Scheduler;</li>
  *   <li>tracing through stint-otel.</li>
  * </ul>
+ * SDD S.2: the worker runs Billing's handlers ({@link BillingHandlers}) over {@code sandbox-facts}, the
+ * {@code billing-invoices}/{@code billing-effects} tables and SMTP, and logs every failed result as it travels
+ * on the wire (type and status, CA3).
  * The connectors are built by hand, so nothing here reads Stint's global {@code stint.aws.*} properties: two
  * domains can never share a resource by accident. {@code billing.engine.enabled} / {@code billing.worker.enabled}
  * let the same jar run either role alone (SDD S.1, sec. 8d).
@@ -88,6 +101,8 @@ public class BillingEngine {
     SchedulerClient scheduler;
     @Inject
     OpenTelemetry openTelemetry;
+    @Inject
+    Mailer mailer;
 
     @ConfigProperty(name = "billing.sqs.tasks-queue-url")
     String tasksQueue;
@@ -125,12 +140,24 @@ public class BillingEngine {
     String roleArn;
     @ConfigProperty(name = "billing.scheduler.sent-timestamp-fallback", defaultValue = "false")
     boolean sentTimestampFallback;
+    @ConfigProperty(name = "billing.dynamodb.invoices-table")
+    String invoicesTable;
+    @ConfigProperty(name = "billing.dynamodb.effects-table")
+    String effectsTable;
+    @ConfigProperty(name = "billing.mail.from")
+    String mailFrom;
+    @ConfigProperty(name = "billing.mail.to")
+    String mailTo;
+    @ConfigProperty(name = "billing.fault.slow-delay", defaultValue = "5s")
+    Duration slowDelay;
     @ConfigProperty(name = "billing.engine.enabled", defaultValue = "true")
     boolean engineEnabled;
     @ConfigProperty(name = "billing.worker.enabled", defaultValue = "true")
     boolean workerEnabled;
 
     private volatile WorkflowEngine engine;
+    private volatile WorkflowRegistry registry;
+    private volatile ScheduledStart scheduledStart;
     private volatile ExecutionTracer tracer = ExecutionTracer.NOOP;
     private volatile boolean workerRunning;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
@@ -172,26 +199,33 @@ public class BillingEngine {
         EventBridgeSchedulerService schedules = new EventBridgeSchedulerService(scheduler, sqs, schedulesGroup, roleArn,
                 schedulesQueueArn, schedulesQueue, sentTimestampFallback);
         new ScheduleReconciler(registry, schedules).reconcile().toCompletableFuture().get(30, TimeUnit.SECONDS);
-        schedules.onFire(new ScheduledStart(registry, built));
+        ScheduledStart starts = new ScheduledStart(registry, built);
+        schedules.onFire(starts);
 
         TriggerBindings bindings = new TriggerBindings(registry);
         bindings.bindDeclaredSchedules();
         new DomainEventRouter(List.of(new StartReaction(bindings, built), new ResumeReaction(built)))
                 .subscribeTo(new SqsDomainEventSource(sqs, domainEventsQueue));
+        this.registry = registry;
+        this.scheduledStart = starts;
         engine = built;
         LOG.infof("Billing engine started with %d workflow definition(s)", definitions.size());
     }
 
     /** A worker binding: tasks queue -> worker runtime -> results queue, acked after the result is sent. */
     private void startWorker(BlobStore blobs) {
-        WorkerRuntime runtime = new WorkerRuntime(new TaskHandlerRegistry(), blobs, tracer);
+        BillingHandlers handlers = new BillingHandlers(new S3InvoiceDocuments(s3, factsBucket),
+                new DynamoDbInvoiceRecords(ddb, invoicesTable), new DynamoDbEffectMarkers(ddb, effectsTable),
+                new QuarkusMailSender(mailer), new FaultInjection(slowDelay), InstantSource.system(), mailFrom, mailTo);
+        WorkerRuntime runtime = new WorkerRuntime(handlers.registry(), blobs, tracer);
         workerRunning = true;
         worker.submit(() -> {
             while (workerRunning) {
                 try {
                     for (Message m : sqs.receiveMessage(r -> r.queueUrl(tasksQueue).waitTimeSeconds(5)).messages()) {
-                        CloudEvent result = runtime.handle(CeWire.fromJson(m.body().getBytes(StandardCharsets.UTF_8)))
-                                .toCompletableFuture().get(60, TimeUnit.SECONDS);
+                        CloudEvent invoke = CeWire.fromJson(m.body().getBytes(StandardCharsets.UTF_8));
+                        CloudEvent result = runtime.handle(invoke).toCompletableFuture().get(60, TimeUnit.SECONDS);
+                        logIfFailed(invoke, result);
                         sqs.sendMessage(r -> r.queueUrl(resultsQueue)
                                 .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
                         sqs.deleteMessage(r -> r.queueUrl(tasksQueue).receiptHandle(m.receiptHandle()));
@@ -203,6 +237,18 @@ public class BillingEngine {
                 }
             }
         });
+    }
+
+    /** CA3: a failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
+    private static void logIfFailed(CloudEvent invoke, CloudEvent result) {
+        JsonNode data = result.getData() == null ? null : Json.read(result.getData().toBytes());
+        if (data == null || !"FAILED".equals(data.path("status").asText())) {
+            return;
+        }
+        JsonNode error = data.path("error");
+        LOG.warnf("Task %s attempt %s of instance %s failed: type=%s status=%s detail=%s", invoke.getSubject(),
+                invoke.getExtension(StintEvents.EXT_ATTEMPT), invoke.getExtension(StintEvents.EXT_WORKFLOW_INSTANCE_ID),
+                error.path("type").asText(), error.path("status").asText(), error.path("detail").asText());
     }
 
     void onStop(@Observes ShutdownEvent event) {
@@ -225,5 +271,19 @@ public class BillingEngine {
 
     public ExecutionTracer tracer() {
         return tracer;
+    }
+
+    /** The running engine (null until it started, or when this process runs the worker only). */
+    public WorkflowEngine engine() {
+        return engine;
+    }
+
+    public WorkflowRegistry registry() {
+        return registry;
+    }
+
+    /** The handler schedule occurrences go through: a test can redeliver an occurrence through it (CA5). */
+    public ScheduledStart scheduledStart() {
+        return scheduledStart;
     }
 }
