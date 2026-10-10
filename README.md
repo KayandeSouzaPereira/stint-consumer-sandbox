@@ -1,44 +1,38 @@
 # stint-consumer-sandbox
 
-A small Quarkus app that consumes [Stint](https://github.com/stintflow/stint) as a plain external
-dependency, to validate the engine contract end to end outside Stint's own reactor build.
+Validates [Stint](https://github.com/stintflow/stint) as a plain external library, outside Stint's own reactor
+build. It deliberately does **not** inherit `stint-parent`: if it builds and runs here, Stint works as a published
+library.
 
-It deliberately does **not** inherit `stint-parent`: if it builds and runs here, Stint works as a
-published library, with no reliance on reactor-only resolution.
+| Module | Port | What it validates |
+|---|---|---|
+| `sandbox-reports` | 8080 | Phase 1 regression: YAML contracts, remote task handlers, in-memory engine, real S3 and real SMTP |
+| `sandbox-orders` | 8081 | Phase 2: the Orders domain, its own engine over Stint's AWS connectors |
+| `sandbox-billing` | 8082 | Phase 2: the Billing domain, its own engine over Stint's AWS connectors |
 
-## What it exercises
+Orders and Billing never depend on each other (the build fails if they do). They coordinate only through the
+domain events in [`contracts/events.md`](contracts/events.md). Their business workflows arrive in SDDs S.2/S.3; the
+specs live in [`docs/sdd`](docs/sdd).
 
-- **YAML workflow contracts** loaded through `stint-dsl` (`DslLoader.loadClasspath`, strict mode),
-  with the workflow manifest generated at build time by `WorkflowManifestGenerator`.
-- **Remote task handlers** registered through `stint-worker-sdk`:
-  - `query-and-stage`: simulates a DB query and stages a 25-row CSV in S3.
-  - `format-file`: reads the CSV by pointer, adds a title row and stages the final file.
-  - `send-email`: fetches the final file from S3 and sends it as an email attachment.
-- **Real infrastructure**: `stint-aws`'s `S3BlobStore` against [floci](https://hub.docker.com/r/floci/floci)
-  (local S3) and SMTP delivery through [MailHog](https://github.com/mailhog/MailHog). The engine's
-  state, transport and timers come from `stint-inmemory`.
-- **Two distinct definitions running concurrently** on the same engine and StateStore, to show
-  that instances don't cross-talk:
-  - `sandbox:query-report-email:1.0.0`: query, format, email.
-  - `sandbox:query-report-email-secondary:1.0.0`: same flow plus `switch` / `set` / `then`
-    (prefixes the subject with `URGENT` when `rows > 15`).
+## Stint version
+
+The sandbox is pinned to **Stint `d455dc0`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.8).
 
 ## Prerequisites
 
-- JDK 25
-- Maven 3.9+
-- Docker (for floci and MailHog)
-- AWS CLI, or any S3 client, to create the bucket
+- JDK 25 and Maven 3.9+
+- Docker (floci, MailHog, Jaeger)
+- AWS CLI v2. Only ever used against floci, with floci's dummy credentials `test`/`test`.
+- A bash shell for `infra/*.sh` (Git Bash on Windows)
 
-## 1. Install Stint locally
+## 1. Install Stint at the pinned SHA
 
-Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install it into your local
-Maven repository first:
+Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install it locally:
 
 ```bash
 git clone https://github.com/stintflow/stint.git
 cd stint
-git checkout phase-1/engine-foundation   # needs stint-aws's embedded Jandex index
+git checkout d455dc0
 mvn install -DskipTests
 ```
 
@@ -49,55 +43,99 @@ docker compose up -d
 ```
 
 | Service | Port | Purpose |
-|---------|------|---------|
-| floci   | 4566 | S3-compatible endpoint |
+|---|---|---|
+| floci | 4566 | AWS emulator: S3, DynamoDB, SQS, EventBridge, EventBridge Scheduler |
 | MailHog | 1025 | SMTP |
-| MailHog | 8025 | Web UI for received emails |
+| MailHog | 8025 | web UI for received e-mails |
+| Jaeger | 16686 | tracing UI (OTLP on 4317/4318) |
 
-The app doesn't create the bucket, so create it once:
-
-```bash
-AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
-  aws --endpoint-url http://localhost:4566 --region us-east-1 s3 mb s3://stint-sandbox-reports
-```
-
-## 3. Run the app
+## 3. Create the AWS resources
 
 ```bash
-mvn quarkus:dev
+bash infra/bootstrap.sh            # idempotent: run it again whenever you like
+bash infra/list-resources.sh       # what exists on floci
 ```
 
-## 4. Trigger a workflow
+The bootstrap creates, with the schemas documented by Stint (`docs/connectors.md`, `stint-it`):
+
+| Resource | Names |
+|---|---|
+| S3 buckets | `stint-sandbox-reports`, `sandbox-facts` (facts too large for the bus), `sandbox-<domain>-blobs` |
+| DynamoDB, per domain | `<domain>-instances`, `<domain>-waits` (GSI `byInstance-index`), `<domain>-outbox` (GSI `pending-by-age`), `<domain>-inbox` (TTL `expiresAt`) |
+| SQS, per domain (each with a `-dlq`) | `<domain>-tasks`, `<domain>-results`, `<domain>-timers`, `<domain>-schedules`, `<domain>-domain-events` |
+| EventBridge | bus `sandbox-domain`; rules `invoice-requested-to-billing`, `invoice-issued-to-orders`; `spy-all` → queue `sandbox-spy` |
+| EventBridge Scheduler | groups `<domain>-schedules`, `<domain>-timers` |
+
+If your AWS CLI isn't on the `PATH` as `aws`, point the scripts at it, e.g.
+`AWS_CLI="/c/Program Files/Amazon/AWSCLIV2/aws.exe" bash infra/bootstrap.sh`.
+
+## 4. Build and run the modules
+
+```bash
+mvn package -DskipTests
+
+java -jar sandbox-reports/target/quarkus-app/quarkus-run.jar   # :8080
+java -jar sandbox-orders/target/quarkus-app/quarkus-run.jar    # :8081
+java -jar sandbox-billing/target/quarkus-app/quarkus-run.jar   # :8082
+```
+
+You can also run each one in dev mode: `mvn quarkus:dev -pl sandbox-orders`.
+
+Health: `curl http://localhost:8081/q/health/ready` (and `:8082`). The logs are JSON, and the line `"Orders engine
+started ..."` lists the AWS connectors the engine runs on.
+
+`<domain>.engine.enabled` and `<domain>.worker.enabled` (both `true` by default) let one jar run the engine only, the
+worker only, or both.
+
+## 5. Try it
+
+### Phase 1 regression (sandbox-reports)
 
 ```bash
 curl -X POST http://localhost:8080/reports \
   -H 'Content-Type: application/json' \
-  -d '{
-        "reportQuery": "monthly sales",
-        "outputFormat": "csv",
-        "recipient": "someone@example.com",
-        "subject": "Monthly sales report"
-      }'
+  -d '{"reportQuery":"monthly sales","outputFormat":"csv","recipient":"someone@example.com","subject":"Monthly sales report"}'
 ```
 
-For the secondary definition, POST the same body to `/reports/secondary`.
+POST the same body to `/reports/secondary` for the second definition, which prefixes the subject with `URGENT`
+when `rows > 15`. Both e-mails, with `final.csv` attached, show up at http://localhost:8025.
 
-The response is the workflow's final context. It includes the S3 `pointer` and `file` URIs, the
-`rows` count and the `messageId`. The email, with `final.csv` attached, shows up at
-http://localhost:8025.
+### Domain routing
 
-> `outputFormat` goes through the contract but is ignored when the file is generated: the output
-> is always a real CSV.
+Publish a test event on the domain bus. The rule for its type sends it to the consuming domain's inbound queue, and
+the spy queue gets a copy:
+
+```bash
+export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
+aws --endpoint-url http://localhost:4566 events put-events --entries '[{
+  "EventBusName": "sandbox-domain",
+  "Source": "https://sandbox.stintflow.io/orders",
+  "DetailType": "io.sandbox.billing.invoice-requested.v1",
+  "Detail": "{\"specversion\":\"1.0\",\"id\":\"test-1\",\"source\":\"https://sandbox.stintflow.io/orders\",\"type\":\"io.sandbox.billing.invoice-requested.v1\",\"datacontenttype\":\"application/json\",\"data\":{\"orderId\":\"o-1\",\"customerId\":\"c-1\",\"amount\":10.0,\"currency\":\"BRL\"}}"
+}]'
+aws --endpoint-url http://localhost:4566 sqs receive-message --queue-url http://localhost:4566/000000000000/sandbox-spy
+```
+
+If Billing is running, it consumes its queue immediately. Until S.2 there is no workflow bound to the type, so it
+acknowledges and logs `matched no binding or wait; dropped`.
+
+### Tracing
+
+`curl -X POST http://localhost:8081/dev/span` (or `:8082`) records a test span through Stint's tracer. It shows up
+at http://localhost:16686 under `sandbox-orders` / `sandbox-billing` a few seconds later (batched export).
 
 ## Configuration
 
-Everything is in `src/main/resources/application.properties`. The S3 credentials there
-(`test`/`test`) are floci's dummy values, not real secrets.
+Everything is in each module's `src/main/resources/application.properties`. All AWS clients point at floci with
+the dummy credentials `test`/`test`; nothing here is a real secret. Dev services are off on purpose, so a
+misconfigured client fails instead of reaching anything else. Mind the Scheduler extension's prefix:
+`quarkus.eventbridge-scheduler.*`, not `quarkus.scheduler.*`.
 
 ## Native build
 
 ```bash
-mvn package -Dnative
+mvn package -Dnative -pl sandbox-reports
 ```
 
-The workflow manifest and the YAML files are included through `quarkus.native.resources.includes`.
+The workflow manifest and the YAML files are included through `quarkus.native.resources.includes`. The native build
+of the domain modules is SDD S.4.
