@@ -48,7 +48,7 @@ class BillingSummaryWorkflowTest {
             assertThat(mail.from()).isEqualTo("billing@sandbox.local");
             assertThat(mail.to()).isEqualTo("finance@sandbox.local");
             assertThat(mail.subject())
-                    .isEqualTo("Billing summary 2026-10-10T12:00:00Z – 2026-10-10T12:01:00Z UTC: 2 invoice(s)");
+                    .isEqualTo("Billing summary 2026-10-10T12:00:00Z to 2026-10-10T12:01:00Z UTC: 2 invoice(s)");
             assertThat(mail.body()).contains("[2026-10-10T12:00:00Z, 2026-10-10T12:01:00Z) UTC: 2");
         });
     }

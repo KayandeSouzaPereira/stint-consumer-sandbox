@@ -13,6 +13,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -39,6 +41,9 @@ import io.stintflow.worker.TaskHandlerRegistry;
  * </ul>
  */
 public final class BillingHandlers {
+
+    /** Logged inside the worker's Stint log context: every line carries stint.chainId, stint.instanceId... (RF6). */
+    private static final Logger LOG = Logger.getLogger(BillingHandlers.class);
 
     private final InvoiceDocuments documents;
     private final InvoiceRecords records;
@@ -85,6 +90,7 @@ public final class BillingHandlers {
             faults.beforeRender(orderId, ctx.attempt());
             String invoiceId = Billing.invoiceId(orderId);
             URI document = documents.put(invoiceId, InvoiceDocument.html(invoiceId, request));
+            LOG.infof("Rendered invoice %s to %s (attempt %d)", invoiceId, document, ctx.attempt());
             ObjectNode out = Json.obj();
             out.put("invoiceId", invoiceId);
             out.put("invoiceDocument", document.toString());
@@ -98,6 +104,7 @@ public final class BillingHandlers {
         Invoice recorded = records.recordIfAbsent(new Invoice(invoice.path("invoiceId").asText(),
                 invoice.path("orderId").asText(), invoice.path("amount").decimalValue(),
                 invoice.path("currency").asText(), clock.instant().truncatedTo(ChronoUnit.MILLIS)));
+        LOG.infof("Recorded invoice %s issued at %s", recorded.invoiceId(), recorded.issuedAt());
         ObjectNode out = Json.obj();
         out.put("issuedAt", recorded.issuedAt().toString());
         return out;
@@ -110,6 +117,7 @@ public final class BillingHandlers {
         out.put("windowStart", windowStart.toString());
         out.put("windowEnd", windowEnd.toString());
         out.put("invoiceCount", records.countIssued(windowStart, windowEnd));
+        LOG.infof("Counted %d invoice(s) issued in [%s, %s)", out.get("invoiceCount").asLong(), windowStart, windowEnd);
         return out;
     }
 
@@ -117,14 +125,16 @@ public final class BillingHandlers {
         JsonNode summary = ctx.input().path("summary");
         ObjectNode out = Json.obj();
         if (!markers.markIfAbsent(mailEffectKey(ctx.instanceId(), ctx.taskId()))) {
+            LOG.infof("Summary of %s already mailed by an earlier delivery; not sending again", ctx.instanceId());
             out.put("mailed", false); // already sent (or started) by an earlier delivery of this task
             return out;
         }
         long count = summary.path("invoiceCount").asLong();
-        String window = summary.path("windowStart").asText() + " – " + summary.path("windowEnd").asText();
+        String window = summary.path("windowStart").asText() + " to " + summary.path("windowEnd").asText();
         mail.send(mailFrom, mailTo, "Billing summary " + window + " UTC: " + count + " invoice(s)",
                 "Invoices issued in [" + summary.path("windowStart").asText() + ", "
                         + summary.path("windowEnd").asText() + ") UTC: " + count + "\n");
+        LOG.infof("Mailed the summary to %s", mailTo);
         out.put("mailed", true);
         return out;
     }

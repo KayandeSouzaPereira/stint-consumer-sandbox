@@ -209,7 +209,7 @@ Alternativa descartada: guardar "último resumo em". Exige escrita condicional e
 ### 8e. Endereços e fuso do resumo
 **Proposta:**
 - remetente `billing@sandbox.local`, destinatário fixo `finance@sandbox.local`, em `billing.mail.from`/`billing.mail.to`;
-- assunto `Billing summary <início>–<fim> UTC: N invoice(s)`;
+- assunto `Billing summary <início> to <fim> UTC: N invoice(s)` (ASCII, sem codificação MIME);
 - **todos os instantes em UTC** (o cron `* * * * *` não depende de fuso; a janela e o corpo mostram ISO-8601 UTC);
 - `quarkus.mailer.host=localhost`, `port=1025`, `mock=false`.
 

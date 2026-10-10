@@ -102,6 +102,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
                     <excludedGroups>${billing.tests.excluded}</excludedGroups>
                     <groups>${billing.tests.groups}</groups>
                     <systemPropertyVariables>
