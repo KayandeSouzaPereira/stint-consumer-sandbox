@@ -21,8 +21,8 @@ import java.util.function.Predicate;
 
 /**
  * SDD S.4, 8c: one sandbox app as an OS process — the packaged jar ({@code java -jar quarkus-run.jar}) or, with
- * {@code -Dscenarios.apps=native}, the native binary (a Linux executable from the container build, 8f) run in a
- * container on the compose network, where floci, MailHog and Jaeger are reached by their service names: every
+ * {@code -Dscenarios.apps=native}, the native binary (a Linux executable from the container build, 8f) in the image
+ * {@code infra/gate.sh --native} wraps it in ({@link #nativeImage}), run as a container on the compose network, where floci, MailHog and Jaeger are reached by their service names: every
  * {@code localhost} value of the module's {@code application.properties} is overridden with {@code -D}, the file
  * itself is untouched. Its output is read line by line into a log file under
  * {@code target/scenarios} and kept in memory, so a scenario waits for a line (a condition signalled by the reader,
@@ -76,11 +76,9 @@ public final class App implements AutoCloseable {
         Path root = Scenario.root();
         String container = null;
         if (Scenario.nativeApps()) {
-            Path binary = nativeBinary(root, module);
             container = "stint-s4-" + name;
             command.addAll(List.of("docker", "run", "--rm", "--name", container, "--network", NETWORK,
-                    "-p", port + ":" + port, "-v", binary.getParent() + ":/work", "-w", "/work", RUNTIME_IMAGE,
-                    "./" + binary.getFileName()));
+                    "-p", port + ":" + port, nativeImage(module)));
             Map<String, String> all = new LinkedHashMap<>(composeOverrides(root, module));
             all.putAll(props);
             all.forEach((k, v) -> command.add("-D" + k + "=" + v));
@@ -131,15 +129,12 @@ public final class App implements AutoCloseable {
         return out;
     }
 
-    private static Path nativeBinary(Path root, Module module) {
-        Path target = root.resolve(module.dir).resolve("target");
-        try (var files = Files.list(target)) {
-            return files.filter(p -> p.getFileName().toString().endsWith("-runner")
-                            || p.getFileName().toString().endsWith("-runner.exe"))
-                    .findFirst().orElseThrow(() -> new IllegalStateException("No native runner in " + target));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    /**
+     * The image {@code infra/gate.sh --native} builds around a module's runner: the binary is copied in (no bind
+     * mount, which Docker Desktop's Hyper-V backend refuses for C:), on top of {@link #RUNTIME_IMAGE}.
+     */
+    static String nativeImage(Module module) {
+        return "stint-s4/" + module.dir + ":native";
     }
 
     private void pump() {

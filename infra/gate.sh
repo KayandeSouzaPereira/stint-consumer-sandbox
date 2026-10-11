@@ -6,7 +6,7 @@
 #   bash infra/gate.sh --orders 100         the load scenario with N orders (default 50)
 #   bash infra/gate.sh --only ChaosIT       one scenario class (or a JUnit -Dtest pattern)
 #   bash infra/gate.sh --native             RF4 only: both domains built as native images (in a container) and the
-#                                           happy path run on them (Docker needs ~8 GB of memory for the build)
+#                                           happy path run on them as containers (Docker needs ~8 GB of memory)
 #
 # Needs: docker compose up -d (floci, MailHog, Jaeger), Stint installed at the README's SHA, the AWS CLI, JDK 25,
 # Maven (MVN=... if `mvn` isn't the right one) and no sandbox app already running (ports 8080-8083).
@@ -72,7 +72,21 @@ trap stop_billing EXIT
 
 log "Stint pinned: $(grep -o 'Stint `[0-9a-f]*`' README.md | head -1); sandbox $(git rev-parse --short HEAD)"
 if [ "$NATIVE" = true ]; then
-  mvn_ native-build package -Dnative -Dquarkus.native.container-build=true -DskipTests -pl sandbox-orders,sandbox-billing -am
+  # remote-container-build: sources and binary go in and out by docker cp, so no bind mount of C: (8f)
+  mvn_ native-build package -Dnative -Dquarkus.native.remote-container-build=true -DskipTests \
+    -pl sandbox-orders,sandbox-billing -am
+  for m in sandbox-orders sandbox-billing; do # the image App.nativeImage runs: the runner on the micro image
+    ctx="$ROOT/$m/target/native-image-ctx"
+    rm -rf "$ctx" && mkdir -p "$ctx" && cp "$m"/target/*-runner "$ctx/application"
+    cat > "$ctx/Dockerfile" <<'DOCKERFILE'
+FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+WORKDIR /work
+COPY --chmod=755 application /work/application
+ENTRYPOINT ["./application"]
+DOCKERFILE
+    log "docker build stint-s4/$m:native"
+    docker build -q -t "stint-s4/$m:native" "$ctx" >> "$OUT/native-build.log" 2>&1 || { log "FAILED: image $m"; exit 1; }
+  done
   bash infra/reset.sh > "$OUT/reset-native.log" 2>&1
   mvn_ native verify -Pscenarios -pl sandbox-scenarios -Dtest=NativeIT -Dscenarios.apps=native
   cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
