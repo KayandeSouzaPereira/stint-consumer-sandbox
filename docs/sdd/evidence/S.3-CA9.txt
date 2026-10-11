@@ -1,0 +1,17 @@
+SDD S.3, CA9: OrdersIndependenceTest and the enforcer are green. Command: mvn verify -pl sandbox-orders
+
+[INFO] --- enforcer:3.5.0:enforce (sovereign-domain) @ sandbox-orders ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.411 s -- in io.stintflow.sandbox.orders.OrdersIndependenceTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.381 s -- in io.stintflow.sandbox.orders.PlaceOrderWorkflowTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+stint-inmemory is in test scope only:
+[INFO] \- io.github.stintflow:stint-inmemory:jar:0.1.0-SNAPSHOT:test
+
+The test strips the contract's own terms (the three io.sandbox.billing.* types, /billing/invoices/, the billing
+source, the generic 'rejected by billing') and then forbids 'billing', 'fail503', 'slow-' and '8082' in src/main.
+It discriminates: with '# counterpart is sandbox-billing' appended to application.properties it failed with
+  [src\main\resources\application.properties names the other domain beyond the contract]
+(file restored right after; not committed).

@@ -1,0 +1,15 @@
+SDD S.3, RF5: JSON logs with stint.chainId in every task; in Jaeger, the listen's resume links to the event received
+and to the span that suspended (Stint SDD 2.5).
+
+OrdersHandlers log lines in the final floci run: 25, without stint.chainId: 0
+Two of them:
+{"message": "Mailed 'Order fail503-o-ca7-d81f387f-46b4-4c4c-9dbb-c1579388ea0a confirmed: invoice inv-fa99c6bd780ba505' to fail503-o-ca7-d81f387f-46b4-4c4c-9dbb-c1579388ea0a@example.com with invoice-inv-fa99c6bd780ba505.html", "mdc": {"stint.instanceId": "evt-592651e5-7a25-3d38-b1d9-bc54637e458c", "stint.causationId": "1fb5ec51-db30-4c42-a01b-ba74aaf2550f", "stint.workflow": "orders:place-order:1.0.0", "stint.chainId": "chn-d5fd2f89-850a-3772-a30c-43a042eb069e", "stint.correlationId": "1fb5ec51-db30-4c42-a01b-ba74aaf2550f", "stint.taskId": "/do/9/confirm", "stint.attempt": "1"}}
+{"message": "Mailed 'Order o-ca1-9913427f-02e9-4fb8-a280-00de29d71329 confirmed: invoice inv-d0e9bce343668146' to o-ca1-9913427f-02e9-4fb8-a280-00de29d71329@example.com with invoice-inv-d0e9bce343668146.html", "mdc": {"stint.instanceId": "evt-d7ce159e-1019-3c5a-b388-f204fc76f0e4", "stint.causationId": "4ec23e99-2f7e-4c4a-9c08-88667cfece45", "stint.workflow": "orders:place-order:1.0.0", "stint.chainId": "chn-83dc768f-98fe-35f7-a562-3b85d6fdd898", "stint.correlationId": "4ec23e99-2f7e-4c4a-9c08-88667cfece45", "stint.taskId": "/do/9/confirm", "stint.attempt": "1"}}
+
+Jaeger, service sandbox-orders, the activations of the first floci run's CA1 instance (evt-a922b8e8-...):
+  stint.activation trace 14e03db77a5c causation=o-ca1-d6852ba6-1060-42ea-85a8-a075dbe8ac0e refs=[]
+  stint.activation trace 6b32928ccc01 causation=91cd2363-6344-3f84-abc0-3729afc7ea8e refs=[('FOLLOWS_FROM', '14e03db77a5c'), ('FOLLOWS_FROM', '34e49bf7919a')]
+  stint.activation trace 6b32928ccc01 causation=4335a192-fbfe-4216-81cb-23e6f3f93fd4 refs=[('CHILD_OF', '6b32928ccc01')]
+
+The 2nd activation is the listen's resume (causation = the invoice-issued id): FOLLOWS_FROM the start activation
+that suspended (same trace as the 1st line) and FOLLOWS_FROM the counterpart's trace that carried the event.

@@ -1,0 +1,13 @@
+SDD S.3, CA5: the same order POSTed twice at once (CyclicBarrier) -> one instance, one e-mail.
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca5_the_same_order_posted_twice_starts_one_instance_and_mails_once -- OK
+
+CA5 order o-ca5-91323391-d2bc-4343-8ba3-682c30f8bf7d: 2 POSTs -> instance evt-d108f24d-6be6-3829-826c-8b6d9ad8933f (both), 2 order-placed, 1 invoice-requested, 1 mail
+
+Both POSTs answer 202 with the same instanceId and both order-placed reach the bus; the second maps to the same
+instance (Stint SDD 2.1), so only one invoice-requested is ever emitted. In memory:
+PlaceOrderWorkflowTest.the_same_order_placed_twice_at_once_starts_one_instance_and_mails_once (creates == 1).

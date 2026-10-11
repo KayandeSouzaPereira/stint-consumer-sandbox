@@ -1,0 +1,12 @@
+SDD S.3, CA2: amount 0 -> invoice-rejected -> rejection e-mail with the reason, no order-confirmed.
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca2_a_rejected_order_mails_the_reason_and_confirms_nothing -- OK
+
+CA2 order o-ca2-06bea378-e90e-400a-bae7-af7c257b18fb: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-rejected.v1]; GET {"orderId":"o-ca2-06bea378-e90e-400a-bae7-af7c257b18fb","instanceId":"evt-cd666d34-e5af-3b21-a5cf-c375950b22ff","status":"rejected","reason":"invalid-amount"}
+
+Mail subject asserted: 'Order <orderId> was not invoiced: invalid-amount', no attachment. The spy is drained until
+an empty long poll after the rejection, and holds no order-confirmed for the order.

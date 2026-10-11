@@ -1,0 +1,20 @@
+SDD S.3, CA8: unit tests of place-order on Stint's in-memory engine (test scope), controllable clock, barriers,
+no sleeps. Sandbox at 0380a84; command: mvn verify -pl sandbox-orders
+
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.411 s -- in io.stintflow.sandbox.orders.OrdersIndependenceTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.381 s -- in io.stintflow.sandbox.orders.PlaceOrderWorkflowTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+
+PlaceOrderWorkflowTest:
+  invoiced_order_is_confirmed_with_the_invoice_attached_on_the_order_chain      (invoiced)
+  rejected_order_mails_the_reason_and_confirms_nothing                           (rejected)
+  timeout_mails_a_delay_notice_and_a_late_invoice_still_confirms_the_order       (timeout + late answer, 8c)
+  no_answer_within_both_timeouts_leaves_the_invoice_missing                      (both timeouts)
+  an_answer_published_before_the_request_returns_still_finds_the_wait           (CA4)
+  the_same_order_placed_twice_at_once_starts_one_instance_and_mails_once         (CA5)
+  the_same_invoice_delivered_twice_mails_one_confirmation                        (CA6)
+  a_redelivered_mail_task_does_not_send_again_and_keeps_its_first_instant        (RF4)
+  a_document_outside_the_contract_pattern_is_never_read                          (RF3)
+  listen_timeouts_under_two_seconds_are_refused_at_load                          (8f / S.2 8i)
+Timeouts fire by moving the clock to the armed timer's fireAt after the listen wait was observed saved; the late
+test also checks the long timer was cancelled and that firing it afterwards changes nothing.

@@ -1,0 +1,14 @@
+SDD S.3, CA4: 20 orders in a row, counterpart answering without delay -> 20 confirmed, none lost (the wait is
+saved with the request, Stint SDD 2.3).
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca4_twenty_orders_in_a_row_are_all_confirmed -- OK
+
+CA4 run 89101be5: 20 of 20 orders confirmed, one confirmation e-mail each
+(first run) CA4 run 03eb4db2: 20 of 20 orders confirmed, one confirmation e-mail each
+
+In memory: PlaceOrderWorkflowTest.an_answer_published_before_the_request_returns_still_finds_the_wait
+(the answer is published inside the request's own publication, 20 times).
