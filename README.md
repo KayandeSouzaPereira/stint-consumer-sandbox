@@ -9,10 +9,12 @@ library.
 | `sandbox-reports` | 8080 | Phase 1 regression: YAML contracts, remote task handlers, in-memory engine, real S3 and real SMTP |
 | `sandbox-orders` | 8081 | Phase 2: the Orders domain (S.3): HTTP orders that request an invoice and wait for it, with correlation, timeouts and a 24 h late-invoice wait. See [its README](sandbox-orders/README.md) |
 | `sandbox-billing` | 8082 | Phase 2: the Billing domain (S.2): invoices with retry, rejection and a scheduled summary. See [its README](sandbox-billing/README.md) |
+| `sandbox-scenarios` | — | Phase 2 gate (S.4): tests only. They run the packaged apps as processes, kill them at chosen moments, load them and read Jaeger, all from outside |
 
 Orders and Billing never depend on each other (the build fails if they do). They coordinate only through the
-domain events in [`contracts/events.md`](contracts/events.md). Billing (S.2) and Orders (S.3) are in place; the cross-domain
-and chaos scenarios are S.4. The specs live in [`docs/sdd`](docs/sdd).
+domain events in [`contracts/events.md`](contracts/events.md). Billing (S.2) and Orders (S.3) are in place, and S.4
+runs them together under failures and load. The specs live in [`docs/sdd`](docs/sdd); the gate report is
+[`docs/evidence/phase-2-gate.md`](docs/evidence/phase-2-gate.md).
 
 ## Stint version
 
@@ -137,6 +139,35 @@ spy. See the [Billing README](sandbox-billing/README.md) for rejections, injecte
 
 `curl -X POST http://localhost:8081/dev/span` (or `:8082`) records a test span through Stint's tracer. It shows up
 at http://localhost:16686 under `sandbox-orders` / `sandbox-billing` a few seconds later (batched export).
+
+## 6. The Phase 2 gate in one command (S.4)
+
+```bash
+bash infra/gate.sh                               # regression once, then chaos, load and observability
+bash infra/gate.sh --regression-only --repeat 3  # the regression three times in a row
+bash infra/gate.sh --only LoadIT --orders 100    # one scenario class, N orders for the load
+```
+
+- **Destructive for the emulator only.** Every scenario starts from `infra/reset.sh`, which empties floci's sandbox
+  tables, queues and one-time schedules, and every MailHog message. It refuses any endpoint other than
+  `http://localhost:4566`.
+- **Before running:** no sandbox app may be running, so ports 8080-8085 must be free. Set `MVN=...` if `mvn` on
+  your `PATH` isn't Maven 3.9 with JDK 25.
+- **What it runs:**
+  - the build and every unit test;
+  - the floci tests of Billing, and of Orders with Billing started as a process;
+  - `sandbox-scenarios`:
+    - `RegressionIT`: S.1 CA2, S.2 CA6 and S.3 CA3;
+    - `ChaosIT`: RF2 a-e;
+    - `LoadIT`: RF3;
+    - `ObservabilityIT`: RF5.
+- **Where the output goes:** logs and evidence in `gate-out/<timestamp>/`, and each app's own log in
+  `sandbox-scenarios/target/scenarios/`.
+- **Chaos points** (S.4 8b). They are off by default, and a scenario sets one with `-D` only on the process it means
+  to kill:
+  - `billing.chaos.halt-before-publish=<event type>` halts the engine on that type's first publication, after its
+    checkpoint;
+  - `billing.chaos.halt-in-task=<route>` halts the worker after that task's effect, before its result.
 
 ## Configuration
 

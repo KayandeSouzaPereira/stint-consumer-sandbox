@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-OUT="$ROOT/target/gate/$(date +%Y%m%d-%H%M%S)"
+OUT="${GATE_OUT:-$ROOT/gate-out}/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 SUMMARY="$OUT/summary.txt"
 cd "$ROOT"
