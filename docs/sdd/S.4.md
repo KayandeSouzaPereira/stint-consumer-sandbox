@@ -364,5 +364,22 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 	- o que mais aparecer.
 - **Recomendação** de aprovar, ou não, o gate.
 
+### 8i. ACHADO no Stint: no nativo, as funções builtin do jq ficam fora do binário (registrado em 11/10/2026)
+**Onde:** Stint `b1f4579`, `JqExpressionEvaluator` (`stint-core`), com o caminho nativo do SDD 2.7. A página do 2.7 está no Notion, inacessível; o achado vai para a seção 8 do SDD 2.7 do Stint quando ele voltar.
+
+**Comportamento:**
+- O `JqExpressionEvaluator` carrega as funções builtin do jackson-jq 1.6.0 com `BuiltinFunctionLoader.loadFunctions(classLoader, JQ_1_6, scope)`. Elas são declaradas em `META-INF/services/net.thisptr.jackson.jq.Function` (81 provedores) e chegam por `ServiceLoader`.
+- O build nativo do Quarkus 3.33.2 passa `-H:-UseServiceLoaderFeature` ao `native-image`, e o GraalVM deixa de registrar os provedores de `ServiceLoader`. O binário sobe e carrega os YAMLs, mas sem `type`, `length`, `keys` e as outras builtin.
+- Qualquer expressão que chame uma delas falha. No `place-order`, a validação da entrada (`$context | (.orderId | type) != "string" or …`) falha já na ativação, e a instância fica `FAILED` com só `Failed to evaluate jq expression: …` no log, sem a causa.
+- **Por que o 2.7 não pegou:** o `stint-example-aws-smoke`, que é a prova nativa citada no `docs/connectors.md` ("Native: proven by `stint-example-aws-smoke`"), só usa caminhos (`${ .name }`, `${ . }`, `${ $context }`), nenhuma função. É divergência entre o Stint e a sua documentação.
+
+**Reprodução:**
+1. `bash infra/gate.sh --native` no `434a4b3`: `NativeIT` falha com `Not reached within PT3M: native-… confirmed`, e o log `native-orders.log` mostra a instância `FAILED`.
+2. O mesmo com `-Dquarkus.native.auto-service-loader-registration=true` (opção documentada do Quarkus, que registra os provedores de `ServiceLoader` no build): `NativeIT` verde (1 teste, 0 falhas, 167 s).
+
+**Contorno decidido por Kayan (11/10/2026):** `quarkus.native.auto-service-loader-registration=true` no `application.properties` do Orders e do Billing, com comentário apontando este item. Só vale no build nativo; o JVM não muda.
+
+**Correção sugerida ao Stint (não feita daqui):** registrar as funções do jackson-jq para o nativo no próprio Stint (por exemplo, na extensão/bundle Quarkus ou num `native-image.properties` do `stint-core`), e pôr no smoke nativo uma expressão com função builtin, para o CA do 2.7 cobrir isso.
+
 ## 9. Registro de validação
 (etapa 2)
