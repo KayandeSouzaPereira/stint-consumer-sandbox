@@ -7,12 +7,12 @@ library.
 | Module | Port | What it validates |
 |---|---|---|
 | `sandbox-reports` | 8080 | Phase 1 regression: YAML contracts, remote task handlers, in-memory engine, real S3 and real SMTP |
-| `sandbox-orders` | 8081 | Phase 2: the Orders domain, its own engine over Stint's AWS connectors |
+| `sandbox-orders` | 8081 | Phase 2: the Orders domain (S.3): HTTP orders that request an invoice and wait for it, with correlation, timeouts and a 24 h late-invoice wait. See [its README](sandbox-orders/README.md) |
 | `sandbox-billing` | 8082 | Phase 2: the Billing domain (S.2): invoices with retry, rejection and a scheduled summary. See [its README](sandbox-billing/README.md) |
 
 Orders and Billing never depend on each other (the build fails if they do). They coordinate only through the
-domain events in [`contracts/events.md`](contracts/events.md). Billing's workflows are in place (S.2); Orders' arrive in
-S.3. The specs live in [`docs/sdd`](docs/sdd).
+domain events in [`contracts/events.md`](contracts/events.md). Billing (S.2) and Orders (S.3) are in place; the cross-domain
+and chaos scenarios are S.4. The specs live in [`docs/sdd`](docs/sdd).
 
 ## Stint version
 
@@ -63,8 +63,9 @@ The bootstrap creates, with the schemas documented by Stint (`docs/connectors.md
 | S3 buckets | `stint-sandbox-reports`, `sandbox-facts` (facts too large for the bus, invoice documents; declarative policy from `infra/policies/`), `sandbox-<domain>-blobs` |
 | DynamoDB, per domain | `<domain>-instances`, `<domain>-waits` (GSI `byInstance-index`), `<domain>-outbox` (GSI `pending-by-age`), `<domain>-inbox` (TTL `expiresAt`) |
 | DynamoDB, Billing | `billing-invoices`, `billing-effects` |
+| DynamoDB, Orders | `orders-effects` |
 | SQS, per domain (each with a `-dlq`) | `<domain>-tasks`, `<domain>-results`, `<domain>-timers`, `<domain>-schedules`, `<domain>-domain-events` |
-| EventBridge | bus `sandbox-domain`; rules `invoice-requested-to-billing`, `invoice-issued-to-orders`, `invoice-rejected-to-orders`; `spy-all` → queue `sandbox-spy` |
+| EventBridge | bus `sandbox-domain`; rules `invoice-requested-to-billing`, `invoice-issued-to-orders`, `invoice-rejected-to-orders`, `order-placed-to-orders`; `spy-all` → queue `sandbox-spy` |
 | EventBridge Scheduler | groups `<domain>-schedules`, `<domain>-timers` |
 
 If your AWS CLI isn't on the `PATH` as `aws`, point the scripts at it, e.g.
@@ -100,6 +101,18 @@ curl -X POST http://localhost:8080/reports \
 
 POST the same body to `/reports/secondary` for the second definition, which prefixes the subject with `URGENT`
 when `rows > 15`. Both e-mails, with `final.csv` attached, show up at http://localhost:8025.
+
+### An order, end to end
+
+With both domains running:
+
+```bash
+curl -X POST http://localhost:8081/orders -H 'Content-Type: application/json'   -d '{"orderId":"o-1","customerId":"c-1","recipient":"me@example.com","amount":10.0,"currency":"BRL"}'
+curl http://localhost:8081/orders/o-1     # requested -> confirmed
+```
+
+The confirmation e-mail, with the invoice attached, shows up at http://localhost:8025. Use `"amount":0` to see a rejection;
+stop Billing to see the delay notice after 2 minutes (and the confirmation once it is back).
 
 ### Domain routing
 
