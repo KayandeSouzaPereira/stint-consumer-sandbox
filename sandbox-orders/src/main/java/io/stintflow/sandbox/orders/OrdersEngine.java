@@ -12,7 +12,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.cloudevents.CloudEvent;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.opentelemetry.api.OpenTelemetry;
+import io.quarkus.mailer.Mailer;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.stintflow.aws.DynamoDbStateStore;
@@ -36,13 +39,17 @@ import io.stintflow.core.trigger.DomainEventRouter;
 import io.stintflow.core.trigger.ResumeReaction;
 import io.stintflow.core.trigger.StartReaction;
 import io.stintflow.core.trigger.TriggerBindings;
-import io.stintflow.dsl.DslLoader;
-import io.stintflow.dsl.LoadOptions;
 import io.stintflow.otel.OpenTelemetryExecutionTracer;
+import io.stintflow.sandbox.orders.aws.DynamoDbEffectMarkers;
+import io.stintflow.sandbox.orders.aws.QuarkusMailSender;
+import io.stintflow.sandbox.orders.aws.S3InvoiceDocuments;
+import io.stintflow.sandbox.orders.worker.OrdersHandlers;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.spi.ExecutionTracer;
+import io.stintflow.spi.StateStore;
+import io.stintflow.spi.wire.StintEvents;
 import io.stintflow.wire.CeWire;
-import io.stintflow.worker.TaskHandlerRegistry;
+import io.stintflow.wire.Json;
 import io.stintflow.worker.WorkerRuntime;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -67,6 +74,10 @@ import software.amazon.awssdk.services.sqs.model.Message;
  *   <li>cron schedules reconciled into EventBridge Scheduler;</li>
  *   <li>tracing through stint-otel.</li>
  * </ul>
+ * SDD S.3: the engine runs {@code place-order} (its listen timeouts from {@code orders.invoice.timeout} and
+ * {@code orders.late-invoice.timeout}, {@link OrderDefinitions}); the worker runs the three e-mails
+ * ({@link OrdersHandlers}) and logs every failed result as it travels back. The state store is built in either
+ * role, so {@code GET /orders/{orderId}} can read the order's snapshot.
  * The connectors are built by hand, so nothing here reads Stint's global {@code stint.aws.*} properties: two
  * domains can never share a resource by accident. {@code orders.engine.enabled} / {@code orders.worker.enabled}
  * let the same jar run either role alone (SDD S.1, sec. 8d).
@@ -88,6 +99,8 @@ public class OrdersEngine {
     SchedulerClient scheduler;
     @Inject
     OpenTelemetry openTelemetry;
+    @Inject
+    Mailer mailer;
 
     @ConfigProperty(name = "orders.sqs.tasks-queue-url")
     String tasksQueue;
@@ -125,12 +138,22 @@ public class OrdersEngine {
     String roleArn;
     @ConfigProperty(name = "orders.scheduler.sent-timestamp-fallback", defaultValue = "false")
     boolean sentTimestampFallback;
+    @ConfigProperty(name = "orders.dynamodb.effects-table")
+    String effectsTable;
+    @ConfigProperty(name = "orders.mail.from")
+    String mailFrom;
+    @ConfigProperty(name = "orders.invoice.timeout", defaultValue = "PT2M")
+    Duration invoiceTimeout;
+    @ConfigProperty(name = "orders.late-invoice.timeout", defaultValue = "PT24H")
+    Duration lateInvoiceTimeout;
     @ConfigProperty(name = "orders.engine.enabled", defaultValue = "true")
     boolean engineEnabled;
     @ConfigProperty(name = "orders.worker.enabled", defaultValue = "true")
     boolean workerEnabled;
 
     private volatile WorkflowEngine engine;
+    private volatile StateStore state;
+    private volatile WorkflowRegistry registry;
     private volatile ExecutionTracer tracer = ExecutionTracer.NOOP;
     private volatile boolean workerRunning;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
@@ -142,6 +165,7 @@ public class OrdersEngine {
     void onStart(@Observes StartupEvent event) throws Exception {
         tracer = new OpenTelemetryExecutionTracer(openTelemetry);
         BlobStore blobs = new S3BlobStore(s3, blobsBucket);
+        state = new DynamoDbStateStore(ddb, instancesTable, waitsTable, outboxTable, 4, inboxTable);
         if (engineEnabled) {
             startEngine(blobs);
         }
@@ -159,11 +183,11 @@ public class OrdersEngine {
                 new EventBridgeSchedulerTimerService(scheduler, timersGroup, roleArn, timersQueueArn,
                         Duration.ofDays(365)), InstantSource.system());
         WorkflowRegistry registry = new WorkflowRegistry(timers.maxDelay());
-        List<WorkflowDefinition> definitions = new DslLoader().loadClasspath("stint/workflows/*.yaml", LoadOptions.STRICT);
+        List<WorkflowDefinition> definitions = List.of(OrderDefinitions.placeOrder(invoiceTimeout, lateInvoiceTimeout));
         definitions.forEach(registry::register);
 
         WorkflowEngine built = new WorkflowEngine(registry, new SqsTaskTransport(sqs, tasksQueue, resultsQueue),
-                new DynamoDbStateStore(ddb, instancesTable, waitsTable, outboxTable, 4, inboxTable),
+                state,
                 timers, blobs, new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
                 new EventBridgeEventPublisher(eventBridge, domainBus, "default"), new S3FactBlobStore(s3, factsBucket),
                 tracer);
@@ -178,20 +202,25 @@ public class OrdersEngine {
         bindings.bindDeclaredSchedules();
         new DomainEventRouter(List.of(new StartReaction(bindings, built), new ResumeReaction(built)))
                 .subscribeTo(new SqsDomainEventSource(sqs, domainEventsQueue));
+        this.registry = registry;
         engine = built;
-        LOG.infof("Orders engine started with %d workflow definition(s)", definitions.size());
+        LOG.infof("Orders engine started with %d workflow definition(s); invoice timeout %s, late invoice timeout %s",
+                definitions.size(), invoiceTimeout, lateInvoiceTimeout);
     }
 
     /** A worker binding: tasks queue -> worker runtime -> results queue, acked after the result is sent. */
     private void startWorker(BlobStore blobs) {
-        WorkerRuntime runtime = new WorkerRuntime(new TaskHandlerRegistry(), blobs, tracer);
+        OrdersHandlers handlers = new OrdersHandlers(new S3InvoiceDocuments(s3), new DynamoDbEffectMarkers(ddb, effectsTable),
+                new QuarkusMailSender(mailer), InstantSource.system(), mailFrom, factsBucket);
+        WorkerRuntime runtime = new WorkerRuntime(handlers.registry(), blobs, tracer);
         workerRunning = true;
         worker.submit(() -> {
             while (workerRunning) {
                 try {
                     for (Message m : sqs.receiveMessage(r -> r.queueUrl(tasksQueue).waitTimeSeconds(5)).messages()) {
-                        CloudEvent result = runtime.handle(CeWire.fromJson(m.body().getBytes(StandardCharsets.UTF_8)))
-                                .toCompletableFuture().get(60, TimeUnit.SECONDS);
+                        CloudEvent invoke = CeWire.fromJson(m.body().getBytes(StandardCharsets.UTF_8));
+                        CloudEvent result = runtime.handle(invoke).toCompletableFuture().get(60, TimeUnit.SECONDS);
+                        logIfFailed(invoke, result);
                         sqs.sendMessage(r -> r.queueUrl(resultsQueue)
                                 .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
                         sqs.deleteMessage(r -> r.queueUrl(tasksQueue).receiptHandle(m.receiptHandle()));
@@ -203,6 +232,18 @@ public class OrdersEngine {
                 }
             }
         });
+    }
+
+    /** A failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
+    private static void logIfFailed(CloudEvent invoke, CloudEvent result) {
+        JsonNode data = result.getData() == null ? null : Json.read(result.getData().toBytes());
+        if (data == null || !"FAILED".equals(data.path("status").asText())) {
+            return;
+        }
+        JsonNode error = data.path("error");
+        LOG.warnf("Task %s attempt %s of instance %s failed: type=%s status=%s detail=%s", invoke.getSubject(),
+                invoke.getExtension(StintEvents.EXT_ATTEMPT), invoke.getExtension(StintEvents.EXT_WORKFLOW_INSTANCE_ID),
+                error.path("type").asText(), error.path("status").asText(), error.path("detail").asText());
     }
 
     void onStop(@Observes ShutdownEvent event) {
@@ -225,5 +266,19 @@ public class OrdersEngine {
 
     public ExecutionTracer tracer() {
         return tracer;
+    }
+
+    /** The running engine (null until it started, or when this process runs the worker only). */
+    public WorkflowEngine engine() {
+        return engine;
+    }
+
+    /** Orders' state store, in either role: GET /orders/{orderId} reads the order's snapshot from it (S.3 8d). */
+    public StateStore state() {
+        return state;
+    }
+
+    public WorkflowRegistry registry() {
+        return registry;
     }
 }
