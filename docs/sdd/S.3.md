@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.3 |
-| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8h) |
+| Status | **Implementado** em 11/10/2026 (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8h). Validado e Mergeado ficam com o Kayan |
 | Depende de | S.1 (`4b84eb3`), S.2 (Implementado em `4c5300f`) |
 | Bloqueia | S.4 (cenários cruzados e caos) |
 | Branch | `phase-2-validation` |
@@ -252,3 +252,27 @@ O Billing do S.2 roda como **processo externo** (jar). O README de Orders manda 
 
 ### 8h. Ocorrências do 8i (S.2) durante o S.3
 Se uma instância de Orders ficar `WAITING` sem timer pendente, ela é registrada aqui como nova ocorrência, com o estado de `orders-instances`, `orders-waits`, `orders-timers` e DLQ, em vez de contornar.
+
+## 9. Registro de validação
+**Implementado em 11/10/2026** na branch `phase-2-validation`, commits `1729270` → `025d3d0`, mais o commit desta seção (sem push). Stint fixado em `d455dc0`. O Billing do S.2 rodou como processo externo (jar). As evidências estão em `docs/sdd/evidence/S.3-*.txt`.
+
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **OK.** `POST /orders` → `order-placed`, `invoice-requested`, `invoice-issued` e `order-confirmed` no spy, os 4 com o `chainid` do pedido. O e-mail de confirmação traz `invoice-<id>.html` byte a byte igual ao objeto do `invoiceDocument`, e o `GET` mostra `confirmed` com o `invoiceId` | `S.3-CA1.txt`; `FlociOrdersIT.ca1_…`; `PlaceOrderWorkflowTest.invoiced_…` |
+| CA2 | **OK.** Com `amount` 0, chega `invoice-rejected` e sai o e-mail `was not invoiced: invalid-amount`, sem `order-confirmed`; o `GET` mostra `rejected` com o `reason` | `S.3-CA2.txt`; `FlociOrdersIT.ca2_…`; `PlaceOrderWorkflowTest.rejected_…` |
+| CA3 | **OK** (roteiro manual, 8g). Com o Billing parado, o e-mail de atraso sai aos 2 min e o status vira `invoice-delayed`. O 2º `listen` arma o agendamento one-time `at(+24 h)` no grupo `orders-timers`. Com o Billing religado, a fatura tardia confirma o pedido em ~3 s e o agendamento é apagado. O disparo tardio simulado é ignorado: a instância segue `COMPLETED`, versão 5, e continuam 2 e-mails. Os 4 eventos aparecem no spy com a mesma chain. Executado 2× | `S.3-CA3.txt`; `PlaceOrderWorkflowTest.timeout_…`, `no_answer_…` |
+| CA4 | **OK.** 20 pedidos seguidos dão 20 confirmados e 1 e-mail cada, nas 2 execuções. Em memória, a resposta publicada dentro da própria publicação do pedido também acha a espera | `S.3-CA4.txt`; `FlociOrdersIT.ca4_…`; `PlaceOrderWorkflowTest.an_answer_…` |
+| CA5 | **OK.** 2 POSTs simultâneos (barreira) devolvem o mesmo `instanceId`: 2 `order-placed` no barramento, 1 `invoice-requested` e 1 e-mail | `S.3-CA5.txt`; `FlociOrdersIT.ca5_…`; `PlaceOrderWorkflowTest.the_same_order_…` |
+| CA6 | **OK.** O mesmo `invoice-issued` reenviado não acha espera e fica no `orders-inbox`; sai 1 e-mail só. A redelivery da task de e-mail é barrada pelo marcador | `S.3-CA6.txt`; `FlociOrdersIT.ca6_…`; `PlaceOrderWorkflowTest.the_same_invoice_…`, `a_redelivered_…` |
+| CA7 | **OK.** Um pedido `fail503-…` é confirmado ~5 s depois (os retries do Billing). Orders não conhece o prefixo, e o teste de isolamento o proíbe em `src/main` | `S.3-CA7.txt`; `FlociOrdersIT.ca7_…` |
+| CA8 | **OK.** 10 testes unitários com engine em memória, relógio controlável e barreiras: emitido, recusado, timeout + resposta tardia, os dois timeouts, mais CA4/CA5/CA6, RF3, RF4 e 8f | `S.3-CA8.txt` |
+| CA9 | **OK.** `OrdersIndependenceTest` e o enforcer verdes; o `stint-inmemory` só aparece em escopo test. O teste pega uma menção injetada de propósito | `S.3-CA9.txt` |
+
+### Notas
+- **RF5:** as 25 linhas de log dos handlers têm `stint.chainId`. No Jaeger, a ativação de retomada do `listen` tem `FOLLOWS_FROM` para a ativação que suspendeu e para o trace que trouxe o evento (`S.3-RF5.txt`).
+- **Detalhe de implementação do 8d:** para distinguir `received` (POST aceito, instância ainda não existe) de um pedido desconhecido (404), o POST grava a nota `received#<orderId>` na `orders-effects`. O estado do pedido continua vindo só do snapshot.
+- **Correção durante a validação:** o `order-placed` saía sem o atributo `time`, porque o endpoint não o definia; ele foi acrescentado (`0380a84`). A suíte do floci foi refeita depois disso.
+- **Achados do Stint:** nenhum novo. O 8h não se aplica, porque nenhuma `call` fica dentro de `try`. Não houve nova ocorrência do 8i, já que todos os timers ficam ≥ 2 s.
+- **Resíduo:** no CA3, uma mensagem de timer com `timerId` vazio, enviada por erro meu de script, vai para a `orders-timers-dlq`. É entrada malformada, não comportamento do Stint.
+- **Dependências novas:** `quarkus-mailer` (BOM do Quarkus 3.33.2). Em teste: `stint-inmemory`, `quarkus-junit5` e `assertj-core`.
+- **Notion:** inacessível. A página S.3 e o Log ficam pendentes.
