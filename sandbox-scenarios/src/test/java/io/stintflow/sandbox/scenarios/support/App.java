@@ -21,7 +21,10 @@ import java.util.function.Predicate;
 
 /**
  * SDD S.4, 8c: one sandbox app as an OS process — the packaged jar ({@code java -jar quarkus-run.jar}) or, with
- * {@code -Dscenarios.apps=native}, the native binary. Its output is read line by line into a log file under
+ * {@code -Dscenarios.apps=native}, the native binary (a Linux executable from the container build, 8f) run in a
+ * container on the compose network, where floci, MailHog and Jaeger are reached by their service names: every
+ * {@code localhost} value of the module's {@code application.properties} is overridden with {@code -D}, the file
+ * itself is untouched. Its output is read line by line into a log file under
  * {@code target/scenarios} and kept in memory, so a scenario waits for a line (a condition signalled by the reader,
  * never a sleep). {@link #kill()} is {@code destroyForcibly}: SIGKILL on Linux, {@code TerminateProcess} on Windows.
  */
@@ -39,7 +42,11 @@ public final class App implements AutoCloseable {
         }
     }
 
+    static final String NETWORK = "stint-consumer-sandbox_default";
+    static final String RUNTIME_IMAGE = "quay.io/quarkus/ubi9-quarkus-micro-image:2.0";
+
     private final String name;
+    private final String container;
     private final Module module;
     private final int port;
     private final Process process;
@@ -49,8 +56,9 @@ public final class App implements AutoCloseable {
     private final Condition changed = lock.newCondition();
     private boolean ended;
 
-    private App(String name, Module module, int port, Process process, Path log) {
+    private App(String name, String container, Module module, int port, Process process, Path log) {
         this.name = name;
+        this.container = container;
         this.module = module;
         this.port = port;
         this.process = process;
@@ -66,9 +74,16 @@ public final class App implements AutoCloseable {
         int port = Integer.parseInt(props.computeIfAbsent("quarkus.http.port", k -> Integer.toString(module.port)));
         List<String> command = new ArrayList<>();
         Path root = Scenario.root();
+        String container = null;
         if (Scenario.nativeApps()) {
-            command.add(nativeBinary(root, module).toString());
-            props.forEach((k, v) -> command.add("-D" + k + "=" + v));
+            Path binary = nativeBinary(root, module);
+            container = "stint-s4-" + name;
+            command.addAll(List.of("docker", "run", "--rm", "--name", container, "--network", NETWORK,
+                    "-p", port + ":" + port, "-v", binary.getParent() + ":/work", "-w", "/work", RUNTIME_IMAGE,
+                    "./" + binary.getFileName()));
+            Map<String, String> all = new LinkedHashMap<>(composeOverrides(root, module));
+            all.putAll(props);
+            all.forEach((k, v) -> command.add("-D" + k + "=" + v));
         } else {
             command.add(ProcessHandle.current().info().command().orElse("java"));
             props.forEach((k, v) -> command.add("-D" + k + "=" + v));
@@ -79,7 +94,7 @@ public final class App implements AutoCloseable {
         try {
             Files.createDirectories(log.getParent());
             Process process = new ProcessBuilder(command).directory(root.toFile()).redirectErrorStream(true).start();
-            App app = new App(name, module, port, process, log);
+            App app = new App(name, container, module, port, process, log);
             app.awaitLine(l -> l.contains("started in") && l.contains("Quarkus"), Duration.ofSeconds(90));
             return app;
         } catch (IOException e) {
@@ -89,6 +104,31 @@ public final class App implements AutoCloseable {
 
     public static App start(String name, Module module) {
         return start(name, module, Map.of());
+    }
+
+    /**
+     * 8f: inside the compose network floci, MailHog and Jaeger are {@code floci}, {@code mailhog} and {@code jaeger};
+     * every {@code localhost} value of the module's properties (endpoints, queue URLs, SMTP, OTLP) is redirected.
+     */
+    static Map<String, String> composeOverrides(Path root, Module module) {
+        Path file = root.resolve(module.dir).resolve("src/main/resources/application.properties");
+        java.util.Properties props = new java.util.Properties();
+        try (var in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            props.load(in);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String key : props.stringPropertyNames()) {
+            String value = props.getProperty(key);
+            if (key.startsWith("%") || !value.contains("localhost")) {
+                continue;
+            }
+            out.put(key, value.replace("localhost:4566", "floci:4566").replace("localhost:4317", "jaeger:4317")
+                    .replace("localhost:4318", "jaeger:4318")
+                    .replace("localhost", key.startsWith("quarkus.mailer") ? "mailhog" : "localhost"));
+        }
+        return out;
     }
 
     private static Path nativeBinary(Path root, Module module) {
@@ -184,6 +224,9 @@ public final class App implements AutoCloseable {
 
     /** kill -9: no shutdown hook, nothing flushed or acknowledged. */
     public void kill() {
+        if (container != null) {
+            docker("kill", container);
+        }
         process.destroyForcibly();
         awaitExit(Duration.ofSeconds(30));
     }
@@ -212,6 +255,19 @@ public final class App implements AutoCloseable {
         return log;
     }
 
+    private static void docker(String... args) {
+        List<String> command = new ArrayList<>(List.of("docker"));
+        command.addAll(List.of(args));
+        try {
+            new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .start().waitFor(30, TimeUnit.SECONDS);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private String exitValue() {
         return process.isAlive() ? "running" : Integer.toString(process.exitValue());
     }
@@ -219,6 +275,9 @@ public final class App implements AutoCloseable {
     /** A graceful stop (SIGTERM / WM_CLOSE): only for cleanup, never as a scenario's failure. */
     @Override
     public void close() {
+        if (container != null) {
+            docker("rm", "-f", container);
+        }
         if (process.isAlive()) {
             process.destroy();
             try {

@@ -5,6 +5,8 @@
 #   bash infra/gate.sh --regression-only --repeat 3     CA2: the regression three times in a row
 #   bash infra/gate.sh --orders 100         the load scenario with N orders (default 50)
 #   bash infra/gate.sh --only ChaosIT       one scenario class (or a JUnit -Dtest pattern)
+#   bash infra/gate.sh --native             RF4 only: both domains built as native images (in a container) and the
+#                                           happy path run on them (Docker needs ~8 GB of memory for the build)
 #
 # Needs: docker compose up -d (floci, MailHog, Jaeger), Stint installed at the README's SHA, the AWS CLI, JDK 25,
 # Maven (MVN=... if `mvn` isn't the right one) and no sandbox app already running (ports 8080-8083).
@@ -21,6 +23,7 @@ MVN="${MVN:-mvn}"
 REPEAT=1
 ORDERS=50
 REGRESSION_ONLY=false
+NATIVE=false
 ONLY=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -28,6 +31,7 @@ while [ $# -gt 0 ]; do
     --orders) ORDERS="$2"; shift 2 ;;
     --regression-only) REGRESSION_ONLY=true; shift ;;
     --only) ONLY="$2"; shift 2 ;;
+    --native) NATIVE=true; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -67,6 +71,14 @@ stop_billing() {
 trap stop_billing EXIT
 
 log "Stint pinned: $(grep -o 'Stint `[0-9a-f]*`' README.md | head -1); sandbox $(git rev-parse --short HEAD)"
+if [ "$NATIVE" = true ]; then
+  mvn_ native-build package -Dnative -Dquarkus.native.container-build=true -DskipTests -pl sandbox-orders,sandbox-billing -am
+  bash infra/reset.sh > "$OUT/reset-native.log" 2>&1
+  mvn_ native verify -Pscenarios -pl sandbox-scenarios -Dtest=NativeIT -Dscenarios.apps=native
+  cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+  log "PASSED. Evidence and logs: $OUT"
+  exit 0
+fi
 mvn_ build clean install
 
 if [ -z "$ONLY" ]; then
