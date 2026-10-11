@@ -3,7 +3,7 @@
 # (S.3 8a/8b): the same order always maps to the same instance (Stint SDD 2.1). The input is [that event], and the
 # instance inherits its chain (Stint SDD 2.5). Everything else is the contract's invoice events, matched by orderId.
 # The two listen timeouts below are defaults: OrdersEngine replaces them with orders.invoice.timeout and
-# orders.late-invoice.timeout before loading (S.3 8f). None may be under 2 s (S.2 8i).
+# orders.late-invoice.timeout before loading (S.3 8f).
 document:
   dsl: '1.0.0'
   namespace: orders

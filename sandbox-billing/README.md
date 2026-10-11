@@ -80,10 +80,10 @@ The handlers log inside Stint's log context, so every JSON line carries `stint.c
 | `mvn verify -pl sandbox-billing` | unit tests on Stint's in-memory engine (test scope only), the isolation test and the enforcer |
 | `mvn verify -Pfloci -pl sandbox-billing` | CA1–CA5 against floci, MailHog and the real Scheduler, with the whole app started by `@QuarkusTest` (about 7 minutes). Stop any other `sandbox-billing` first: it would consume the same queues |
 
-## Known Stint finding
+## Stint findings (resolved)
 
-At Stint `d455dc0`, a `call: remote` inside a `try` ignores its `with.input` (SDD S.2, 8h). `issue-invoice` shapes the
-renderer's input with the `try` task's DSL 1.0 `input.from` instead.
-
-At the same SHA, a 1 s retry timer on SQS can fire before its wait is saved and be lost, which leaves the instance
-waiting forever (S.2, 8i). The retry starts at 2 s to narrow that race; it does not close it.
+Two findings of S.2 were fixed by Stint SDD 2.9 (`b1f4579`), and their workarounds were removed in S.4 (8a):
+- 8h: a `call: remote` inside a `try` ignored its `with.input`. `issue-invoice` now passes the renderer's input with
+  `with.input`, as DSL 1.0 has it.
+- 8i: a 1 s retry timer on SQS could fire before its wait was saved and be lost. Stint now rounds the delay up and
+  redelivers an early fire, so the retry starts at 1 s again.

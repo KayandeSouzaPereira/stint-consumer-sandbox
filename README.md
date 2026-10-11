@@ -16,7 +16,7 @@ and chaos scenarios are S.4. The specs live in [`docs/sdd`](docs/sdd).
 
 ## Stint version
 
-The sandbox is pinned to **Stint `d455dc0`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.8).
+The sandbox is pinned to **Stint `b1f4579`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.9).
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install 
 ```bash
 git clone https://github.com/stintflow/stint.git
 cd stint
-git checkout d455dc0
+git checkout b1f4579
 mvn install -DskipTests
 ```
 

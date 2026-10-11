@@ -38,16 +38,14 @@ do:
 
   # RF1: a 503 from the renderer is transient: exponential retry, at most 3 attempts in all. Exhausted, the
   # instance fails (S.2 8g); anything else is not caught and fails it too.
-  # S.2 8h (finding at Stint d455dc0): a remote call inside a try is dispatched with the try's own input and its
-  # with.input is ignored, so the renderer's input is shaped here, by the try's DSL 1.0 input.from.
   - render:
-      input:
-        from: '${ {request: $context} }'
       try:
         - render-invoice:
             call: remote
             with:
               task: render-invoice    # routing key -> CloudEvent subject -> selects the worker
+              input:
+                request: '${ $context }'
             export:
               as: '${ $context + {invoiceId, invoiceDocument, renderAttempt} }'
       catch:
@@ -55,11 +53,9 @@ do:
           with:
             type: https://serverlessworkflow.io/spec/1.0.0/errors/communication
             status: 503
-        # S.2 8i (finding at Stint d455dc0): with a 1 s delay the SQS timer can fire before the retry wait is
-        # saved and be lost; 2 s leaves about a second for the save (it narrows the race, it does not close it).
         retry:
           delay:
-            seconds: 2
+            seconds: 1
           backoff:
             exponential: {}
           limit:

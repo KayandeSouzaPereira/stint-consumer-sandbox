@@ -47,7 +47,8 @@ order-placed -> validate -> emit invoice-requested
 Timeouts:
 - The YAML holds the default timeouts. `OrdersEngine` replaces them with the two properties before Stint loads the
   definition.
-- Anything under `PT2S` stops the startup: at Stint `d455dc0` a shorter SQS timer can be lost (S.2, 8i).
+- Any positive duration works; zero or negative stops the startup. (Before Stint `b1f4579` the floor was `PT2S`:
+  S.2, 8i, fixed by Stint SDD 2.9.)
 
 When the late invoice arrives, the second listen resumes and Stint deletes its 24 h schedule. A fire arriving after
 that finds no wait and does nothing.

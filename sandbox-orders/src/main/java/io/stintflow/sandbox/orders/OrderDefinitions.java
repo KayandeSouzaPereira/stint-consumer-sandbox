@@ -24,9 +24,6 @@ import io.stintflow.dsl.LoadOptions;
 public final class OrderDefinitions {
 
     public static final String RESOURCE = "stint/workflows/place-order.yaml";
-    /** S.2 8i: a shorter SQS timer can fire before its wait is saved and be lost. */
-    public static final Duration MIN_TIMEOUT = Duration.ofSeconds(2);
-
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
 
     private OrderDefinitions() {
@@ -34,9 +31,9 @@ public final class OrderDefinitions {
 
     public static WorkflowDefinition placeOrder(Duration invoiceTimeout, Duration lateInvoiceTimeout) {
         for (Duration timeout : List.of(invoiceTimeout, lateInvoiceTimeout)) {
-            if (timeout.compareTo(MIN_TIMEOUT) < 0) {
-                throw new IllegalArgumentException("A listen timeout of " + timeout + " is under " + MIN_TIMEOUT
-                        + " (S.2 8i: a shorter SQS timer can be lost)");
+            // S.4 8a: Stint 2.9 redelivers a timer that fires before its wait is saved, so any positive timeout works.
+            if (timeout.isNegative() || timeout.isZero()) {
+                throw new IllegalArgumentException("A listen timeout must be positive, not " + timeout);
             }
         }
         JsonNode tree;

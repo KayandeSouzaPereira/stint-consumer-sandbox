@@ -228,10 +228,12 @@ class PlaceOrderWorkflowTest {
     }
 
     @Test
-    void listen_timeouts_under_two_seconds_are_refused_at_load() {
-        assertThatThrownBy(() -> OrderDefinitions.placeOrder(Duration.ofSeconds(1), Duration.ofHours(1)))
-                .hasMessageContaining("S.2 8i");
-        assertThat(OrderDefinitions.placeOrder(Duration.ofSeconds(2), Duration.ofMinutes(20)).ref())
+    void only_positive_listen_timeouts_are_accepted_at_load() {
+        assertThatThrownBy(() -> OrderDefinitions.placeOrder(Duration.ZERO, Duration.ofHours(1)))
+                .hasMessageContaining("positive");
+        assertThatThrownBy(() -> OrderDefinitions.placeOrder(Duration.ofMinutes(2), Duration.ofSeconds(-1)))
+                .hasMessageContaining("positive");
+        assertThat(OrderDefinitions.placeOrder(Duration.ofSeconds(1), Duration.ofMinutes(20)).ref())
                 .isEqualTo(Orders.PLACE_ORDER);
     }
 
