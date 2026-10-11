@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -46,13 +47,18 @@ import io.stintflow.sandbox.billing.aws.DynamoDbEffectMarkers;
 import io.stintflow.sandbox.billing.aws.DynamoDbInvoiceRecords;
 import io.stintflow.sandbox.billing.aws.QuarkusMailSender;
 import io.stintflow.sandbox.billing.aws.S3InvoiceDocuments;
+import io.stintflow.sandbox.billing.chaos.Chaos;
+import io.stintflow.sandbox.billing.chaos.ChaosEventPublisher;
+import io.stintflow.sandbox.billing.chaos.ChaosTaskHandler;
 import io.stintflow.sandbox.billing.worker.BillingHandlers;
 import io.stintflow.sandbox.billing.worker.FaultInjection;
 import io.stintflow.spi.BlobStore;
+import io.stintflow.spi.EventPublisher;
 import io.stintflow.spi.ExecutionTracer;
 import io.stintflow.spi.wire.StintEvents;
 import io.stintflow.wire.CeWire;
 import io.stintflow.wire.Json;
+import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.WorkerRuntime;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -83,6 +89,8 @@ import software.amazon.awssdk.services.sqs.model.Message;
  * The connectors are built by hand, so nothing here reads Stint's global {@code stint.aws.*} properties: two
  * domains can never share a resource by accident. {@code billing.engine.enabled} / {@code billing.worker.enabled}
  * let the same jar run either role alone (SDD S.1, sec. 8d).
+ * SDD S.4, 8b: {@code billing.chaos.halt-before-publish} and {@code billing.chaos.halt-in-task} (unset by default)
+ * mount the chaos points of the RF2 scenarios; unset, the engine and the worker are exactly as without them.
  */
 @ApplicationScoped
 public class BillingEngine {
@@ -154,6 +162,12 @@ public class BillingEngine {
     boolean engineEnabled;
     @ConfigProperty(name = "billing.worker.enabled", defaultValue = "true")
     boolean workerEnabled;
+    /** SDD S.4, RF2b: an event type; the engine halts on its first publication. Unset by default. */
+    @ConfigProperty(name = "billing.chaos.halt-before-publish")
+    Optional<String> haltBeforePublish;
+    /** SDD S.4, RF2a: a task route; the worker halts after its first task's effect. Unset by default. */
+    @ConfigProperty(name = "billing.chaos.halt-in-task")
+    Optional<String> haltInTask;
 
     private volatile WorkflowEngine engine;
     private volatile WorkflowRegistry registry;
@@ -192,7 +206,8 @@ public class BillingEngine {
         WorkflowEngine built = new WorkflowEngine(registry, new SqsTaskTransport(sqs, tasksQueue, resultsQueue),
                 new DynamoDbStateStore(ddb, instancesTable, waitsTable, outboxTable, 4, inboxTable),
                 timers, blobs, new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
-                new EventBridgeEventPublisher(eventBridge, domainBus, "default"), new S3FactBlobStore(s3, factsBucket),
+                publisher(new EventBridgeEventPublisher(eventBridge, domainBus, "default"), haltBeforePublish, Chaos.HALT),
+                new S3FactBlobStore(s3, factsBucket),
                 tracer);
         built.outboxRelay().start(Duration.ofSeconds(30));
 
@@ -217,7 +232,7 @@ public class BillingEngine {
         BillingHandlers handlers = new BillingHandlers(new S3InvoiceDocuments(s3, factsBucket),
                 new DynamoDbInvoiceRecords(ddb, invoicesTable), new DynamoDbEffectMarkers(ddb, effectsTable),
                 new QuarkusMailSender(mailer), new FaultInjection(slowDelay), InstantSource.system(), mailFrom, mailTo);
-        WorkerRuntime runtime = new WorkerRuntime(handlers.registry(), blobs, tracer);
+        WorkerRuntime runtime = new WorkerRuntime(registry(handlers.registry(), haltInTask, Chaos.HALT), blobs, tracer);
         workerRunning = true;
         worker.submit(() -> {
             while (workerRunning) {
@@ -237,6 +252,24 @@ public class BillingEngine {
                 }
             }
         });
+    }
+
+    /** SDD S.4, 8b: the domain's publisher, decorated with the chaos point only when one is configured. */
+    static EventPublisher publisher(EventPublisher publisher, Optional<String> haltBeforePublish, Chaos chaos) {
+        if (haltBeforePublish.isEmpty()) {
+            return publisher;
+        }
+        LOG.warnf("CHAOS armed: the engine halts on the first publication of %s", haltBeforePublish.get());
+        return new ChaosEventPublisher(publisher, haltBeforePublish.get(), chaos);
+    }
+
+    /** SDD S.4, 8b: the worker's handlers, one of them decorated with the chaos point only when one is configured. */
+    static TaskHandlerRegistry registry(TaskHandlerRegistry registry, Optional<String> haltInTask, Chaos chaos) {
+        if (haltInTask.isEmpty()) {
+            return registry;
+        }
+        LOG.warnf("CHAOS armed: the worker halts after the effect of its first %s task", haltInTask.get());
+        return ChaosTaskHandler.wrap(registry, haltInTask.get(), chaos);
     }
 
     /** CA3: a failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
