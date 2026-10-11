@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.4 |
-| Status | **Em especificação**: aguardando aprovação do Kayan |
+| Status | **Spec aprovada** por Kayan em 11/10/2026, com as propostas 8a–8h. Etapa 2 aguardando o push do Stint (RF0) |
 | Depende de | S.1, S.2 e S.3 (Implementados). SDD 2.9 do Stint (Implementado em `b1f4579`) |
 | Bloqueia | Revalidação do gate da Fase 2 no PR novo do Stint (2.4–2.9), conforme 2.9, seção 8f |
 | Branch | `phase-2-validation` |
