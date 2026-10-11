@@ -1,0 +1,16 @@
+SDD S.2, CA8: unit tests on Stint's in-memory engine (test scope), controllable clock, barriers, no sleeps.
+Sandbox at 988b1fc; command: mvn verify -pl sandbox-billing
+
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.388 s -- in io.stintflow.sandbox.billing.BillingIndependenceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.219 s -- in io.stintflow.sandbox.billing.BillingSummaryWorkflowTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.202 s -- in io.stintflow.sandbox.billing.IssueInvoiceWorkflowTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+
+IssueInvoiceWorkflowTest:
+  valid_request_issues_the_invoice_on_the_request_chain         (valid)
+  invalid_requests_are_rejected_with_their_reason_and_no_invoice  (invalid)
+  transient_503_is_retried_and_succeeds_on_the_third_attempt     (retry)
+  exhausted_retries_fail_the_instance_without_an_invoice_or_an_event (retry exhausted, S.2 8g)
+  a_duplicated_request_starts_one_instance_and_issues_one_invoice
+BillingSummaryWorkflowTest: window, duplicated occurrence, redelivered send-summary.
+Retry delays are fired by moving the clock to the armed timer's fireAt after the wait was observed saved.

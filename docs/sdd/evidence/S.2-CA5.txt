@@ -1,0 +1,15 @@
+SDD S.2, CA5: billing-summary fired by floci's EventBridge Scheduler (every minute) counts [T - 1 min, T) and
+mails finance once; a duplicate of the occurrence sends no second mail.
+Sandbox phase-2-validation at 988b1fc (retry delay 2 s); Stint d455dc0; floci + MailHog on localhost.
+Command: mvn verify -Pfloci -pl sandbox-billing (FlociBillingIT, the whole app started by @QuarkusTest).
+
+Test: FlociBillingIT.ca5_the_scheduler_runs_the_summary_with_the_right_count_and_a_duplicate_sends_no_second_mail -- OK
+
+CA5 occurrence 2026-10-10T23:59:00Z (instance evt-f1139156-0a20-3465-b4e4-3b93b2657a61): count=2 (scan of billing-invoices: 2), mail "Billing summary 2026-10-10T23:58:00Z to 2026-10-10T23:59:00Z UTC: 2 invoice(s)" x1, after a duplicate fire still x1
+(first run) CA5 occurrence 2026-10-10T23:17:00Z (instance evt-10a9672e-272e-34db-8f43-b64695f16774): count=2 (scan of billing-invoices: 2), mail "Billing summary 2026-10-10T23:16:00Z to 2026-10-10T23:17:00Z UTC: 2 invoice(s)" x1, after a duplicate fire still x1
+
+The expected count is the test's own scan of billing-invoices; the mail is read from MailHog's API
+(/api/v2/search?kind=to&query=finance@sandbox.local). The duplicate goes through the same ScheduledStart the
+Scheduler queue feeds, with the same scheduled instant: it maps to the same instance and starts nothing.
+In memory: BillingSummaryWorkflowTest (window bounds, a duplicated occurrence with a barrier, and a redelivered
+send-summary task stopped by its marker mail#<instanceId>#<taskId>).

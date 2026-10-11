@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.2 |
-| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8g) |
+| Status | **Implementado** em 10/10/2026 (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8g; contornos dos achados 8h e 8i decididos por ele). Validado e Mergeado ficam com o Kayan |
 | Depende de | S.1 (Implementado) |
 | Bloqueia | S.3 (Orders), S.4 (cenários ponta a ponta) |
 | Branch | `phase-2-validation` |
@@ -283,3 +283,28 @@ Isso viola o at-least-once: o timer foi entregue e confirmado sem que o efeito e
 **Contornos avaliados:**
 1. `delay` do retry ≥ 2 s no YAML do sandbox: `DelaySeconds` ≥ 1 deixa uma folga de ~1 s para o `save`. Reduz a probabilidade, mas a corrida continua. Não é configuração documentada pelo Stint.
 2. Corrigir no Stint, num SDD do Stint: salvar a espera antes de armar, ou arredondar para cima o atraso SQS, ou fazer o timer sem espera ser reentregue em vez de apagado.
+
+## 9. Registro de validação
+**Implementado em 10/10/2026** na branch `phase-2-validation`, commits `0d8e227` → `988b1fc`, mais o commit desta seção (sem push). Stint fixado em `d455dc0`. As evidências estão em `docs/sdd/evidence/S.2-*.txt`.
+
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **OK.** O `invoice-requested` publicado no `sandbox-domain` gera 1 instância e 1 `invoice-issued` no spy, com `invoiceDocument`. O `chainid` é igual ao do pedido. O `causationid` é o `correlationId` do `record-invoice` (igualdade conferida no MDC do worker), conforme 8f | `S.2-CA1.txt`; `FlociBillingIT.ca1_…`; `IssueInvoiceWorkflowTest.valid_…` |
+| CA2 | **OK.** O mesmo pedido publicado 2× ao mesmo tempo (barreira): o spy vê 2 `invoice-requested` e 1 `invoice-issued` | `S.2-CA2.txt`; `FlociBillingIT.ca2_…`; `IssueInvoiceWorkflowTest.a_duplicated_…` |
+| CA3 | **OK, com contorno 8i.** O `fail503-` falha nas tentativas 1 e 2 com o tipo `communication` (URI DSL) e status 503 no wire, e sai na 3ª (`renderAttempt=3`). Com o retry de 1 s, travou uma vez (achado 8i). Com 2 s, passou na suíte e em mais 3 repetições | `S.2-CA3.txt`; `FlociBillingIT.ca3_…`; `IssueInvoiceWorkflowTest.transient_503_…` |
+| CA4 | **OK.** Com `amount` 0, sai `invoice-rejected` (`reason: invalid-amount`) no spy, com `causationid` = id do pedido, e não há fatura em `billing-invoices` | `S.2-CA4.txt`; `FlociBillingIT.ca4_…`; `IssueInvoiceWorkflowTest.invalid_…` |
+| CA5 | **OK.** O Scheduler do floci dispara o `billing-summary` a cada minuto. A contagem é igual à varredura independente de `billing-invoices` na janela `[T − 1 min, T)`, e chega 1 e-mail no MailHog. Uma ocorrência duplicada não manda um 2º e-mail | `S.2-CA5.txt`; `FlociBillingIT.ca5_…`; `BillingSummaryWorkflowTest` |
+| CA6 | **OK.** Com o Billing parado, os 3 pedidos esperam em `billing-domain-events` (profundidade 3). Ao subir o jar, as 3 faturas saem em ~5 s (uma delas `slow-`) e a fila esvazia | `S.2-CA6.txt` (roteiro manual) |
+| CA7 | **OK.** `BillingIndependenceTest` e o enforcer verdes. O `stint-inmemory` só aparece em escopo test e não vai para o app empacotado. O teste pega uma menção proibida injetada de propósito | `S.2-CA7.txt` |
+| CA8 | **OK.** 11 testes unitários sobre o engine em memória, com relógio controlável e barreiras, sem sleep: válido, inválido, retry, retry esgotado, duplicatas e resumo | `S.2-CA8.txt` |
+
+### Notas
+- **RF6:** cada handler loga dentro do contexto de log do Stint (`stint.chainId`, `stint.instanceId`, `stint.taskId`, `stint.attempt`…). No Jaeger, o span `stint.activation` tem link `FOLLOWS_FROM` para o span do `traceparent` do pedido (`S.2-RF6.txt`, `S.2-CA6.txt`). A 1ª versão do `slow-` atrasava num executor fora desse contexto e perdia o MDC; foi corrigida (`b8ead7a`).
+- **Achados do Stint** (seção 8), ambos com contorno decidido pelo Kayan:
+	- **8h:** o `with.input` de uma `call: remote` dentro de `try` é ignorado. Contorno: `input.from` no `try`.
+	- **8i:** um timer de retry de 1 s pode disparar antes de a espera ser salva e se perder. Contorno: atraso de 2 s, que reduz mas não fecha a corrida.
+	- Os dois pedem um SDD de correção no Stint e o registro na seção 8 do SDD 1.3 do Stint, pendente porque o Notion está inacessível.
+- **Dependência nova:** `quarkus-mailer` (BOM do Quarkus 3.33.2, a mesma do `sandbox-reports`). Em teste: `stint-inmemory`, `quarkus-junit5` e `assertj-core`.
+- **floci:** aceitou e guardou a bucket policy do `sandbox-facts` (sem aplicar IAM, como previsto no 8a). O fallback `sent-timestamp-fallback` foi usado em todas as ocorrências do Scheduler, como documentado pelo Stint.
+- **Resíduo no floci:** a instância `evt-e4f1a7a1-…` do 8i ficou `WAITING` em `billing-instances`. Não atrapalha nada e foi mantida como evidência.
+- **Notion:** inacessível durante toda a sessão. A página S.2, o Log e os achados 8h/8i nos SDDs do Stint ficam pendentes.

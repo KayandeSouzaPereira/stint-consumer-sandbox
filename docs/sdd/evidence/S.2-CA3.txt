@@ -1,0 +1,21 @@
+SDD S.2, CA3: orderId 'fail503-...' -> attempts 1 and 2 fail on the wire with the DSL 1.0 standard type and
+status 503; attempt 3 succeeds (the test asserts context.renderAttempt == 3).
+Sandbox phase-2-validation at 988b1fc (retry delay 2 s); Stint d455dc0; floci + MailHog on localhost.
+Command: mvn verify -Pfloci -pl sandbox-billing (FlociBillingIT, the whole app started by @QuarkusTest).
+
+Test: FlociBillingIT.ca3_a_transient_503_succeeds_on_the_third_attempt -- OK
+
+Failed results as they went back to the engine (BillingEngine worker loop):
+CA3 Task render-invoice attempt 1 of instance evt-f385baac-6717-3daa-a140-63c71edebdc1 failed: type=https://serverlessworkflow.io/spec/1.0.0/errors/communication status=503 detail=Injected fault: renderer unavailable (attempt 1)
+CA3 Task render-invoice attempt 2 of instance evt-f385baac-6717-3daa-a140-63c71edebdc1 failed: type=https://serverlessworkflow.io/spec/1.0.0/errors/communication status=503 detail=Injected fault: renderer unavailable (attempt 2)
+
+Repeated alone after the 2 s change (mvn verify -Pfloci -Dtest='FlociBillingIT#ca3*'):
+  repeat 1: [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+  repeat 2: [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+  repeat 3: [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+History (finding 8i): with the 1 s retry delay, the first full run passed and the second stopped after attempt 1
+(instance evt-e4f1a7a1-6e92-366f-a9a3-2002c27d2f9c left WAITING on retry:98dc9c24-..., no timer message left):
+[ERROR] io.stintflow.sandbox.billing.floci.FlociBillingIT.ca3_a_transient_503_succeeds_on_the_third_attempt -- Time elapsed: 90.11 s <<< ERROR!
+In memory: IssueInvoiceWorkflowTest.transient_503_is_retried_and_succeeds_on_the_third_attempt also checks the
+caught error kept in the retry state (type communication, status 503, attempts 1 and 2).
