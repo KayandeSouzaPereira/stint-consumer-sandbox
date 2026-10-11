@@ -73,6 +73,27 @@ depende do outro em código: cada um conhece só os tipos, `source` e campos de 
 
 Um consumidor trata um `reason` desconhecido como rejeição genérica. Por isso, um valor novo de `reason` é compatível.
 
+## `io.sandbox.orders.order-placed.v1`
+| Campo | Valor |
+|---|---|
+| Publica | `sandbox-orders`, pelo endpoint `POST /orders` (S.3, 8a): é a entrada do pedido |
+| `source` | `https://sandbox.stintflow.io/orders` |
+| `id` | o `orderId`: o mesmo pedido gera sempre o mesmo evento, e por isso uma só instância (SDD 2.1) |
+| Consome | `sandbox-orders` (inicia `place-order` por `schedule.on`). Nenhum outro domínio: os outros só observam pela `spy-all` |
+| Regra | `order-placed-to-orders` → `orders-domain-events` |
+| Correlação | `data.orderId` |
+| Linhagem | o endpoint define `chainid = "chn-" + UUIDv3("order\|" + orderId)`. É a chain de todo o pedido |
+
+`data`:
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `orderId` | string | sim | identificador do pedido, escolhido pelo cliente (`[A-Za-z0-9-]{1,64}`); é a chave de idempotência |
+| `customerId` | string | sim | cliente |
+| `recipient` | string | sim | e-mail do cliente |
+| `amount` | number | sim | valor total (Orders não valida o valor; quem decide se fatura é o Billing) |
+| `currency` | string | sim | ISO 4217 |
+| `items` | array | não | itens `{sku, quantity, unitPrice}` |
+
 ## `io.sandbox.orders.order-confirmed.v1`
 | Campo | Valor |
 |---|---|

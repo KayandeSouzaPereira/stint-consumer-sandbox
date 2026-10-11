@@ -92,6 +92,13 @@ billing_tables() {
     --key-schema AttributeName=effectKey,KeyType=HASH
 }
 
+# SDD S.3, RF4: Orders' worker effect markers (same schema as billing-effects).
+orders_tables() {
+  ensure_table orders-effects \
+    --attribute-definitions AttributeName=effectKey,AttributeType=S \
+    --key-schema AttributeName=effectKey,KeyType=HASH
+}
+
 # --- SQS --------------------------------------------------------------------------------------------------
 queue_url() { aws_ sqs get-queue-url --queue-name "$1" --query QueueUrl --output text 2>/dev/null || true; }
 queue_arn() { echo "arn:aws:sqs:$AWS_REGION:$ACCOUNT:$1"; }
@@ -149,6 +156,7 @@ for d in "${DOMAINS[@]}"; do
 done
 
 billing_tables
+orders_tables
 
 ensure_queue sandbox-spy
 ensure_bus
@@ -159,6 +167,8 @@ ensure_rule invoice-issued-to-orders \
   '{"detail-type":["io.sandbox.billing.invoice-issued.v1"]}' orders-domain-events
 ensure_rule invoice-rejected-to-orders \
   '{"detail-type":["io.sandbox.billing.invoice-rejected.v1"]}' orders-domain-events
+ensure_rule order-placed-to-orders \
+  '{"detail-type":["io.sandbox.orders.order-placed.v1"]}' orders-domain-events
 # The spy sees everything that reaches the bus (catch-all pattern proven by Stint's FlociEmitIT).
 ensure_rule spy-all '{"source":[{"prefix":""}]}' sandbox-spy
 
