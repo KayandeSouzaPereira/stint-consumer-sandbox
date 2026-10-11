@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!-- SDD S.4, 8c: cross-domain, chaos, load and observability scenarios. Tests only: they run the packaged apps
+         as processes (java -jar, or the native binaries) and watch them only from outside — floci, MailHog, Jaeger
+         and HTTP. No dependency on any sandbox domain, nor on Stint: the contract is contracts/events.md. -->
+    <parent>
+        <groupId>io.stintflow.sandbox</groupId>
+        <artifactId>stint-consumer-sandbox-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>sandbox-scenarios</artifactId>
+    <name>stint-consumer-sandbox :: scenarios</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sqs</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>eventbridge</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>scheduler</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <!-- The scenarios start and kill processes: they only run with -Pscenarios (infra/gate.sh). -->
+        <scenarios.skip>true</scenarios.skip>
+        <scenarios.orders>50</scenarios.orders>
+        <scenarios.apps>jvm</scenarios.apps>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <skipTests>${scenarios.skip}</skipTests>
+                    <includes>
+                        <include>**/*IT.java</include>
+                    </includes>
+                    <runOrder>alphabetical</runOrder>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                    <systemPropertyVariables>
+                        <scenarios.root>${project.basedir}/..</scenarios.root>
+                        <scenarios.out>${project.build.directory}/scenarios</scenarios.out>
+                        <scenarios.orders>${scenarios.orders}</scenarios.orders>
+                        <scenarios.apps>${scenarios.apps}</scenarios.apps>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- The scenarios are sovereign too: no sandbox domain and no Stint artifact on their class path. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>outside-observer</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>io.stintflow.sandbox:*</exclude>
+                                        <exclude>io.github.stintflow:*</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>scenarios</id>
+            <properties>
+                <scenarios.skip>false</scenarios.skip>
+            </properties>
+        </profile>
+    </profiles>
+</project>

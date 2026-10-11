@@ -15,6 +15,7 @@
         <module>sandbox-reports</module>
         <module>sandbox-orders</module>
         <module>sandbox-billing</module>
+        <module>sandbox-scenarios</module>
     </modules>
 
     <properties>
