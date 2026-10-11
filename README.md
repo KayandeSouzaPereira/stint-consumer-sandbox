@@ -146,6 +146,7 @@ at http://localhost:16686 under `sandbox-orders` / `sandbox-billing` a few secon
 bash infra/gate.sh                               # regression once, then chaos, load and observability
 bash infra/gate.sh --regression-only --repeat 3  # the regression three times in a row
 bash infra/gate.sh --only LoadIT --orders 100    # one scenario class, N orders for the load
+bash infra/gate.sh --native                      # Orders and Billing as native images, the happy path on them
 ```
 
 - **Destructive for the emulator only.** Every scenario starts from `infra/reset.sh`, which empties floci's sandbox
@@ -182,5 +183,13 @@ misconfigured client fails instead of reaching anything else. Mind the Scheduler
 mvn package -Dnative -pl sandbox-reports
 ```
 
-The workflow manifest and the YAML files are included through `quarkus.native.resources.includes`. The native build
-of the domain modules is SDD S.4.
+The workflow manifest and the YAML files are included through `quarkus.native.resources.includes`.
+
+The domain modules are built and run natively by `bash infra/gate.sh --native` (S.4 RF4):
+- the build runs in a container with `-Dquarkus.native.remote-container-build=true`, so Docker needs about 8 GB of
+  memory (each image peaks at ~4.4 GB). The remote variant copies files in and out with `docker cp`, because Docker
+  Desktop on Hyper-V never creates a container with a bind mount of `C:`;
+- each runner is copied into an image `stint-s4/<module>:native` on `quay.io/quarkus/ubi9-quarkus-micro-image:2.0`
+  and run on the compose network, with the `localhost` endpoints overridden to `floci`, `mailhog` and `jaeger`;
+- Orders and Billing set `quarkus.native.auto-service-loader-registration=true`: a workaround for a Stint finding
+  (S.4 8i), without which every jq expression calling a builtin function (`type`, `length`, ...) fails natively.

@@ -1,0 +1,126 @@
+SDD S.4, CA2: the regression (RF1) green three times in a row.
+Command: bash infra/gate.sh --regression-only --repeat 3 (MVN = Maven 3.9.15, JAVA_HOME = Temurin 25.0.3)
+Sandbox phase-2-validation at 434a4b3; Stint b1f4579; floci + MailHog + Jaeger from docker-compose.yml.
+Each run: infra/reset.sh -> S.2 CA1-CA5 (FlociBillingIT) -> reset -> S.3 CA1, CA2, CA4-CA7 (FlociOrdersIT, Billing jar
+running as its own process) -> S.1 CA2, S.2 CA6, S.3 CA3 (RegressionIT, every app a process).
+
+--- gate summary (gate-out/20261011-142927/summary.txt) ---
+[gate 14:29:28] Stint pinned: Stint `b1f4579`; sandbox 434a4b3
+[gate 14:29:28] mvn clean install (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/build.log)
+    Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.403 s -- in io.stintflow.sandbox.orders.OrdersIndependenceTest
+    Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.386 s -- in io.stintflow.sandbox.orders.PlaceOrderWorkflowTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.379 s -- in io.stintflow.sandbox.billing.BillingIndependenceTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.228 s -- in io.stintflow.sandbox.billing.BillingSummaryWorkflowTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in io.stintflow.sandbox.billing.ChaosPointsTest
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.207 s -- in io.stintflow.sandbox.billing.IssueInvoiceWorkflowTest
+    BUILD SUCCESS
+[gate 14:30:31] === regression run 1 of 3 ===
+[gate 14:33:16] mvn verify -Pfloci -pl sandbox-billing (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/billing-floci-1.log)
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 427.9 s -- in io.stintflow.sandbox.billing.floci.FlociBillingIT
+    BUILD SUCCESS
+[gate 14:43:37] mvn verify -Pfloci -pl sandbox-orders (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/orders-floci-1.log)
+    Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 209.8 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+    BUILD SUCCESS
+[gate 14:47:33] mvn verify -Pscenarios -pl sandbox-scenarios -Dtest=RegressionIT -Dscenarios.run=1 (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/regression-1.log)
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 528.9 s -- in io.stintflow.sandbox.scenarios.RegressionIT
+    BUILD SUCCESS
+[gate 14:56:32] === regression run 2 of 3 ===
+[gate 14:59:19] mvn verify -Pfloci -pl sandbox-billing (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/billing-floci-2.log)
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 424.9 s -- in io.stintflow.sandbox.billing.floci.FlociBillingIT
+    BUILD SUCCESS
+[gate 15:09:43] mvn verify -Pfloci -pl sandbox-orders (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/orders-floci-2.log)
+    Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 208.7 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+    BUILD SUCCESS
+[gate 15:13:38] mvn verify -Pscenarios -pl sandbox-scenarios -Dtest=RegressionIT -Dscenarios.run=2 (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/regression-2.log)
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 525.4 s -- in io.stintflow.sandbox.scenarios.RegressionIT
+    BUILD SUCCESS
+[gate 15:22:32] === regression run 3 of 3 ===
+[gate 15:25:22] mvn verify -Pfloci -pl sandbox-billing (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/billing-floci-3.log)
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 418.7 s -- in io.stintflow.sandbox.billing.floci.FlociBillingIT
+    BUILD SUCCESS
+[gate 15:35:44] mvn verify -Pfloci -pl sandbox-orders (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/orders-floci-3.log)
+    Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 209.3 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+    BUILD SUCCESS
+[gate 15:39:39] mvn verify -Pscenarios -pl sandbox-scenarios -Dtest=RegressionIT -Dscenarios.run=3 (log /c/dev/stint-consumer-sandbox/gate-out/20261011-142927/regression-3.log)
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 539.4 s -- in io.stintflow.sandbox.scenarios.RegressionIT
+    BUILD SUCCESS
+[gate 15:48:45] PASSED. Evidence and logs: /c/dev/stint-consumer-sandbox/gate-out/20261011-142927
+
+--- timer decisions in the gate logs of the three runs (FlociBillingIT, FlociOrdersIT and its Billing process) ---
+    123 decision=obsolete
+  (no 'early': no retry timer of 1 s fired before its wait existed, Stint SDD 2.9)
+
+--- S.4-CA2-s1-ca2-run1.txt ---
+S.1 CA2 (run 1): sandbox-reports as a process (s1-ca2-reports-run1.log)
+  /reports -> 200, rows=25
+  /reports/secondary -> 200, rows=25
+  mail to s1-ca2-1ee4c3f7@example.com | URGENT: Monthly sales report | [final.csv (772 bytes)]
+  mail to s1-ca2-1ee4c3f7@example.com | Monthly sales report | [final.csv (772 bytes)]
+
+--- S.4-CA2-s2-ca6-run1.txt ---
+S.2 CA6 (run 1): Billing down, 3 invoice-requested published on sandbox-domain
+  billing-domain-events while Billing is down: visible 3, in flight 0
+  Billing started (s2-ca6-billing-run1.log): 3 invoice-issued within 7.5 s of the start
+  s2-ca6-b0985859-1 -> invoice inv-318e530bfc1aadd5
+  s2-ca6-b0985859-2 -> invoice inv-8e766255bb3f57f1
+  slow-s2-ca6-b0985859-3 -> invoice inv-940c9a43e08e22ff
+  billing-domain-events after: visible 0, in flight 0
+
+--- S.4-CA2-s3-ca3-run1.txt ---
+S.3 CA3 (run 1): orders.invoice.timeout=PT20S, Billing down
+  mails to s3-ca3-2445749c@example.com: [Order s3-ca3-2445749c confirmed: invoice inv-6fb0155abfb0df09, Order s3-ca3-2445749c: invoicing is delayed]
+  one-time schedule while delayed: orders-timers/timer-2ef913fd-6f14-4efe-b700-04ebbf17ba5a at at(2026-10-12T17:57:00), input {"timerId":"timer:2ef913fd-6f14-4efe-b700-04ebbf17ba5a","workflowInstanceId":"evt-89bb9228-86b1-31c9-9a0b-d4dc6f5d11d6","armedAt":"2026-10-11T17:56:23.679840900Z"}
+  after Billing came back: status confirmed, orders-timers schedules []
+  simulated late fire -> Timer fire without its wait: decision=obsolete timerId=timer:2ef913fd-6f14-4efe-b700-04ebbf17ba5a instanceId=evt-89bb9228-86b1-31c9-9a0b-d4dc6f5d11d6 armedAt=2026-10-11T17:56:23.679840900Z age=PT4.3017682S instanceStatus=COMPLETED
+  spy, one chain chn-735f81a9-fb56-368c-a5b7-328cb43f9828: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]
+  logs: s3-ca3-orders-run1.log, s3-ca3-billing-run1.log
+
+--- S.4-CA2-s1-ca2-run2.txt ---
+S.1 CA2 (run 2): sandbox-reports as a process (s1-ca2-reports-run2.log)
+  /reports -> 200, rows=25
+  /reports/secondary -> 200, rows=25
+  mail to s1-ca2-2fba7fdb@example.com | URGENT: Monthly sales report | [final.csv (772 bytes)]
+  mail to s1-ca2-2fba7fdb@example.com | Monthly sales report | [final.csv (772 bytes)]
+
+--- S.4-CA2-s2-ca6-run2.txt ---
+S.2 CA6 (run 2): Billing down, 3 invoice-requested published on sandbox-domain
+  billing-domain-events while Billing is down: visible 3, in flight 0
+  Billing started (s2-ca6-billing-run2.log): 3 invoice-issued within 7.5 s of the start
+  s2-ca6-60d37250-1 -> invoice inv-bab0cbf20e88663c
+  s2-ca6-60d37250-2 -> invoice inv-a920f42bca4dd1f4
+  slow-s2-ca6-60d37250-3 -> invoice inv-78ed9364cd59cab3
+  billing-domain-events after: visible 0, in flight 0
+
+--- S.4-CA2-s3-ca3-run2.txt ---
+S.3 CA3 (run 2): orders.invoice.timeout=PT20S, Billing down
+  mails to s3-ca3-932da21a@example.com: [Order s3-ca3-932da21a confirmed: invoice inv-eff7c683cda7bb18, Order s3-ca3-932da21a: invoicing is delayed]
+  one-time schedule while delayed: orders-timers/timer-9e51adfe-d702-4bd6-ac54-cd61002685ce at at(2026-10-12T18:23:00), input {"timerId":"timer:9e51adfe-d702-4bd6-ac54-cd61002685ce","workflowInstanceId":"evt-c207ce3d-8a47-3192-9c11-1665276f3b5a","armedAt":"2026-10-11T18:22:24.769489400Z"}
+  after Billing came back: status confirmed, orders-timers schedules []
+  simulated late fire -> Timer fire without its wait: decision=obsolete timerId=timer:9e51adfe-d702-4bd6-ac54-cd61002685ce instanceId=evt-c207ce3d-8a47-3192-9c11-1665276f3b5a armedAt=2026-10-11T18:22:24.769489400Z age=PT4.0141041S instanceStatus=COMPLETED
+  spy, one chain chn-f7cb06bb-f309-3c48-97f5-31d6896366d6: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]
+  logs: s3-ca3-orders-run2.log, s3-ca3-billing-run2.log
+
+--- S.4-CA2-s1-ca2-run3.txt ---
+S.1 CA2 (run 3): sandbox-reports as a process (s1-ca2-reports-run3.log)
+  /reports -> 200, rows=25
+  /reports/secondary -> 200, rows=25
+  mail to s1-ca2-dd4ff1e0@example.com | URGENT: Monthly sales report | [final.csv (772 bytes)]
+  mail to s1-ca2-dd4ff1e0@example.com | Monthly sales report | [final.csv (772 bytes)]
+
+--- S.4-CA2-s2-ca6-run3.txt ---
+S.2 CA6 (run 3): Billing down, 3 invoice-requested published on sandbox-domain
+  billing-domain-events while Billing is down: visible 3, in flight 0
+  Billing started (s2-ca6-billing-run3.log): 3 invoice-issued within 7.5 s of the start
+  s2-ca6-e8fb4f1f-1 -> invoice inv-35865595e2c73c25
+  s2-ca6-e8fb4f1f-2 -> invoice inv-80bd36e19c93cc1a
+  slow-s2-ca6-e8fb4f1f-3 -> invoice inv-d8564ba6d43fae2a
+  billing-domain-events after: visible 0, in flight 0
+
+--- S.4-CA2-s3-ca3-run3.txt ---
+S.3 CA3 (run 3): orders.invoice.timeout=PT20S, Billing down
+  mails to s3-ca3-88a93191@example.com: [Order s3-ca3-88a93191 confirmed: invoice inv-1b87c7389cee4e48, Order s3-ca3-88a93191: invoicing is delayed]
+  one-time schedule while delayed: orders-timers/timer-74caf80c-03b2-4dea-a940-45ac1ce71d66 at at(2026-10-12T18:49:00), input {"timerId":"timer:74caf80c-03b2-4dea-a940-45ac1ce71d66","workflowInstanceId":"evt-9604f67b-712e-3ad4-9cdd-5ee1b2874943","armedAt":"2026-10-11T18:48:36.062341900Z"}
+  after Billing came back: status confirmed, orders-timers schedules []
+  simulated late fire -> Timer fire without its wait: decision=obsolete timerId=timer:74caf80c-03b2-4dea-a940-45ac1ce71d66 instanceId=evt-9604f67b-712e-3ad4-9cdd-5ee1b2874943 armedAt=2026-10-11T18:48:36.062341900Z age=PT4.6812291S instanceStatus=COMPLETED
+  spy, one chain chn-a9333d8a-b08b-315f-b247-b9a626fd0b1b: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]
+  logs: s3-ca3-orders-run3.log, s3-ca3-billing-run3.log

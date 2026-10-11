@@ -1,0 +1,29 @@
+SDD S.4, CA6: ObservabilityIT
+Command: bash infra/gate.sh --only 'ChaosIT,LoadIT,ObservabilityIT' (gate-out/20261011-154845, PASSED 16:11:35:
+ChaosIT 5/5, LoadIT 1/1, ObservabilityIT 1/1). Sandbox phase-2-validation at 33d4942; Stint b1f4579; every app a JVM
+process (java -jar quarkus-run.jar) started by the scenario; floci + MailHog + Jaeger from docker-compose.yml.
+
+S.4 RF5: one order, traces in Jaeger and logs of both processes
+  t+   1.5s  started obs-orders (ORDERS, pid 256828, :8081) 
+  t+   3.4s  started obs-billing (BILLING, pid 253740, :8082) 
+  t+   4.4s  order obs-4ee7c965 confirmed, chain chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3
+  t+   8.4s  Jaeger: 9 spans with the chain (4 in sandbox-orders, 5 in sandbox-billing)
+  t+   8.4s  link sandbox-orders stint.activation (trace 2ae2cf9b779f251a33988707667ff281) FOLLOWS_FROM sandbox-billing stint.activation (trace 3d33440188614d5030ce90eae7c78e2f)
+  t+   8.4s  link sandbox-billing stint.activation (trace 3d33440188614d5030ce90eae7c78e2f) FOLLOWS_FROM sandbox-orders stint.activation (trace c483b20cf3683516c399221434184ffc)
+  t+   8.4s  JSON log lines with mdc stint.chainId=chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3: sandbox-orders 1, sandbox-billing 2
+  Jaeger query: http://localhost:16686/api/traces?service=<service>&tags={"stint.chainId":"chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3"} (raw JSON: S.4-CA6-jaeger.json)
+  spans:
+    sandbox-billing  stint.task        trace 3d33440188614d5030ce90eae7c78e2f span 1b78d939ebb2abf7 refs [CHILD_OF:3d33440188614d5030ce90eae7c78e2f/0404360ae878f33e]
+    sandbox-billing  stint.activation  trace 3d33440188614d5030ce90eae7c78e2f span 042e3f94d5550283 refs [CHILD_OF:3d33440188614d5030ce90eae7c78e2f/1b78d939ebb2abf7]
+    sandbox-billing  stint.task        trace 3d33440188614d5030ce90eae7c78e2f span f280e8df5b3b6de0 refs [CHILD_OF:3d33440188614d5030ce90eae7c78e2f/042e3f94d5550283]
+    sandbox-billing  stint.activation  trace 3d33440188614d5030ce90eae7c78e2f span 0404360ae878f33e refs [FOLLOWS_FROM:c483b20cf3683516c399221434184ffc/099f6718118bb936]
+    sandbox-billing  stint.activation  trace 3d33440188614d5030ce90eae7c78e2f span f66172d931d04603 refs [CHILD_OF:3d33440188614d5030ce90eae7c78e2f/f280e8df5b3b6de0]
+    sandbox-orders   stint.task        trace 2ae2cf9b779f251a33988707667ff281 span 9b81fc2c4425a1ab refs [CHILD_OF:2ae2cf9b779f251a33988707667ff281/1825daca8ef558cf]
+    sandbox-orders   stint.activation  trace 2ae2cf9b779f251a33988707667ff281 span 1825daca8ef558cf refs [FOLLOWS_FROM:c483b20cf3683516c399221434184ffc/099f6718118bb936, FOLLOWS_FROM:3d33440188614d5030ce90eae7c78e2f/f66172d931d04603]
+    sandbox-orders   stint.activation  trace 2ae2cf9b779f251a33988707667ff281 span 76f460461dd1e499 refs [CHILD_OF:2ae2cf9b779f251a33988707667ff281/9b81fc2c4425a1ab]
+    sandbox-orders   stint.activation  trace c483b20cf3683516c399221434184ffc span 099f6718118bb936 refs []
+  sandbox-orders log lines (obs-orders.log):
+    OrdersHandlers: Mailed 'Order obs-4ee7c965 confirmed: invoice inv-08a3b88ba5df583f' to obs-4ee7c965@example.com with invoice-inv-08a3b88ba5df583f.html {stint.chainId=chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3, stint.instanceId=evt-0e47f205-e3fd-39fd-9c8b-90ea81b89985, traceId=2ae2cf9b779f251a33988707667ff281}
+  sandbox-billing log lines (obs-billing.log):
+    BillingHandlers: Rendered invoice inv-08a3b88ba5df583f to s3://sandbox-facts/billing/invoices/inv-08a3b88ba5df583f.html (attempt 1) {stint.chainId=chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3, stint.instanceId=evt-ff50f404-92fa-388d-94f7-63e9b27a4de7, traceId=3d33440188614d5030ce90eae7c78e2f}
+    BillingHandlers: Recorded invoice inv-08a3b88ba5df583f issued at 2026-10-11T19:11:29.903Z {stint.chainId=chn-10411ec9-d894-3c9a-99fa-e144f5fce1d3, stint.instanceId=evt-ff50f404-92fa-388d-94f7-63e9b27a4de7, traceId=3d33440188614d5030ce90eae7c78e2f}

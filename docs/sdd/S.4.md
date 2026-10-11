@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | ID | S.4 |
-| Status | **Spec aprovada** por Kayan em 11/10/2026, com as propostas 8a–8h. Etapa 2 aguardando o push do Stint (RF0) |
+| Status | **Implementado** em 11/10/2026 (spec aprovada por Kayan em 11/10/2026, com as propostas 8a–8h; contorno do achado 8i decidido por ele). Validado e Mergeado ficam com o Kayan |
 | Depende de | S.1, S.2 e S.3 (Implementados). SDD 2.9 do Stint (Implementado em `b1f4579`) |
 | Bloqueia | Revalidação do gate da Fase 2 no PR novo do Stint (2.4–2.9), conforme 2.9, seção 8f |
 | Branch | `phase-2-validation` |
-| Commits analisados | sandbox `372a052` · Stint `b1f4579` (`phase-2/federated-orchestration`, **local**: o remoto está em `d455dc0`) |
+| Commits analisados | sandbox `372a052` · Stint `b1f4579` (`phase-2/federated-orchestration`; local na análise, no remoto desde o push do RF0) |
 | Data da análise | 11/10/2026 |
 | Notion | **Inacessível nesta sessão** (o MCP do Notion não conecta). A política "Regras gerais para agentes" e o plano não puderam ser relidos. Valem as regras do pedido e as decisões registradas nos SDDs do repositório. A página S.4 em "Stint · SDDs" será criada quando ele voltar |
 
@@ -382,4 +382,55 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 **Correção sugerida ao Stint (não feita daqui):** registrar as funções do jackson-jq para o nativo no próprio Stint (por exemplo, na extensão/bundle Quarkus ou num `native-image.properties` do `stint-core`), e pôr no smoke nativo uma expressão com função builtin, para o CA do 2.7 cobrir isso.
 
 ## 9. Registro de validação
-(etapa 2)
+
+**Ambiente.**
+- Windows 11, Temurin 25.0.3, Maven 3.9.15 e Quarkus 3.33.2;
+- Docker Desktop no Hyper-V, com 10 GB a partir do RF4 (8f), rodando floci, MailHog e Jaeger do `docker-compose.yml`;
+- Stint `b1f4579`, instalado no `~/.m2` com `mvn install -DskipTests`.
+
+**Commits** (`phase-2-validation`, sem push):
+
+| Commit | O que faz |
+|---|---|
+| `21b6e04` | spec |
+| `af819e8` | aprovação |
+| `4fbbc60` | RF0: SHA fixado e contornos removidos |
+| `9e96a13` | evidência do CA1 |
+| `aec3f2c` | pontos de caos (8b) |
+| `71f36d1` | `sandbox-scenarios`, `reset.sh`, `gate.sh` e `RegressionIT` |
+| `b29cccc` | caos, carga e observabilidade |
+| `3357e39` | nativo em container e `NativeIT` |
+| `434a4b3` | build nativo remoto e imagens, sem bind mount |
+| `33d4942` | contorno do achado 8i |
+| commit deste registro | evidências, relatório do gate e README |
+
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.**<br>- O SHA `b1f4579` está no remoto (push autorizado pelo Kayan: `d455dc0..b1f4579`, sem force) e fixado no README, no `pom.xml` e no `bootstrap.sh`.<br>- Os contornos do 8a saíram: `with.input` dentro do `try`, retry de 1 s e fim do `MIN_TIMEOUT`.<br>- Os 5 YAMLs do sandbox carregam em STRICT.<br>- `FlociBillingIT` 5/5: as tentativas 1 e 2 falham com 503 e a 3 renderiza; 0 disparos `early` | `S.4-CA1.txt` |
+| CA2 | **Verde 3 vezes seguidas** no `434a4b3`, com `gate.sh --regression-only --repeat 3` (14:29–15:48). Cada rodada passou em:<br>- build e unitários;<br>- `FlociBillingIT` 5/5;<br>- `FlociOrdersIT` 6/6, com o Billing como processo;<br>- `RegressionIT` 3/3.<br>Nos logs, os timers registraram 123 decisões `obsolete` e 0 `early` | `S.4-CA2.txt` |
+| CA3 | **Verde** no `33d4942`, com `gate.sh --only 'ChaosIT,LoadIT,ObservabilityIT'` (`ChaosIT` 5/5).<br>- a: o worker caiu com 137 depois do render; a task foi reentregue em ~30 s ao 2º worker; a mesma fatura foi renderizada 2× (idempotente); 1 confirmação.<br>- b: o engine caiu com 137 no `publish`; ficou 1 fato no `billing-outbox` e 0 no barramento; o engine religado publicou pelo relay em ~30 s.<br>- c: o Orders foi morto no `listen`; o evento esperou na fila; o Orders religado retomou.<br>- d: duas réplicas, com 9 e 11 instâncias, nenhuma nas duas; 20 confirmações e 20 e-mails.<br>- e: 10 avisos, 10 agendamentos one-time, 10 confirmações e 0 agendamentos no fim.<br>Todas as sobras ficaram em 0, exceto os timers atrasados já obsoletos e as duplicatas do d no inbox | `S.4-CA3-{a..e}.txt` |
+| CA4 | **Verde** (`LoadIT`, N=50, 5 `fail503-` e 5 `slow-`):<br>- 50 faturas com ids distintos, 50 `invoice-issued`, 50 `order-confirmed` e 50 e-mails, cada anexo byte a byte igual ao documento do próprio pedido;<br>- 50 cadeias distintas e nenhuma sobra.<br>Só como observação: p50 28,3 s e p95 31,1 s (relatório do gate, 5.3) | `S.4-CA4.txt` |
+| CA5 | **Verde com contorno** (`gate.sh --native` no `33d4942`, `NativeIT` 1/1).<br>- As duas imagens nativas subiram em ~0,07 s; o pedido gerou 4 eventos na mesma cadeia, a confirmação com o anexo certo e nenhuma sobra.<br>- Sem o contorno do 8i, o Orders nativo falha na 1ª expressão com `type` | `S.4-CA5.txt` |
+| CA6 | **Verde** (`ObservabilityIT`):<br>- 9 spans com o `stint.chainId` (4 do Orders, 5 do Billing);<br>- `FOLLOWS_FROM` do Billing para o Orders e do Orders para o Billing;<br>- linhas JSON dos dois processos com o mesmo `stint.chainId` (1 no Orders, 2 no Billing) | `S.4-CA6.txt`, `S.4-CA6-jaeger.json` |
+| CA7 | **Verde.** `docs/evidence/phase-2-gate.md` está completo: tabela 2.1–2.9, real × simulado, achados com estado, observações e recomendação, sem nenhuma linha "a verificar" | `docs/evidence/phase-2-gate.md` |
+
+**Desvios da spec e correções da sua previsão:**
+- **8e, inbox no cenário d.** A spec previa "exatamente o número de duplicatas" no `orders-inbox`. Ficaram 4 de 5 nas duas execuções.
+	- A duplicata que chega enquanto a espera ainda existe perde a gravação condicional para o evento original e é descartada como já consumida (`WorkflowEngine.java:468`, SDD 2.3). Só as que chegam depois da retomada ficam no inbox.
+	- As duas rotas são corretas, e nenhuma confirmação saiu dobrada.
+	- O cenário passou a exigir inbox entre 0 e o número de duplicatas, e a evidência diz quantas ficaram.
+- **8a, teste do Orders.** O `listen_timeouts_under_two_seconds_are_refused_at_load` virou `only_positive_listen_timeouts_are_accepted_at_load`, consequência direta da remoção do `MIN_TIMEOUT`.
+- **8f, build nativo.** A spec previa `-Dquarkus.native.container-build=true` e o runner montado no container.
+	- No Docker Desktop com Hyper-V, nenhum container com bind mount de `C:` chega a ser criado: o `docker run` fica pendurado.
+	- O build passou a `-Dquarkus.native.remote-container-build=true` (o mesmo builder, com arquivos por `docker cp`).
+	- O runner é copiado numa imagem `stint-s4/<módulo>:native`.
+	- As URLs vão por `-D` com os nomes do compose, em vez das variáveis de ambiente do 8f; o efeito é o mesmo, e o `application.properties` não muda.
+- **8f, memória.** Cada imagem nativa pede ~4,4 GB de pico. Com 2 GB não roda; com os 10 GB que o Kayan configurou, roda.
+- **8c, saída do gate.** A saída vai para `gate-out/<data-hora>/` (no `.gitignore`), não para `target/`, que o `mvn clean` do próprio gate apagava.
+- **Achado novo (8i)**, com o contorno decidido pelo Kayan.
+
+**Notion.** O MCP do Notion não conectou nesta sessão. Ficam pendentes:
+- a página S.4 em "Stint · SDDs";
+- o Log da Biblioteca;
+- a cópia do achado 8i para a seção 8 do SDD 2.7 do Stint;
+- a dos achados S.2 8h/8i (já resolvidos no 2.9) para o SDD 1.3.

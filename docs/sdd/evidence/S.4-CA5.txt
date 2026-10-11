@@ -1,0 +1,67 @@
+SDD S.4, CA5: RF4, the happy path of S.3 CA1 on both domains as native images.
+Command: bash infra/gate.sh --native (gate-out/20261011-161150, PASSED 16:21:21: NativeIT 1/1, 154.5 s).
+Sandbox phase-2-validation at 33d4942; Stint b1f4579; Docker Desktop (Hyper-V) with 10 GB.
+Build: mvn package -Dnative -Dquarkus.native.remote-container-build=true (Mandrel 25.0.4.1 in
+quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25; sources in and binary out by docker cp, since Docker Desktop's
+Hyper-V backend never creates a container with a bind mount of C:). Each runner is copied into an image on
+quay.io/quarkus/ubi9-quarkus-micro-image:2.0 (stint-s4/<module>:native) and run on the compose network, with every
+localhost value of its application.properties overridden by -D to floci / mailhog / jaeger.
+  8,4s (8,5% of total time) in 958 GCs | Peak RSS: 4,38GB | CPU load: 8,87
+  Finished generating 'sandbox-orders-1.0.0-SNAPSHOT-runner' in 1m 37s.
+  8,8s (8,7% of total time) in 1052 GCs | Peak RSS: 4,44GB | CPU load: 8,81
+  Finished generating 'sandbox-billing-1.0.0-SNAPSHOT-runner' in 1m 40s.
+
+With the workaround of Stint finding 8i (quarkus.native.auto-service-loader-registration=true, decided by Kayan):
+S.4 RF4: S.3 CA1's happy path on both native images
+  t+   0.4s  started native-orders (ORDERS, pid 255832, :8081) 
+  t+   0.7s  started native-billing (BILLING, pid 256796, :8082) 
+  t+   0.8s  sandbox-orders: sandbox-orders 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.064s. Listening on: http://0.0.0.0:8081
+  t+   0.8s  sandbox-billing: sandbox-billing 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.068s. Listening on: http://0.0.0.0:8082
+  t+   4.1s  order native-57b9e0bc confirmed
+  spy, one chain chn-84aa2a58-934d-36c5-9c96-f063382853fa: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]
+  MailHog:
+    native-57b9e0bc@example.com | Order native-57b9e0bc confirmed: invoice inv-a341804e7b11411e | [invoice-inv-a341804e7b11411e.html (342 bytes)]
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [orders]
+    waits                 0   dynamodb scan --table-name orders-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name orders-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name orders-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name orders-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    orders-tasks               visible 0, in flight 0, delayed 0
+    orders-results             visible 0, in flight 0, delayed 0
+    orders-timers              visible 0, in flight 0, delayed 2
+    orders-domain-events       visible 0, in flight 0, delayed 0
+    orders-tasks-dlq           visible 0, in flight 0, delayed 0
+    orders-results-dlq         visible 0, in flight 0, delayed 0
+    orders-timers-dlq          visible 0, in flight 0, delayed 0
+    orders-schedules-dlq       visible 0, in flight 0, delayed 0
+    orders-domain-events-dlq   visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name orders-timers []
+  [billing]
+    waits                 0   dynamodb scan --table-name billing-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name billing-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name billing-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name billing-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    billing-tasks              visible 0, in flight 0, delayed 0
+    billing-results            visible 0, in flight 0, delayed 0
+    billing-timers             visible 0, in flight 0, delayed 6
+    billing-domain-events      visible 0, in flight 0, delayed 0
+    billing-tasks-dlq          visible 0, in flight 0, delayed 0
+    billing-results-dlq        visible 0, in flight 0, delayed 0
+    billing-timers-dlq         visible 0, in flight 0, delayed 0
+    billing-schedules-dlq      visible 0, in flight 0, delayed 0
+    billing-domain-events-dlq  visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name billing-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
+
+Without it (sandbox 434a4b3, gate-out/20261011-140458, NativeIT FAILED: "Not reached within PT3M: native-7d1f3830
+confirmed"), native-orders.log:
+  17:14:34.540 INFO  sandbox-orders 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.062s
+  17:14:35.164 WARN  WorkflowEngine Instance evt-38352bee-bd8d-394d-a714-346a152f23a1 failed
+    java.lang.RuntimeException: Failed to start from event native-7d1f3830: Failed to evaluate jq expression:
+    $context | (.orderId | type) != "string" or .orderId == "" or ... (no cause logged)
+  orders-instances evt-38352bee-...: status FAILED, position "" (the first node: the input validation)
+Then the same build plus -Dquarkus.native.auto-service-loader-registration=true: NativeIT 1/1 (167.3 s), the experiment
+that confirmed the cause (gate-out/native-experiment.log).
