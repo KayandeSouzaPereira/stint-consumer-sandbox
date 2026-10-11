@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.3 |
-| Status | **Em especificação**, aguardando aprovação do Kayan (seção 8) |
+| Status | **Em implementação** (spec aprovada por Kayan em 10/10/2026, com as propostas 8a–8h) |
 | Depende de | S.1 (`4b84eb3`), S.2 (Implementado em `4c5300f`) |
 | Bloqueia | S.4 (cenários cruzados e caos) |
 | Branch | `phase-2-validation` |
