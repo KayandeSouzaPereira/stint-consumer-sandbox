@@ -257,6 +257,12 @@ O CA8 "retry esgotado" verifica isso com 3 falhas forçadas pelo handler de test
 
 **Contorno aplicado** (decisão do Kayan em 10/10/2026): `input.from: '${ {request: $context} }'` na própria task `try`. É DSL 1.0 padrão (transformação de entrada da task). A call ficou sem `with.input`, para não sugerir um efeito que não existe. A correção no Stint fica para um SDD do Stint: aplicar o `with.input` do corpo do `try`, ou rejeitá-lo no `STRICT`.
 
+**Resolvido no Stint** pelo SDD 2.9 (branch `phase-2/federated-orchestration`, 11/10/2026, ainda não no remoto):
+- `ce721d4`: o `with.input` é aplicado depois do `input.from`, inclusive dentro de `try`, e cada retry reenvia a entrada da 1ª tentativa;
+- `35e9c7a`: o `STRICT` falha em qualquer chave declarada e não usada.
+
+O contorno deste SDD (`input.from` no `try`, sem `with.input`) continua válido, com o mesmo resultado. Removê-lo é decisão de um SDD do sandbox, depois de o SHA fixado ser atualizado.
+
 ### 8i. ACHADO no Stint: um timer de retry de 1 s pode disparar antes de a espera existir e se perder (registrado em 10/10/2026)
 **Onde:** Stint `d455dc0`. Envolve `WorkflowEngine.armThenSave`, `SqsDelayTimerService.schedule` e o caminho de retry do SDD 1.3. A página do Stint está no Notion, inacessível; o achado vai para a seção 8 do SDD 1.3 do Stint quando ele voltar.
 
@@ -279,6 +285,12 @@ Isso viola o at-least-once: o timer foi entregue e confirmado sem que o efeito e
 - É intermitente, porque depende de o poller receber a mensagem antes de o `PutItem` da espera terminar.
 
 **Contorno aplicado** (decisão do Kayan em 10/10/2026): opção 1, `delay: {seconds: 2}` em `issue-invoice`. A corrida continua possível, só menos provável. A correção (opção 2) fica para um SDD do Stint.
+
+**Resolvido no Stint** pelo SDD 2.9 (11/10/2026, ainda não no remoto):
+- `8a47d03`: o atraso SQS é arredondado para cima, o JSON do timer leva `armedAt` e o poller trata cada mensagem isoladamente;
+- `33096cb`: um disparo que chega antes da espera é reentregue em vez de perdido, e todo disparo sem espera é logado como `early`, `obsolete` ou `obsolete-after-window`.
+
+Validação cruzada (CA6 do 2.9): com o Stint `185c16b` instalado localmente e `delay: {seconds: 1}` só para o teste, o CA3 deste SDD rodou 20 vezes seguidas sem instância parada. A evidência está no SDD 2.9 do Stint (`docs/sdd/evidence/2.9-CA6.txt`). O contorno (2 s) continua no YAML até um SDD do sandbox atualizar o SHA fixado.
 
 **Contornos avaliados:**
 1. `delay` do retry ≥ 2 s no YAML do sandbox: `DelaySeconds` ≥ 1 deixa uma folga de ~1 s para o `save`. Reduz a probabilidade, mas a corrida continua. Não é configuração documentada pelo Stint.
