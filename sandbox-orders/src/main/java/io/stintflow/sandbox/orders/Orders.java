@@ -2,6 +2,8 @@ package io.stintflow.sandbox.orders;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -51,6 +53,7 @@ public final class Orders {
                 .withId(orderId)
                 .withSource(SOURCE)
                 .withType(ORDER_PLACED)
+                .withTime(OffsetDateTime.now(ZoneOffset.UTC))
                 .withDataContentType("application/json")
                 .withData(Json.bytes(order))
                 .withExtension(StintEvents.EXT_CHAIN_ID, chainId(orderId))
