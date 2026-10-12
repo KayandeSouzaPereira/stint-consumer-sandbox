@@ -18,7 +18,7 @@ runs them together under failures and load. The specs live in [`docs/sdd`](docs/
 
 ## Stint version
 
-The sandbox is pinned to **Stint `b1f4579`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.9).
+The sandbox is pinned to **Stint `9be0898`** (`main`, the merge of Phase 2 in PR #3, with SDDs 2.1–2.10).
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install 
 ```bash
 git clone https://github.com/stintflow/stint.git
 cd stint
-git checkout b1f4579
+git checkout 9be0898
 mvn install -DskipTests
 ```
 
@@ -191,5 +191,5 @@ The domain modules are built and run natively by `bash infra/gate.sh --native` (
   Desktop on Hyper-V never creates a container with a bind mount of `C:`;
 - each runner is copied into an image `stint-s4/<module>:native` on `quay.io/quarkus/ubi9-quarkus-micro-image:2.0`
   and run on the compose network, with the `localhost` endpoints overridden to `floci`, `mailhog` and `jaeger`;
-- Orders and Billing set `quarkus.native.auto-service-loader-registration=true`: a workaround for a Stint finding
-  (S.4 8i), without which every jq expression calling a builtin function (`type`, `length`, ...) fails natively.
+- jq builtin functions (`type`, `length`, ...) work natively without any setting here: since Stint SDD 2.10,
+  `stint-core` carries the native metadata for them (S.4 8i, whose workaround was removed).

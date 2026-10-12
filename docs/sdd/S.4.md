@@ -381,6 +381,10 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 
 **Correção sugerida ao Stint (não feita daqui):** registrar as funções do jackson-jq para o nativo no próprio Stint (por exemplo, na extensão/bundle Quarkus ou num `native-image.properties` do `stint-core`), e pôr no smoke nativo uma expressão com função builtin, para o CA do 2.7 cobrir isso.
 
+**Resolvido no 2.10** (12/10/2026). O SDD 2.10 do Stint pôs no `stint-core` os metadados nativos dos 81 provedores do jackson-jq (`META-INF/native-image/io.stintflow/stint-core`) e uma função builtin (`length`) no smoke nativo. Entrou no `main` pelo PR #3 (merge `9be0898`).
+- O contorno saiu do Orders e do Billing, e o sandbox foi fixado no `9be0898` (README, `pom.xml` e `bootstrap.sh`), conforme a proposta 8b do 2.10.
+- `gate.sh --native` sem o contorno: `NativeIT` 1/1. O build continua com `-H:-UseServiceLoaderFeature` e o Quarkus informa `auto-service-loader-registration is false`, então quem carrega as funções são os metadados do `stint-core` (`S.4-CA5-2.10.txt`).
+
 ## 9. Registro de validação
 
 **Ambiente.**
@@ -402,7 +406,8 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 | `3357e39` | nativo em container e `NativeIT` |
 | `434a4b3` | build nativo remoto e imagens, sem bind mount |
 | `33d4942` | contorno do achado 8i |
-| commit deste registro | evidências, relatório do gate e README |
+| `1f24ceb` | evidências, relatório do gate e README |
+| commit da remoção | 8i resolvido no Stint 2.10: contorno removido, Stint fixado no `9be0898` e CA5 refeito (12/10/2026) |
 
 | CA | Resultado | Evidência |
 |---|---|---|
@@ -410,7 +415,7 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 | CA2 | **Verde 3 vezes seguidas** no `434a4b3`, com `gate.sh --regression-only --repeat 3` (14:29–15:48). Cada rodada passou em:<br>- build e unitários;<br>- `FlociBillingIT` 5/5;<br>- `FlociOrdersIT` 6/6, com o Billing como processo;<br>- `RegressionIT` 3/3.<br>Nos logs, os timers registraram 123 decisões `obsolete` e 0 `early` | `S.4-CA2.txt` |
 | CA3 | **Verde** no `33d4942`, com `gate.sh --only 'ChaosIT,LoadIT,ObservabilityIT'` (`ChaosIT` 5/5).<br>- a: o worker caiu com 137 depois do render; a task foi reentregue em ~30 s ao 2º worker; a mesma fatura foi renderizada 2× (idempotente); 1 confirmação.<br>- b: o engine caiu com 137 no `publish`; ficou 1 fato no `billing-outbox` e 0 no barramento; o engine religado publicou pelo relay em ~30 s.<br>- c: o Orders foi morto no `listen`; o evento esperou na fila; o Orders religado retomou.<br>- d: duas réplicas, com 9 e 11 instâncias, nenhuma nas duas; 20 confirmações e 20 e-mails.<br>- e: 10 avisos, 10 agendamentos one-time, 10 confirmações e 0 agendamentos no fim.<br>Todas as sobras ficaram em 0, exceto os timers atrasados já obsoletos e as duplicatas do d no inbox | `S.4-CA3-{a..e}.txt` |
 | CA4 | **Verde** (`LoadIT`, N=50, 5 `fail503-` e 5 `slow-`):<br>- 50 faturas com ids distintos, 50 `invoice-issued`, 50 `order-confirmed` e 50 e-mails, cada anexo byte a byte igual ao documento do próprio pedido;<br>- 50 cadeias distintas e nenhuma sobra.<br>Só como observação: p50 28,3 s e p95 31,1 s (relatório do gate, 5.3) | `S.4-CA4.txt` |
-| CA5 | **Verde com contorno** (`gate.sh --native` no `33d4942`, `NativeIT` 1/1).<br>- As duas imagens nativas subiram em ~0,07 s; o pedido gerou 4 eventos na mesma cadeia, a confirmação com o anexo certo e nenhuma sobra.<br>- Sem o contorno do 8i, o Orders nativo falha na 1ª expressão com `type` | `S.4-CA5.txt` |
+| CA5 | **Verde com contorno** (`gate.sh --native` no `33d4942`, `NativeIT` 1/1).<br>- As duas imagens nativas subiram em ~0,07 s; o pedido gerou 4 eventos na mesma cadeia, a confirmação com o anexo certo e nenhuma sobra.<br>- Sem o contorno do 8i, o Orders nativo falha na 1ª expressão com `type`.<br>- **Refeito em 12/10/2026 sem o contorno**, com o Stint `9be0898` (8i resolvido no 2.10): `NativeIT` 1/1, mesmos 4 eventos numa cadeia e nenhuma sobra | `S.4-CA5.txt`, `S.4-CA5-2.10.txt` |
 | CA6 | **Verde** (`ObservabilityIT`):<br>- 9 spans com o `stint.chainId` (4 do Orders, 5 do Billing);<br>- `FOLLOWS_FROM` do Billing para o Orders e do Orders para o Billing;<br>- linhas JSON dos dois processos com o mesmo `stint.chainId` (1 no Orders, 2 no Billing) | `S.4-CA6.txt`, `S.4-CA6-jaeger.json` |
 | CA7 | **Verde.** `docs/evidence/phase-2-gate.md` está completo: tabela 2.1–2.9, real × simulado, achados com estado, observações e recomendação, sem nenhuma linha "a verificar" | `docs/evidence/phase-2-gate.md` |
 
@@ -432,5 +437,5 @@ infra/gate.sh [--regression-only] [--repeat 3] [--orders N] [--native]
 **Notion.** O MCP do Notion não conectou nesta sessão. Ficam pendentes:
 - a página S.4 em "Stint · SDDs";
 - o Log da Biblioteca;
-- a cópia do achado 8i para a seção 8 do SDD 2.7 do Stint;
+- a cópia do achado 8i (resolvido no 2.10) para a seção 8 do SDD 2.7 do Stint;
 - a dos achados S.2 8h/8i (já resolvidos no 2.9) para o SDD 1.3.

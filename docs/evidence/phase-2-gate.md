@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | SDD | S.4 (RF6, CA7) |
-| Stint | `b1f4579` (`phase-2/federated-orchestration`, no remoto), SDDs 2.1–2.9 |
+| Stint | `b1f4579` (`phase-2/federated-orchestration`, no remoto), SDDs 2.1–2.9. Nativo refeito em 12/10/2026 com `9be0898` (`main`, merge do PR #3, SDDs 2.1–2.10) |
 | Sandbox | `phase-2-validation` @ `33d4942` (regressão no `434a4b3`, que só difere na configuração do build nativo) |
 | Data | 11/10/2026 |
 | Ambiente | Windows 11, JDK 25 (Temurin 25.0.3), Maven 3.9.15, Quarkus 3.33.2, Docker Desktop (Hyper-V, 10 GB) com floci, MailHog e Jaeger do `docker-compose.yml` |
@@ -12,6 +12,8 @@
 ## 1. Recomendação
 
 **Recomendo aprovar o gate da Fase 2, com uma condição: o achado 4.1 (funções builtin do jq ausentes no nativo) corrigido no Stint, ou aceito explicitamente como pendência do 2.7, antes do merge do PR das SDDs 2.4–2.9.**
+
+**Atualização (12/10/2026): a condição foi cumprida.** O achado 4.1 foi corrigido pelo SDD 2.10 do Stint, mergeado no `main` (PR #3, `9be0898`). Sem o contorno, o caminho feliz passa nos dois binários nativos (`S.4-CA5-2.10.txt`).
 
 - Todos os critérios do S.4 estão verdes (seção 9 do `docs/sdd/S.4.md`):
   - a regressão completa do S.1–S.3 passou 3 vezes seguidas;
@@ -36,7 +38,7 @@ Cada linha diz o que o SDD promete, onde o sandbox exercitou isso de ponta a pon
 | 2.4 | `schedule.cron` reconciliado e timers longos pelo EventBridge Scheduler (one-time `at(...)`), apagados quando deixam de valer | S.2 CA5 (resumo por cron a cada minuto, ocorrência duplicada); S.3 CA3 (timeout curto, depois espera de 24 h no Scheduler, apagada ao confirmar; disparo tardio simulado ignorado); RF2e (10 pedidos) | Verde: 1 e-mail por ocorrência; no RF2e 10 avisos de atraso, 10 agendamentos one-time, 10 confirmações e 0 agendamentos no fim; o disparo tardio sai como `decision=obsolete` | `S.2-CA5.txt`, `S.4-CA2-s3-ca3-run{1..3}.txt`, `S.4-CA3-e.txt` |
 | 2.5 | Linhagem: `chainid`/`causationid` em todo evento, contexto de trace entre domínios (links), MDC nos logs | S.2 CA1; S.3 CA1 (4 eventos com o mesmo `chainid`); RF3 (50 cadeias distintas); RF5 (Jaeger + logs) | Verde: trace do Billing com `FOLLOWS_FROM` para o span do Orders que publicou o pedido, e a retomada do Orders com `FOLLOWS_FROM` para o span do Billing; linhas de log dos dois processos com o mesmo `stint.chainId` | `S.2-CA1.txt`, `S.3-CA1.txt`, `S.4-CA4.txt`, `S.4-CA6.txt`, `S.4-CA6-jaeger.json` |
 | 2.6 | O marco: workflows independentes ligados só por eventos (`emit` → `schedule.on`), cada um no seu domínio | A federação inteira: S.3 CA1 (Orders → Billing → Orders), independência de compilação (S.2 CA7, S.3 CA9, enforcer do `sandbox-scenarios`) | Verde: nenhum módulo depende do outro; o único artefato comum é o contrato | `S.3-CA1.txt`, `S.2-CA7.txt`, `S.3-CA9.txt` |
-| 2.7 | Extensões Quarkus dos conectores AWS e imagem nativa | Todos os cenários rodam os jars Quarkus; RF4 roda os dois domínios como imagens nativas em containers na rede do compose | Verde **com contorno**: sem ele, o nativo do Orders falha em toda expressão jq com função builtin (achado 4.1); com `quarkus.native.auto-service-loader-registration=true`, o caminho feliz do S.3 CA1 passa nos dois binários | `S.4-CA5.txt` |
+| 2.7 | Extensões Quarkus dos conectores AWS e imagem nativa | Todos os cenários rodam os jars Quarkus; RF4 roda os dois domínios como imagens nativas em containers na rede do compose | Verde **com contorno**: sem ele, o nativo do Orders falha em toda expressão jq com função builtin (achado 4.1); com `quarkus.native.auto-service-loader-registration=true`, o caminho feliz do S.3 CA1 passa nos dois binários. **Verde sem contorno** com o Stint `9be0898` (2.10) | `S.4-CA5.txt`, `S.4-CA5-2.10.txt` |
 | 2.8 | Erros padrão da DSL 1.0 (`type` URI + `status`) no fio e nos `catch` | S.2 CA3 (render com 503 duas vezes, sucesso na 3ª); S.3 CA7; RF3 (5 pedidos `fail503-` sob carga) | Verde: o `catch` filtra `communication`/503; tentativas 1 e 2 falham, 3 passa; sob carga, os 5 confirmam | `S.4-CA2-*` (FlociBillingIT `ca3`, FlociOrdersIT `ca7`), `S.4-CA4.txt` |
 | 2.9 | Correções da validação externa: delay SQS arredondado para cima, disparo adiantado reentregue, `with.input` dentro de `try`, STRICT completo | RF0: o `issue-invoice` voltou à DSL pura (`with.input` dentro do `try`, retry de 1 s), o piso de 2 s do Orders saiu, os 5 YAMLs carregam em STRICT; S.2 CA3 com 1 s nas 3 regressões; RF3 | Verde: 0 disparos `early` nos logs; nenhuma instância parada | `S.4-CA1.txt`, `S.4-CA2-*`, `S.4-CA4.txt` |
 
@@ -65,7 +67,7 @@ Cada linha diz o que o SDD promete, onde o sandbox exercitou isso de ponta a pon
 
 | # | Achado | Origem | Estado |
 |---|---|---|---|
-| 4.1 | **Nativo sem as funções builtin do jq.** O build nativo do Quarkus desliga o `ServiceLoaderFeature`; o jackson-jq carrega `type`, `length` e as demais por `ServiceLoader`, então toda expressão com função falha no binário. O smoke nativo do 2.7 só usa caminhos e não pegou (o `docs/connectors.md` diz "Native: proven by stint-example-aws-smoke") | S.4 8i | **Aberto no Stint.** Contorno no sandbox decidido por Kayan: `quarkus.native.auto-service-loader-registration=true`. Correção sugerida: registrar as funções no próprio Stint e pôr uma função builtin no smoke nativo |
+| 4.1 | **Nativo sem as funções builtin do jq.** O build nativo do Quarkus desliga o `ServiceLoaderFeature`; o jackson-jq carrega `type`, `length` e as demais por `ServiceLoader`, então toda expressão com função falha no binário. O smoke nativo do 2.7 só usa caminhos e não pegou (o `docs/connectors.md` diz "Native: proven by stint-example-aws-smoke") | S.4 8i | Resolvido no 2.10 (metadados nativos dos provedores do jackson-jq no `stint-core` e `length` no smoke nativo; `main` `9be0898`). Contorno removido em 12/10/2026; `NativeIT` verde sem ele |
 | 4.2 | `with.input` de uma `call: remote` dentro de `try` era ignorado | S.2 8h | Resolvido no 2.9 (RF4). Contorno removido no RF0 |
 | 4.3 | Timer de retry de 1 s podia disparar antes de a espera existir e se perder | S.2 8i (e S.3 8h) | Resolvido no 2.9 (arredondamento e reentrega `early`). Contornos removidos no RF0; 0 `early` nos logs |
 | 4.4 | Dev service do SNS subia o LocalStack no teste do smoke AWS | 2.7 | Resolvido no 2.9 (8g-3) |

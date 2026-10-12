@@ -2,7 +2,7 @@
 # SDD S.1, RF5: creates every AWS resource the sandbox needs on floci. Idempotent: run it as often as you like,
 # nothing is duplicated and nothing that exists is changed.
 #
-# Schemas and settings are copied from Stint (branch phase-2/federated-orchestration, SHA b1f4579):
+# Schemas and settings are copied from Stint (main, SHA 9be0898):
 #   - DynamoDB tables: stint-it/.../DynamoDbTestTables.java and docs/connectors.md (outbox, inbox)
 #   - SQS: docs/connectors.md "SQS setup" (redrive maxReceiveCount 5, visibility 30 s, retention 4 d; DLQ 14 d)
 #   - EventBridge -> SQS with InputPath $.detail: docs/connectors.md; catch-all pattern from FlociEmitIT

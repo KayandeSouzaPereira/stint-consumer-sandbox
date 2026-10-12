@@ -24,7 +24,7 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.33.2</quarkus.platform.version>
-        <!-- Stint branch phase-2/federated-orchestration at SHA b1f4579, installed with mvn install (README). -->
+        <!-- Stint main at SHA 9be0898, installed with mvn install (README). -->
         <stint.version>0.1.0-SNAPSHOT</stint.version>
         <assertj.version>3.26.3</assertj.version>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
