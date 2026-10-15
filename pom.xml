@@ -19,9 +19,9 @@
         <module>sandbox-contracts</module>
         <module>sandbox-privacy</module>
         <module>sandbox-records</module>
-        <!-- <module>sandbox-channels</module> -->
+        <module>sandbox-channels</module>
         <module>sandbox-target</module>
-        <!-- <module>sandbox-business</module> -->
+        <module>sandbox-business</module>
         <!-- <module>sandbox-engineering</module> -->
         <!-- <module>sandbox-delivery</module> -->
         <module>sandbox-scenarios</module>
