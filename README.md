@@ -18,7 +18,8 @@ runs them together under failures and load. The specs live in [`docs/sdd`](docs/
 
 ## Stint version
 
-The sandbox is pinned to **Stint `9be0898`** (`main`, the merge of Phase 2 in PR #3, with SDDs 2.1–2.10).
+The sandbox is pinned to **Stint `500dfd1`** (branch `phase-3a/ai-decision-workers`, Phase 3a: SDDs 3a.1–3a.7, PR #5),
+since S.5. Phases 1 and 2 were validated on `9be0898` (`main`).
 
 ## Prerequisites
 
@@ -34,7 +35,7 @@ Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install 
 ```bash
 git clone https://github.com/stintflow/stint.git
 cd stint
-git checkout 9be0898
+git checkout 500dfd1
 mvn install -DskipTests
 ```
 

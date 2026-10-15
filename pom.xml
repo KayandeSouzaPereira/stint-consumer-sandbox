@@ -15,6 +15,15 @@
         <module>sandbox-reports</module>
         <module>sandbox-orders</module>
         <module>sandbox-billing</module>
+        <!-- SDD S.5: the meeting pipeline. Domains talk only through contracts (events and schemas). -->
+        <module>sandbox-contracts</module>
+        <module>sandbox-privacy</module>
+        <module>sandbox-records</module>
+        <!-- <module>sandbox-channels</module> -->
+        <module>sandbox-target</module>
+        <!-- <module>sandbox-business</module> -->
+        <!-- <module>sandbox-engineering</module> -->
+        <!-- <module>sandbox-delivery</module> -->
         <module>sandbox-scenarios</module>
     </modules>
 
@@ -24,7 +33,7 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.33.2</quarkus.platform.version>
-        <!-- Stint main at SHA 9be0898, installed with mvn install (README). -->
+        <!-- Stint at SHA 500dfd1 (phase-3a/ai-decision-workers, SDD S.5 RF1), installed with mvn install (README). -->
         <stint.version>0.1.0-SNAPSHOT</stint.version>
         <assertj.version>3.26.3</assertj.version>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
@@ -80,6 +89,54 @@
                 <groupId>io.github.stintflow</groupId>
                 <artifactId>stint-otel</artifactId>
                 <version>${stint.version}</version>
+            </dependency>
+            <!-- SDD S.5: Phase 3a workers (3a.2-3a.7) -->
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-aws-worker</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-decision</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-decision-jev</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-langchain4j</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-redaction</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-transcription</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-publishing</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.stintflow.sandbox</groupId>
+                <artifactId>sandbox-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-langchain4j-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.assertj</groupId>
@@ -147,6 +204,24 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>${enforcer-plugin.version}</version>
+                </plugin>
+                <!-- SDD S.5, RF7 (as Stint's 3a.2 CA4): a test JVM resolves only the names in infra/test-hosts
+                     (localhost), so no test reaches a real model provider, even by mistake. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>-Djdk.net.hosts.file=${maven.multiModuleProjectDirectory}/infra/test-hosts</argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>-Djdk.net.hosts.file=${maven.multiModuleProjectDirectory}/infra/test-hosts</argLine>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

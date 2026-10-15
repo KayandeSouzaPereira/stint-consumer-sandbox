@@ -1,0 +1,4 @@
+# SDD S.5, RF7: the only names a test JVM may resolve (-Djdk.net.hosts.file, set in the parent pom).
+# floci, MailHog, Jaeger, the apps and the fake model servers are all on localhost.
+127.0.0.1 localhost
+::1 localhost

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/meeting-recorded.v1.schema.json",
+  "title": "io.sandbox.channels.meeting-recorded.v1 — data (SDD S.5, 8b)",
+  "description": "The same data as Stint's io.stintflow.examples.meeting-recorded.v1 (copied unchanged from Stint 500dfd1 into stint-meeting-recorded.v1.schema.json; a test checks its hash). Project, cycle and stage travel as extensions, never in data.",
+  "$ref": "stint-meeting-recorded.v1.schema.json"
+}

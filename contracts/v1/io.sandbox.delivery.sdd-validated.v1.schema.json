@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/io.sandbox.delivery.sdd-validated.v1.schema.json",
+  "title": "io.sandbox.delivery.sdd-validated.v1 — data (SDD S.5, 8b)",
+  "description": "An SDD's delivery ended accepted: validated by the validators, or accepted by the technician from the DLQ. Ids, pointers, enums and counts only: never any text of a meeting, document or person. Additive changes only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sddId",
+    "attempts",
+    "outcome",
+    "reportRef"
+  ],
+  "properties": {
+    "sddId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "enum": [
+        "validated",
+        "accepted"
+      ]
+    },
+    "reportRef": {
+      "type": "string",
+      "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$",
+      "description": "A pointer: s3://bucket/key or record://<recordId>/<version>"
+    }
+  }
+}

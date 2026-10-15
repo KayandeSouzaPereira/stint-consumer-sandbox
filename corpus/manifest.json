@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "language": "en",
+  "meetings": [
+    {
+      "id": "a1-c1-business",
+      "script": "meetings/a1-c1-business.yaml",
+      "scriptSha256": "55adb37bdce500153d98d5ef3a7b4868e50ef2e3970f299874a2b4394affff4c"
+    },
+    {
+      "id": "a2-c1-technical",
+      "script": "meetings/a2-c1-technical.yaml",
+      "scriptSha256": "ae2b0f5bc81c841bc2a55532f1acb5ed3dff5f47396b6ff93e8e0fa678ec8173"
+    },
+    {
+      "id": "o1-c1-business",
+      "script": "meetings/o1-c1-business.yaml",
+      "scriptSha256": "1d2d49d22d4c822a6b3687b227d1368e380c82beb7cea373c6a3b649424ab8a8"
+    },
+    {
+      "id": "o2-c1-technical",
+      "script": "meetings/o2-c1-technical.yaml",
+      "scriptSha256": "69af2cfc46bcac3b03e6fc2b2b33f03680cf60864d0f9ffff56a93a929719d63"
+    },
+    {
+      "id": "p1-c1-business",
+      "script": "meetings/p1-c1-business.yaml",
+      "scriptSha256": "c81608d352fe99a1c808c8ff7b210b5c960c36e9058da2b2b04bb5878fb13066"
+    },
+    {
+      "id": "p1-c1-technical",
+      "script": "meetings/p1-c1-technical.yaml",
+      "scriptSha256": "6f1392fe7b39507f544c98a1e10a876fddc3c53780574df4a6e5e479386be3ae"
+    },
+    {
+      "id": "p2-c1-business",
+      "script": "meetings/p2-c1-business.yaml",
+      "scriptSha256": "d8602e07ea7c9f40b372b0749d00ff04d36c7aa9ce0ab3fb95f6fc03935bef36"
+    },
+    {
+      "id": "p2-c1-technical",
+      "script": "meetings/p2-c1-technical.yaml",
+      "scriptSha256": "398d108115c9cb39674b9674490cdcac9190b5e72a877b6d19ad7216d200e59b"
+    },
+    {
+      "id": "p2-c2-business",
+      "script": "meetings/p2-c2-business.yaml",
+      "scriptSha256": "8be65d08b5cae06bbe3e044c53a86bdf6323e1b41c7bb0d556ec07587648d5dd"
+    },
+    {
+      "id": "p2-c2-technical",
+      "script": "meetings/p2-c2-technical.yaml",
+      "scriptSha256": "29f56d5f61c725e9671714fe98880579574f78bdfe4a2e3e7b2c6d84af7b82c3"
+    },
+    {
+      "id": "p3-c1-business",
+      "script": "meetings/p3-c1-business.yaml",
+      "scriptSha256": "a25f3a54ee03a72bff3fcc92114b3ab3a191df14d8c2a00aaf826898c0c673cd"
+    },
+    {
+      "id": "p4-c1-technical",
+      "script": "meetings/p4-c1-technical.yaml",
+      "scriptSha256": "593c02c9418aa5abefd01075841e37a78cd59c4dc9b6434bdb08e32939d7dfee"
+    },
+    {
+      "id": "p5-c1-technical",
+      "script": "meetings/p5-c1-technical.yaml",
+      "scriptSha256": "3fd920eedf841a18b4d536aef00b0ef75fc78ebef130318168b4f47095b9ad88"
+    },
+    {
+      "id": "p6-c1-business",
+      "script": "meetings/p6-c1-business.yaml",
+      "scriptSha256": "8a22459837dfd490defce1032c23f198611498db6ba19a3dc90e1b957604bc3a"
+    }
+  ]
+}

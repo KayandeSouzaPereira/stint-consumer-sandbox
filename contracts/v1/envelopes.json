@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "description": "SDD S.5, 8b: per type, who publishes it, its data schema, and the CloudEvents attributes and extensions it must carry. Correlation is by these extensions and subject, never by data (Stint 3a.5).",
+  "extensions": {
+    "sandboxproject": "^[a-z0-9-]{1,40}$",
+    "sandboxcycle": "^[1-9][0-9]{0,3}$",
+    "sandboxsdd": "^[A-Za-z0-9._:-]{1,128}$",
+    "sandboxstage": "^(business|technical)$",
+    "sandboxdomain": "^(business|engineering|delivery)$"
+  },
+  "types": {
+    "io.sandbox.channels.meeting-recorded.v1": {
+      "source": "https://sandbox.stintflow.io/channels",
+      "schema": "meeting-recorded.v1.schema.json",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxstage"
+      ]
+    },
+    "io.sandbox.business.design-published.v1": {
+      "source": "https://sandbox.stintflow.io/business",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.business.design-published.v1.schema.json"
+    },
+    "io.sandbox.engineering.refinement-requested.v1": {
+      "source": "https://sandbox.stintflow.io/engineering",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.engineering.refinement-requested.v1.schema.json"
+    },
+    "io.sandbox.engineering.questions-sent.v1": {
+      "source": "https://sandbox.stintflow.io/engineering",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.engineering.questions-sent.v1.schema.json"
+    },
+    "io.sandbox.engineering.sdd-batch-approved.v1": {
+      "source": "https://sandbox.stintflow.io/engineering",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.engineering.sdd-batch-approved.v1.schema.json"
+    },
+    "io.sandbox.delivery.sdd-ready.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxsdd"
+      ],
+      "schema": "io.sandbox.delivery.sdd-ready.v1.schema.json"
+    },
+    "io.sandbox.delivery.sdd-implemented.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxsdd"
+      ],
+      "schema": "io.sandbox.delivery.sdd-implemented.v1.schema.json"
+    },
+    "io.sandbox.delivery.sdd-validated.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxsdd"
+      ],
+      "schema": "io.sandbox.delivery.sdd-validated.v1.schema.json"
+    },
+    "io.sandbox.delivery.sdd-cancelled.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxsdd"
+      ],
+      "schema": "io.sandbox.delivery.sdd-cancelled.v1.schema.json"
+    },
+    "io.sandbox.delivery.sdd-dead-lettered.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle",
+        "sandboxsdd"
+      ],
+      "schema": "io.sandbox.delivery.sdd-dead-lettered.v1.schema.json"
+    },
+    "io.sandbox.delivery.cycle-closed.v1": {
+      "source": "https://sandbox.stintflow.io/delivery",
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.delivery.cycle-closed.v1.schema.json"
+    },
+    "io.sandbox.records.document-registered.v1": {
+      "source": null,
+      "extensions": [
+        "sandboxproject",
+        "sandboxcycle"
+      ],
+      "schema": "io.sandbox.records.document-registered.v1.schema.json"
+    }
+  }
+}

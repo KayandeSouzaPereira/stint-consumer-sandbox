@@ -1,0 +1,28 @@
+{
+  "description" : "SDD S.5, 8d: normalized forms (lowercase letters and digits, at least 10 long) of every planted marker, written and spoken. Generated from the corpus by PipelineCorpusTest (-Dcorpus.write=true); do not edit.",
+  "forms" : {
+    "SYNTH-PII-2011" : [ "sinthepii2011rivera", "synthpii2011", "synthpii2011rivera", "synthpiitwozerooneonerivera" ],
+    "SYNTH-PII-2012" : [ "sinthepii2012atexamplecalm", "synthpii2012", "synthpii2012examplecom", "synthpiitwozeroonetwoatexampledotcom" ],
+    "SYNTH-PII-2021" : [ "sinthepii2021rivera", "synthpii2021", "synthpii2021rivera", "synthpiitwozerotwoonerivera" ],
+    "SYNTH-PII-2022" : [ "5511980224022", "plus5511980224022", "plusfivefiveoneonenineeightzerotwotwofourzerotwotwo", "synthpii2022" ],
+    "SYNTH-PII-2031" : [ "sinthepii2031rivera", "synthpii2031", "synthpii2031rivera", "synthpiitwozerothreeonerivera" ],
+    "SYNTH-PII-2032" : [ "sinthepii2032atexamplecalm", "synthpii2032", "synthpii2032examplecom", "synthpiitwozerothreetwoatexampledotcom" ],
+    "SYNTH-PII-2041" : [ "sinthepii2041rivera", "synthpii2041", "synthpii2041rivera", "synthpiitwozerofouronerivera" ],
+    "SYNTH-PII-2051" : [ "sinthepii2051rivera", "synthpii2051", "synthpii2051rivera", "synthpiitwozerofiveonerivera" ],
+    "SYNTH-PII-2052" : [ "sinthepii2052atexamplecalm", "synthpii2052", "synthpii2052examplecom", "synthpiitwozerofivetwoatexampledotcom" ],
+    "SYNTH-PII-2061" : [ "sinthepii2061rivera", "synthpii2061", "synthpii2061rivera", "synthpiitwozerosixonerivera" ],
+    "SYNTH-PII-2071" : [ "sinthepii2071rivera", "synthpii2071", "synthpii2071rivera", "synthpiitwozerosevenonerivera" ],
+    "SYNTH-PII-2072" : [ "sinthepii2072atexamplecalm", "synthpii2072", "synthpii2072examplecom", "synthpiitwozeroseventwoatexampledotcom" ],
+    "SYNTH-PII-2081" : [ "sinthepii2081rivera", "synthpii2081", "synthpii2081rivera", "synthpiitwozeroeightonerivera" ],
+    "SYNTH-PII-2082" : [ "5511980824082", "plus5511980824082", "plusfivefiveoneonenineeightzeroeighttwofourzeroeighttwo", "synthpii2082" ],
+    "SYNTH-PII-2091" : [ "sinthepii2091rivera", "synthpii2091", "synthpii2091rivera", "synthpiitwozeronineonerivera" ],
+    "SYNTH-PII-2101" : [ "sinthepii2101rivera", "synthpii2101", "synthpii2101rivera", "synthpiitwoonezeroonerivera" ],
+    "SYNTH-PII-2102" : [ "sinthepii2102atexamplecalm", "synthpii2102", "synthpii2102examplecom", "synthpiitwoonezerotwoatexampledotcom" ],
+    "SYNTH-PII-2111" : [ "sinthepii2111rivera", "synthpii2111", "synthpii2111rivera", "synthpiitwooneoneonerivera" ],
+    "SYNTH-PII-2121" : [ "sinthepii2121rivera", "synthpii2121", "synthpii2121rivera", "synthpiitwoonetwoonerivera" ],
+    "SYNTH-PII-2122" : [ "sinthepii2122atexamplecalm", "synthpii2122", "synthpii2122examplecom", "synthpiitwoonetwotwoatexampledotcom" ],
+    "SYNTH-PII-2131" : [ "sinthepii2131rivera", "synthpii2131", "synthpii2131rivera", "synthpiitwoonethreeonerivera" ],
+    "SYNTH-PII-2141" : [ "sinthepii2141rivera", "synthpii2141", "synthpii2141rivera", "synthpiitwoonefouronerivera" ],
+    "SYNTH-PII-2142" : [ "5511981424142", "plus5511981424142", "plusfivefiveoneonenineeightonefourtwofouronefourtwo", "synthpii2142" ]
+  }
+}
