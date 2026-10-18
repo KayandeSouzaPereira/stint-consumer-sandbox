@@ -119,7 +119,7 @@ class BusinessDesignWorkflowTest {
             InstanceSnapshot end = d.run(recorded(d, m), r -> asTheKey(r, m), Duration.ofSeconds(30));
 
             assertThat(end.status()).as(end.context().toString()).isEqualTo(InstanceStatus.COMPLETED);
-            CloudEvent published = d.published(PipelineEvents.DESIGN_PUBLISHED).getFirst();
+            CloudEvent published = d.awaitPublished(PipelineEvents.DESIGN_PUBLISHED, 1, Duration.ofSeconds(5)).getFirst();
             assertThat(published.getExtension(PipelineEvents.EXT_PROJECT)).isEqualTo("p1");
             assertThat(published.getExtension(PipelineEvents.EXT_CYCLE)).isEqualTo("1");
             assertThat(published.getSubject()).isEqualTo("p1-c1-design");
@@ -151,7 +151,7 @@ class BusinessDesignWorkflowTest {
             InstanceSnapshot end = d.run(recorded(d, m), r -> asTheKey(r, m), Duration.ofSeconds(30));
             assertThat(end.status()).as(end.context().toString()).isEqualTo(InstanceStatus.COMPLETED);
             assertThat(d.published(PipelineEvents.REVIEW_REQUESTED)).hasSize(3);   // type, channel, approval
-            assertThat(d.published(PipelineEvents.DESIGN_PUBLISHED)).hasSize(1);
+            assertThat(d.awaitPublished(PipelineEvents.DESIGN_PUBLISHED, 1, Duration.ofSeconds(5))).hasSize(1);
             assertContractAndNoMarker(d);
         }
     }

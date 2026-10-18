@@ -1,0 +1,247 @@
+# SDD S.5, 8h: the Engineering domain's skeleton. A technical meeting's recording -> transcription -> the PII filter
+# (sandbox-privacy) -> LitJev: meeting type, priority, SDDs or questions, blocking question ->
+#   SDDs: written, registered one by one (sandbox-records), approved item by item by the technical representative ->
+#         sdd-batch-approved (Delivery);
+#   questions: written, registered, sent to Business by e-mail -> questions-sent, which restarts the cycle (cycle + 1).
+# Events carry ids and pointers only, and correlate by extensions. The domain logic is S.9.
+document:
+  dsl: '1.0.0'
+  namespace: engineering
+  name: technical-meeting
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.label }'
+      routes:
+        restricted: [transcribe, redactor]
+        confidential: [redactor, decide-meeting-type, decide-priority, decide-outcome, decide-blocking, write-sdds,
+                       write-questions, register-document]
+        internal: ['*']
+      retention:
+        restricted: { days: 7 }
+        raw-audio: { days: 7 }
+        raw-transcript: { days: 7 }
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.channels.meeting-recorded.v1, sandboxstage: technical }
+do:
+  - meeting:
+      set: '${ .[0] | {meetingId: .data.meetingId, audioRef: .data.audioRef, language: .data.language, projectId: .sandboxproject, cycle: .sandboxcycle} }'
+      export: { as: '${ . }' }
+  - transcribe:
+      try:
+        - run:
+            call: remote
+            with:
+              task: transcribe
+              input: '${ {audioRef: $context.audioRef, language: $context.language} }'
+            timeout: { after: { minutes: 30 } }
+            export: { as: '${ $context + {transcriptRef: .transcriptRef} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 5 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 3 }
+  - redact:
+      call: redact
+      with:
+        task: redactor
+        input: '${ $context.transcriptRef }'
+        lowersTo: confidential
+      onDoubt: doubt
+      export: { as: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, redacted: .output} }' }
+  - meetingType:
+      call: decision
+      with:
+        task: decide-meeting-type
+        kind: choice
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+        options:
+          - business-design: { description: "A business meeting that designs a product or feature" }
+          - technical-refinement: { description: "A technical meeting that refines a design into work" }
+          - out-of-scope: { description: "Anything else: social, another project" }
+      onUncertain:
+        review:
+          role: tech-rep
+          material: '${ "stint-review://meetings/" + $context.meetingId }'
+          deadline: { hours: 24 }
+          remind: { hours: 20 }
+          onTimeout: { value: out-of-scope }
+      export: { as: '${ $context + {meetingType: .value} }' }
+  - inScope:
+      switch:
+        - refinement:
+            when: '$context.meetingType == "technical-refinement"'
+            then: priority
+        - other:
+            then: end
+  - priority:
+      call: decision
+      with:
+        task: decide-priority
+        kind: score
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+      export: { as: '${ $context + {priority: .value} }' }
+  - outcome:
+      call: decision
+      with:
+        task: decide-outcome
+        kind: choice
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+        options:
+          - sdds: { description: "The meeting decided the work: write the SDDs" }
+          - questions: { description: "The meeting needs answers from Business first" }
+      onUncertain:
+        review:
+          role: tech-rep
+          material: '${ "stint-review://meetings/" + $context.meetingId }'
+          deadline: { hours: 24 }
+          remind: { hours: 20 }
+          onTimeout: { value: questions }
+      export: { as: '${ $context + {outcome: .value} }' }
+  - blocking:
+      call: decision
+      with:
+        task: decide-blocking
+        kind: boolean
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+        options:
+          - "true": { description: "Some question must be answered by Business before any SDD can be written" }
+          - "false": { description: "Nothing blocks writing the SDDs" }
+      export: { as: '${ $context + {blocking: .value} }' }
+  - route:
+      switch:
+        - ask:
+            when: '$context.outcome == "questions" or $context.blocking == true'
+            then: writeQuestions
+        - write:
+            then: writeSdds
+
+  # --- questions: Business answers in a new meeting, cycle + 1 ---
+  - writeQuestions:
+      call: remote
+      with:
+        task: write-questions
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted} }'
+      export: { as: '${ $context + {questionsId: .documentId, questionsRef: .questionsRef, questionCount: .questionCount} }' }
+  - registerQuestions:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.questionsId, documentRef: $context.questionsRef, kind: "questions", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {questionsRecord: .} }' }
+  - questionsRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":questions-registered" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.questionsRecord.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ $context.questionsRecord | {recordId, version, sha256, kind: "questions", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+  - questionsSent:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":questions-sent" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.engineering.questions-sent.v1
+            subject: '${ $context.questionsRecord.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.questionsRecord.recordId, questionsRef: $context.questionsRef, questionCount: $context.questionCount, nextCycle: (($context.cycle | tonumber) + 1)} }'
+      then: end
+
+  # --- SDDs: each registered (a loop: no 'for' in Stint), then approved item by item ---
+  - writeSdds:
+      call: remote
+      with:
+        task: write-sdds
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted} }'
+      export: { as: '${ $context + {batchId: .batchId, batchRef: .batchRef, sdds: .sdds, next: 0, recordIds: []} }' }
+  - registerBatch:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.batchId, documentRef: $context.batchRef, kind: "sdd-batch", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {recordIds: [.recordId], last: .} }' }
+  - batchRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":batch-registered" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.last.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ $context.last | {recordId, version, sha256, kind: "sdd-batch", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+  - nextSdd:
+      switch:
+        - more:
+            when: '$context.next < ($context.sdds | length)'
+            then: registerSdd
+        - done:
+            then: approve
+  - registerSdd:
+      call: remote
+      with:
+        task: register-document
+        input: '${ $context.sdds[$context.next] as $s | {documentId: $s.sddId, documentRef: $s.sddRef, kind: "sdd", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {recordIds: ($context.recordIds + [.recordId]), last: .} }' }
+  - sddRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-registered:" + $context.sdds[$context.next].sddId }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.last.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ $context.last | {recordId, version, sha256, kind: "sdd", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+  - advance:
+      set: '${ $context + {next: ($context.next + 1)} }'
+      export: { as: '${ . }' }
+      then: nextSdd
+  - approve:
+      call: review
+      with:
+        kind: approval
+        role: tech-rep
+        material: '${ $context.batchRef }'
+        items: '${ [$context.sdds[].sddId] }'
+        deadline: { hours: 48 }
+        remind: { hours: 40 }
+      onReject: rejected
+      export: { as: '${ $context + {verdict: .verdict, rejectedItems: .rejectedItems} }' }
+      then: approved
+  - approved:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-batch-approved" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.engineering.sdd-batch-approved.v1
+            subject: '${ $context.batchId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {batchId: $context.batchId, batchRef: $context.batchRef, sddIds: [$context.sdds[].sddId], recordIds: $context.recordIds} }'
+      then: end
+  - rejected:
+      set: '${ $context + {outcome: "rejected"} }'
+      export: { as: '${ . }' }
+      then: end
+  - doubt:
+      set: '${ {meetingId: $context.meetingId, outcome: "redaction-doubt"} }'
+      export: { as: '${ . }' }
+      then: end

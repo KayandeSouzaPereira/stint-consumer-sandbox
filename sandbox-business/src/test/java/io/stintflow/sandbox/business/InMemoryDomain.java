@@ -116,6 +116,20 @@ final class InMemoryDomain implements AutoCloseable {
         return state.load(id).toCompletableFuture().get(10, TimeUnit.SECONDS).orElseThrow();
     }
 
+    /**
+     * The events of {@code type} once there are at least {@code count}: the outbox publishes after the instance's
+     * save, so a finished instance's last facts may still be on their way.
+     */
+    List<CloudEvent> awaitPublished(String type, int count, Duration patience) {
+        long until = System.nanoTime() + patience.toNanos();
+        List<CloudEvent> found = published(type);
+        while (found.size() < count && System.nanoTime() < until) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
+            found = published(type);
+        }
+        return found;
+    }
+
     List<CloudEvent> published(String type) {
         List<CloudEvent> out = new ArrayList<>();
         bus.published().stream().filter(e -> e.getType().equals(type)).forEach(out::add);
