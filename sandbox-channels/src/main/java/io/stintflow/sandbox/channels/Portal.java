@@ -41,7 +41,7 @@ public final class Portal {
 
     /** An open review: the roles the engine asked so far (an escalation adds one), and what the answer must hold. */
     public record Open(String reviewId, String domain, String kind, List<String> options, List<String> items,
-            Set<String> roles, JsonNode request) {
+            Set<String> roles, String chainId, JsonNode request) {
     }
 
     public enum Outcome {
@@ -78,7 +78,9 @@ public final class Portal {
             ObjectNode request = data.deepCopy();
             request.put("reviewId", reviewId).put("domain", domain.toString());
             request.set("roles", Json.MAPPER.valueToTree(roles));
-            return new Open(reviewId, domain.toString(), data.path("kind").asText(), options, items, roles, request);
+            Object chain = event.getExtension(StintEvents.EXT_CHAIN_ID);
+            return new Open(reviewId, domain.toString(), data.path("kind").asText(), options, items, roles,
+                    chain == null ? null : chain.toString(), request);
         });
         LOG.infof("Review %s open for %s (domain %s)", reviewId, role, domain);
     }
@@ -109,7 +111,11 @@ public final class Portal {
                     violations.size());
             return Outcome.OUT_OF_CONTRACT;
         }
-        bus.accept(completed(source, reviewId, role, review.domain(), data));
+        CloudEvent completed = completed(source, reviewId, role, review.domain(), data);
+        if (review.chainId() != null) {   // the answer stays on the chain of the review it answers (8b)
+            completed = CloudEventBuilder.v1(completed).withExtension(StintEvents.EXT_CHAIN_ID, review.chainId()).build();
+        }
+        bus.accept(completed);
         open.remove(reviewId);
         LOG.infof("Review %s answered by role %s", reviewId, role);
         return Outcome.PUBLISHED;

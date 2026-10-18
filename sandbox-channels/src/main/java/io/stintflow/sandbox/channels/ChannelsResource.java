@@ -98,7 +98,7 @@ public class ChannelsResource {
     }
 
     @POST
-    @Path("reviews/{reviewId}")
+    @Path("reviews/{reviewId: .+}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response answer(@HeaderParam("Authorization") String authorization, @PathParam("reviewId") String reviewId,
             String body) {

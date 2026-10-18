@@ -154,7 +154,17 @@ class PipelineSkeletonIT extends ScenarioBase {
             assertThat(d.outbox()).as(d.domain() + " outbox").isZero();
             assertThat(d.nonTerminal()).as(d.domain() + " non-terminal instances").isEmpty();
             assertThat(d.dlqMessages()).as(d.domain() + " DLQ messages").isZero();
-            assertThat(d.inbox()).as(d.domain() + " inbox").isZero();
+        }
+        // The inbox holds only (a) review answers kept for the review's later phases (reminder, escalation): Stint keys
+        // each phase apart and keeps an answer for the ones not waiting yet; and (b) an SDD's end that reached the
+        // Delivery's coordinator while it was asking check-sdds, not listening. Both expire (inbox TTL, 15 min at most).
+        for (String domain : Leftovers.PIPELINE) {
+            List<String> kept = new ArrayList<>();
+            floci.ddb.scan(r -> r.tableName(domain + "-inbox").consistentRead(true)).items()
+                    .forEach(i -> kept.add(i.get("waitKey").s()));
+            assertThat(kept).as(domain + " inbox").allMatch(k -> k.startsWith("event:" + PipelineEvents.REVIEW_COMPLETED)
+                    || k.startsWith("event:" + PipelineEvents.SDD_VALIDATED)
+                    || k.startsWith("event:" + PipelineEvents.SDD_CANCELLED));
         }
     }
 
