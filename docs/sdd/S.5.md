@@ -226,7 +226,19 @@ Duas escolhas são do Kayan: **8a** e **8k**.
 - Exige subir a janela do inbox para a vida inteira do lote, porque os resultados chegam fora de ordem.
 - Pior que (A): depende de um ajuste global do engine para um caso local.
 
-**Recomendação: (A).** Os contratos de 8b assumem (A). Se for (B), a Entrega fica para depois do SDD do Stint, e o esqueleto do S.5 usa ramos fixos com 2 SDDs.
+**Recomendação: (A).** Os contratos de 8b assumem (A).
+
+**Ajuste na implementação (decidido pelo Kayan em 18/10/2026).** A espera "em ordem de chegada, num laço sobre o mesmo `listen`" não funciona no Stint `500dfd1`: ao consumir um fim, o save remove a espera e grava de novo a mesma chave, e os dois stores recusam isso.
+- No `InMemoryStateStore`, a espera nova é conferida antes da remoção.
+- No DynamoDB, um `TransactWriteItems` não aceita duas operações no mesmo item.
+- Com 2 SDDs, o coordenador falhava depois de 5 conflitos (achado 8l-5).
+
+Escolha do Kayan:
+- o coordenador espera **cada SDD pelo seu id** (`sandboxsdd`), um depois do outro;
+- os SDDs continuam em paralelo;
+- um fim que chega antes da vez fica no inbox;
+- a janela de eventos adiantados vale **só no engine da Entrega**: `delivery.early-event-window=PT96H`, acima da vida máxima de um SDD (cerca de 78 h);
+- a rede de segurança de cada espera é de `PT84H`. Se for (B), a Entrega fica para depois do SDD do Stint, e o esqueleto do S.5 usa ramos fixos com 2 SDDs.
 
 ### 8b. OBRIGATÓRIO — Contrato de eventos v1 do pipeline
 **Regras gerais (somam-se às de `contracts/events.md`):**
@@ -529,7 +541,12 @@ Nada é publicado sem seu pedido. Na opção 1, eu só crio a branch local.
      - o `SqsWorkerBinding` responde a ela quando presente;
      - um `RoutingTaskTransport` no `stint-aws`, por `routingKey`.
 3. **Instância sem cancelamento externo.** Um coordenador que desiste (`stalled`) não pode cancelar as instâncias filhas. Proposta: `WorkflowEngine.cancel(instanceId, reason)` e um evento padrão de cancelamento, a avaliar com o 3a.8.
-4. **Os achados do gate da 3a continuam abertos:** listen por `.data` restrito (evitado aqui por extensões), PII falada, resposta adiantada do escalonamento (bloqueada no portal, documentada no CA3) e `SqsPollLoop` serial (observado no CA6).
+4. **Re-espera na chave consumida no mesmo save** (achado na implementação, em 18/10/2026).
+   - Um `listen` que, na mesma ativação, volta a esperar na chave do evento que acabou de consumir falha sempre com `CONFLICT`, e a instância falha depois de 5 tentativas.
+   - Acontece no `InMemoryStateStore`, que confere as esperas novas antes de remover as consumidas, e no `DynamoDbStateStore`, onde o Delete e o Put do mesmo item caem na mesma transação.
+   - **Reprodução:** `DeliveryWorkflowsTest` com o `delivery-cycle` de `96fe848^` (laço sobre o mesmo `listen`) e 2 SDDs.
+   - **Proposta (SDD 3a.10):** o save trata "consumir e reabrir a mesma chave" como uma atualização da espera; por exemplo, uma geração no item da espera. Com isso, um coordenador espera N eventos em ordem de chegada num `listen` só.
+5. **Os achados do gate da 3a continuam abertos:** listen por `.data` restrito (evitado aqui por extensões), PII falada, resposta adiantada do escalonamento (bloqueada no portal, documentada no CA3) e `SqsPollLoop` serial (observado no CA6).
 
 ## 9. Registro de validação
 (preencher na etapa 2)
