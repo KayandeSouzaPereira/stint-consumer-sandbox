@@ -76,8 +76,11 @@ def main(corpus: Path, verify: bool = False) -> None:
                           "rate": RATE, "engine": "kokoro-onnx", "engineVersion": "0.4.9",
                           "model": "kokoro-v1.0", "voices": sorted(set(voices.values()))}
         print(f"{meeting['id']}: {entry['audio']['seconds']} s")
+    if verify:
+        sys.exit(1 if mismatches else 0)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1] if len(sys.argv) > 1 else "corpus"))
+    args = [a for a in sys.argv[1:] if a != "--verify"]
+    main(Path(args[0] if args else "corpus"), "--verify" in sys.argv)

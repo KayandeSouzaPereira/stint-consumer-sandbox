@@ -5,72 +5,254 @@
     {
       "id": "a1-c1-business",
       "script": "meetings/a1-c1-business.yaml",
-      "scriptSha256": "55adb37bdce500153d98d5ef3a7b4868e50ef2e3970f299874a2b4394affff4c"
+      "scriptSha256": "55adb37bdce500153d98d5ef3a7b4868e50ef2e3970f299874a2b4394affff4c",
+      "audio": {
+        "file": "audio/a1-c1-business.wav",
+        "sha256": "1b6f7fbbe0a7d2ed4e55250d9498431b42decc56c43fac6fd2690366cc90fdb4",
+        "seconds": 22.28,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "am_michael",
+          "bf_emma"
+        ]
+      }
     },
     {
       "id": "a2-c1-technical",
       "script": "meetings/a2-c1-technical.yaml",
-      "scriptSha256": "ae2b0f5bc81c841bc2a55532f1acb5ed3dff5f47396b6ff93e8e0fa678ec8173"
+      "scriptSha256": "ae2b0f5bc81c841bc2a55532f1acb5ed3dff5f47396b6ff93e8e0fa678ec8173",
+      "audio": {
+        "file": "audio/a2-c1-technical.wav",
+        "sha256": "0d8577d5e0a43a5085705af0528b84428fb8c30ccf3efc5d3bed6c737e55f980",
+        "seconds": 17.69,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_bella",
+          "bm_george"
+        ]
+      }
     },
     {
       "id": "o1-c1-business",
       "script": "meetings/o1-c1-business.yaml",
-      "scriptSha256": "1d2d49d22d4c822a6b3687b227d1368e380c82beb7cea373c6a3b649424ab8a8"
+      "scriptSha256": "1d2d49d22d4c822a6b3687b227d1368e380c82beb7cea373c6a3b649424ab8a8",
+      "audio": {
+        "file": "audio/o1-c1-business.wav",
+        "sha256": "0a3eb2e50ffdda9a6655ff94c03685c4c5f813f74e0570e558574e4192e70f1d",
+        "seconds": 14.68,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_heart",
+          "am_adam"
+        ]
+      }
     },
     {
       "id": "o2-c1-technical",
       "script": "meetings/o2-c1-technical.yaml",
-      "scriptSha256": "69af2cfc46bcac3b03e6fc2b2b33f03680cf60864d0f9ffff56a93a929719d63"
+      "scriptSha256": "69af2cfc46bcac3b03e6fc2b2b33f03680cf60864d0f9ffff56a93a929719d63",
+      "audio": {
+        "file": "audio/o2-c1-technical.wav",
+        "sha256": "cc643f2235c59db9bbbb4434015460dcdf8cb3545c7531138b4930c782da9123",
+        "seconds": 11.18,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "am_michael",
+          "bf_emma"
+        ]
+      }
     },
     {
       "id": "p1-c1-business",
       "script": "meetings/p1-c1-business.yaml",
-      "scriptSha256": "c81608d352fe99a1c808c8ff7b210b5c960c36e9058da2b2b04bb5878fb13066"
+      "scriptSha256": "c81608d352fe99a1c808c8ff7b210b5c960c36e9058da2b2b04bb5878fb13066",
+      "audio": {
+        "file": "audio/p1-c1-business.wav",
+        "sha256": "87a86feb883842dc5c3fa12f894db25ccc049558859d3e1ef8f04bbe313dc8a5",
+        "seconds": 38.71,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "am_michael",
+          "bf_emma"
+        ]
+      }
     },
     {
       "id": "p1-c1-technical",
       "script": "meetings/p1-c1-technical.yaml",
-      "scriptSha256": "6f1392fe7b39507f544c98a1e10a876fddc3c53780574df4a6e5e479386be3ae"
+      "scriptSha256": "6f1392fe7b39507f544c98a1e10a876fddc3c53780574df4a6e5e479386be3ae",
+      "audio": {
+        "file": "audio/p1-c1-technical.wav",
+        "sha256": "a867751d8b51fa1e517105fee0929f7321559a8a3dedbe46eb36d58fdd91212a",
+        "seconds": 43.81,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_bella",
+          "bm_george"
+        ]
+      }
     },
     {
       "id": "p2-c1-business",
       "script": "meetings/p2-c1-business.yaml",
-      "scriptSha256": "d8602e07ea7c9f40b372b0749d00ff04d36c7aa9ce0ab3fb95f6fc03935bef36"
+      "scriptSha256": "d8602e07ea7c9f40b372b0749d00ff04d36c7aa9ce0ab3fb95f6fc03935bef36",
+      "audio": {
+        "file": "audio/p2-c1-business.wav",
+        "sha256": "0f3b05406ec17b30841dfebe3ffc9bf35d81066d3acde8b30455074499274e1e",
+        "seconds": 21.9,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_heart",
+          "am_adam"
+        ]
+      }
     },
     {
       "id": "p2-c1-technical",
       "script": "meetings/p2-c1-technical.yaml",
-      "scriptSha256": "398d108115c9cb39674b9674490cdcac9190b5e72a877b6d19ad7216d200e59b"
+      "scriptSha256": "398d108115c9cb39674b9674490cdcac9190b5e72a877b6d19ad7216d200e59b",
+      "audio": {
+        "file": "audio/p2-c1-technical.wav",
+        "sha256": "96e92304e0c4b44d7ed7c9cf73620acdecea9c2816dddc27c9b45e0b13fb8716",
+        "seconds": 22.45,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "am_michael",
+          "bf_emma"
+        ]
+      }
     },
     {
       "id": "p2-c2-business",
       "script": "meetings/p2-c2-business.yaml",
-      "scriptSha256": "8be65d08b5cae06bbe3e044c53a86bdf6323e1b41c7bb0d556ec07587648d5dd"
+      "scriptSha256": "8be65d08b5cae06bbe3e044c53a86bdf6323e1b41c7bb0d556ec07587648d5dd",
+      "audio": {
+        "file": "audio/p2-c2-business.wav",
+        "sha256": "b0b0a6c98e66ac71513cbb05597d9c41957d31b5563fba297889bb1d577b5671",
+        "seconds": 23.13,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_bella",
+          "bm_george"
+        ]
+      }
     },
     {
       "id": "p2-c2-technical",
       "script": "meetings/p2-c2-technical.yaml",
-      "scriptSha256": "29f56d5f61c725e9671714fe98880579574f78bdfe4a2e3e7b2c6d84af7b82c3"
+      "scriptSha256": "29f56d5f61c725e9671714fe98880579574f78bdfe4a2e3e7b2c6d84af7b82c3",
+      "audio": {
+        "file": "audio/p2-c2-technical.wav",
+        "sha256": "76b9fcc1a66381274cc8a5e3e742f8eed0fddeb844c185198dab12b710cec041",
+        "seconds": 15.88,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_heart",
+          "am_adam"
+        ]
+      }
     },
     {
       "id": "p3-c1-business",
       "script": "meetings/p3-c1-business.yaml",
-      "scriptSha256": "a25f3a54ee03a72bff3fcc92114b3ab3a191df14d8c2a00aaf826898c0c673cd"
+      "scriptSha256": "a25f3a54ee03a72bff3fcc92114b3ab3a191df14d8c2a00aaf826898c0c673cd",
+      "audio": {
+        "file": "audio/p3-c1-business.wav",
+        "sha256": "f923884ef8d2b5fe04879e2dd2d06c1ce22e0ca97cddc38ed920d666808f200c",
+        "seconds": 21.3,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "am_michael",
+          "bf_emma"
+        ]
+      }
     },
     {
       "id": "p4-c1-technical",
       "script": "meetings/p4-c1-technical.yaml",
-      "scriptSha256": "593c02c9418aa5abefd01075841e37a78cd59c4dc9b6434bdb08e32939d7dfee"
+      "scriptSha256": "593c02c9418aa5abefd01075841e37a78cd59c4dc9b6434bdb08e32939d7dfee",
+      "audio": {
+        "file": "audio/p4-c1-technical.wav",
+        "sha256": "617b7661d68db1293fcd51be8b547a5aa706f8df58cedc9b493922f8b3de37ff",
+        "seconds": 25.78,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_bella",
+          "bm_george"
+        ]
+      }
     },
     {
       "id": "p5-c1-technical",
       "script": "meetings/p5-c1-technical.yaml",
-      "scriptSha256": "3fd920eedf841a18b4d536aef00b0ef75fc78ebef130318168b4f47095b9ad88"
+      "scriptSha256": "3fd920eedf841a18b4d536aef00b0ef75fc78ebef130318168b4f47095b9ad88",
+      "audio": {
+        "file": "audio/p5-c1-technical.wav",
+        "sha256": "48d11934b9b84b9cf6cc8b7d8d4baea06712b1f6960e2d25f1680a9cb9e7a342",
+        "seconds": 12.57,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_heart",
+          "am_adam"
+        ]
+      }
     },
     {
       "id": "p6-c1-business",
       "script": "meetings/p6-c1-business.yaml",
-      "scriptSha256": "8a22459837dfd490defce1032c23f198611498db6ba19a3dc90e1b957604bc3a"
+      "scriptSha256": "8a22459837dfd490defce1032c23f198611498db6ba19a3dc90e1b957604bc3a",
+      "audio": {
+        "file": "audio/p6-c1-business.wav",
+        "sha256": "d803bdf3633994b47dcdf80438087cf9e2c9bf3ea8adc0f5e9495fc373141045",
+        "seconds": 29.11,
+        "rate": 16000,
+        "engine": "kokoro-onnx",
+        "engineVersion": "0.4.9",
+        "model": "kokoro-v1.0",
+        "voices": [
+          "af_bella",
+          "bm_george"
+        ]
+      }
     }
   ]
 }
