@@ -22,6 +22,7 @@ import io.stintflow.sandbox.contracts.Corpus;
 import io.stintflow.sandbox.contracts.PipelineContracts;
 import io.stintflow.sandbox.contracts.PipelineEvents;
 import io.stintflow.spi.BlobStore;
+import io.stintflow.spi.StateStore;
 import io.stintflow.spi.InstanceSnapshot;
 import io.stintflow.spi.wire.StintEvents;
 import io.stintflow.wire.Json;
@@ -40,8 +41,8 @@ class DeliveryWorkflowsTest {
     static final List<String> YAMLS = List.of("delivery-cycle.yaml", "sdd-delivery.yaml");
 
     /** The domain's routes; the target's tests stand in: a changeset with the failing mark fails. */
-    static TaskHandlerRegistry handlers(BlobStore blobs) {
-        return DeliveryHandlers.register(new TaskHandlerRegistry(), CORPUS, blobs)
+    static TaskHandlerRegistry handlers(BlobStore blobs, StateStore state) {
+        return DeliveryHandlers.register(new TaskHandlerRegistry(), CORPUS, blobs, state)
                 .register("run-target-tests", ctx -> blobs.get(URI.create(ctx.input().path("changesetRef").asText()))
                         .thenCompose(bytes -> {
                             boolean failing = Json.read(bytes).toString().contains(DeliveryHandlers.FAILING);
@@ -55,8 +56,8 @@ class DeliveryWorkflowsTest {
     }
 
     /** As {@link #handlers}, with an implementer that always fails the SDDs whose id starts with {@code dlq-}. */
-    static TaskHandlerRegistry alwaysFailing(BlobStore blobs) {
-        return handlers(blobs).register("implement", ctx -> {
+    static TaskHandlerRegistry alwaysFailing(BlobStore blobs, StateStore state) {
+        return handlers(blobs, state).register("implement", ctx -> {
             String sddId = ctx.input().path("sddId").asText();
             boolean failing = sddId.startsWith("dlq-") || CORPUS.sdd(sddId).map(Corpus.Sdd::failures).orElse(0)
                     >= ctx.input().path("attempt").asInt();
@@ -99,7 +100,12 @@ class DeliveryWorkflowsTest {
 
     /** The cycle-closed event, once the outbox published it (the coordinator ends on the last SDD's event). */
     static JsonNode awaitClosed(InMemoryDomain d) {
-        List<CloudEvent> closed = d.awaitPublished(PipelineEvents.CYCLE_CLOSED, 1, Duration.ofSeconds(30));
+        List<CloudEvent> closed = d.awaitPublished(PipelineEvents.CYCLE_CLOSED, 1, Duration.ofMillis(300));
+        long until = System.nanoTime() + Duration.ofSeconds(60).toNanos();
+        while (closed.isEmpty() && System.nanoTime() < until) {
+            d.nap(Duration.ofMinutes(6));            // the coordinator's PT5M wake-up (no sleep)
+            closed = d.awaitPublished(PipelineEvents.CYCLE_CLOSED, 1, Duration.ofMillis(300));
+        }
         assertThat(closed).hasSize(1);
         return Json.read(closed.getFirst().getData().toBytes());
     }

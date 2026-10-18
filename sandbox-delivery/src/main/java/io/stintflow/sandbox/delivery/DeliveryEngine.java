@@ -38,6 +38,7 @@ import io.stintflow.otel.OpenTelemetryExecutionTracer;
 import io.stintflow.sandbox.contracts.Corpus;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.spi.ExecutionTracer;
+import io.stintflow.spi.StateStore;
 import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.WorkerPool;
 import io.stintflow.worker.WorkerRuntime;
@@ -109,10 +110,9 @@ public class DeliveryEngine {
     String timersGroup;
     @ConfigProperty(name = "delivery.scheduler.role-arn")
     String roleArn;
-    /** SDD S.5, 8a: an SDD's end that comes before the coordinator waits for it rests this long in the inbox. */
-    @ConfigProperty(name = "delivery.early-event-window", defaultValue = "PT96H")
-    Duration earlyEventWindow;
 
+    /** The Delivery's state: the engine's, and what check-sdds reads (in either role). */
+    private volatile StateStore state;
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
     private volatile ExecutionTracer tracer = ExecutionTracer.NOOP;
@@ -120,6 +120,8 @@ public class DeliveryEngine {
     void onStart(@Observes StartupEvent event) throws Exception {
         tracer = new OpenTelemetryExecutionTracer(openTelemetry);
         BlobStore blobs = new S3BlobStore(s3, blobsBucket);
+        state = new DynamoDbStateStore(ddb, DOMAIN + "-instances", DOMAIN + "-waits", DOMAIN + "-outbox", 4,
+                DOMAIN + "-inbox");
         if (engineEnabled) {
             startEngine(blobs);
         }
@@ -140,8 +142,7 @@ public class DeliveryEngine {
                 LoadOptions.STRICT);
         definitions.forEach(registry::register);
         WorkflowEngine built = new WorkflowEngine(registry, new RoutingTaskTransport(sqs, queueBase, DOMAIN, SHARED),
-                new DynamoDbStateStore(ddb, DOMAIN + "-instances", DOMAIN + "-waits", DOMAIN + "-outbox", 4,
-                        DOMAIN + "-inbox"),
+                state,
                 timers, blobs, new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
                 new DomainTagPublisher(new EventBridgeEventPublisher(eventBridge, domainBus, "default"), DOMAIN),
                 new S3FactBlobStore(s3, factsBucket), tracer)
@@ -152,7 +153,7 @@ public class DeliveryEngine {
         built.outboxRelay().start(Duration.ofSeconds(30));
         TriggerBindings bindings = new TriggerBindings(registry);
         bindings.bindDeclaredSchedules();
-        new DomainEventRouter(List.of(new StartReaction(bindings, built), new ResumeReaction(built, earlyEventWindow)))
+        new DomainEventRouter(List.of(new StartReaction(bindings, built), new ResumeReaction(built)))
                 .subscribeTo(new SqsDomainEventSource(sqs, queueBase + DOMAIN + "-domain-events"));
         engine = built;
         LOG.infof("Delivery engine started with %d workflow definition(s)", definitions.size());
@@ -163,7 +164,7 @@ public class DeliveryEngine {
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
                 .pool(new WorkerPool(new WorkerRuntime(DeliveryHandlers.register(new TaskHandlerRegistry(), corpus,
-                        new S3BlobStore(s3, documentsBucket)), blobs, tracer), concurrency))
+                        new S3BlobStore(s3, documentsBucket), state), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
 

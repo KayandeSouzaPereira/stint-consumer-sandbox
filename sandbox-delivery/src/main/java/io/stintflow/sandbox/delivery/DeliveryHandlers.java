@@ -7,7 +7,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.cloudevents.core.builder.CloudEventBuilder;
+import io.stintflow.core.WorkflowEngine;
 import io.stintflow.sandbox.contracts.Corpus;
+import io.stintflow.spi.InstanceSnapshot;
+import io.stintflow.spi.InstanceSnapshot.InstanceStatus;
+import io.stintflow.spi.StateStore;
+import io.stintflow.spi.WorkflowRef;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.wire.ClaimCheck;
 import io.stintflow.wire.Json;
@@ -34,9 +40,50 @@ public final class DeliveryHandlers {
     private DeliveryHandlers() {
     }
 
-    public static TaskHandlerRegistry register(TaskHandlerRegistry registry, Corpus corpus, BlobStore documents) {
+    public static TaskHandlerRegistry register(TaskHandlerRegistry registry, Corpus corpus, BlobStore documents,
+            StateStore state) {
         return registry.register("load-batch", loadBatch(documents)).register("implement", implement(corpus, documents))
-                .register("validate", validate());
+                .register("validate", validate()).register("check-sdds", checkSdds(state));
+    }
+
+    /** The definition the SDD instances run (sdd-delivery.yaml): their ids come from the sdd-ready events. */
+    static final WorkflowRef SDD_DELIVERY = new WorkflowRef("delivery", "sdd-delivery", "1.0.0");
+
+    /**
+     * {@code check-sdds}: which SDDs of a cycle have ended, from the Delivery's own state: the status and the outcome of
+     * each SDD instance (its id is the one Stint gives the instance an sdd-ready starts, SDD 2.1). Input
+     * {@code {projectId, cycle, sddIds}}; output {@code {settled: [{sddId, outcome}], pending: [sddId]}}: ids and
+     * enums only. An instance that does not exist yet, or still runs, is pending; one that failed counts as cancelled.
+     */
+    static TaskHandler checkSdds(StateStore state) {
+        return ctx -> {
+            JsonNode in = ctx.input();
+            String project = in.path("projectId").asText();
+            String cycle = in.path("cycle").asText();
+            ObjectNode out = Json.obj();
+            ArrayNode settled = out.putArray("settled");
+            ArrayNode pending = out.putArray("pending");
+            CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+            for (JsonNode sdd : in.path("sddIds")) {
+                String sddId = sdd.asText();
+                String instanceId = WorkflowEngine.triggeredInstanceId(SDD_DELIVERY, CloudEventBuilder.v1()
+                        .withId(project + ":" + cycle + ":sdd-ready:" + sddId)
+                        .withSource(URI.create("https://sandbox.stintflow.io/delivery"))
+                        .withType("io.sandbox.delivery.sdd-ready.v1").build());
+                chain = chain.thenCompose(v -> state.load(instanceId)).thenAccept(found -> {
+                    InstanceStatus status = found.map(InstanceSnapshot::status).orElse(null);
+                    if (status == InstanceStatus.COMPLETED || status == InstanceStatus.FAILED
+                            || status == InstanceStatus.ABORTED) {
+                        String outcome = found.get().context().path("outcome").asText("cancelled");
+                        settled.addObject().put("sddId", sddId).put("outcome",
+                                status == InstanceStatus.COMPLETED ? outcome : "cancelled");
+                    } else {
+                        pending.add(sddId);
+                    }
+                }).toCompletableFuture();
+            }
+            return chain.thenApply(v -> (JsonNode) out);
+        };
     }
 
     static TaskHandler loadBatch(BlobStore documents) {

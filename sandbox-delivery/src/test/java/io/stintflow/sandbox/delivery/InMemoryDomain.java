@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,6 +36,7 @@ import io.stintflow.inmemory.InMemoryStateStore;
 import io.stintflow.inmemory.InMemoryTaskTransport;
 import io.stintflow.inmemory.InMemoryTimerService;
 import io.stintflow.spi.BlobStore;
+import io.stintflow.spi.StateStore;
 import io.stintflow.spi.ExecutionTracer;
 import io.stintflow.spi.InstanceSnapshot;
 import io.stintflow.spi.InstanceSnapshot.InstanceStatus;
@@ -56,9 +58,14 @@ final class InMemoryDomain implements AutoCloseable {
     final MemoryBlobs blobs = new MemoryBlobs();
     final WorkflowEngine engine;
     final WorkflowDefinition definition;
+    /** The engine's clock and its timers: a test advances the clock and ticks them (no sleep). */
+    final java.util.concurrent.atomic.AtomicReference<java.time.Instant> now =
+            new java.util.concurrent.atomic.AtomicReference<>(java.time.Instant.parse("2026-10-18T12:00:00Z"));
+    final InstantSource clock = () -> now.get();
+    final InMemoryTimerService timers = new InMemoryTimerService(clock);
     private final WorkerPool pool;
 
-    InMemoryDomain(String domain, String yaml, Function<BlobStore, TaskHandlerRegistry> handlers)
+    InMemoryDomain(String domain, String yaml, BiFunction<BlobStore, StateStore, TaskHandlerRegistry> handlers)
             throws Exception {
         this(domain, List.of(yaml), handlers);
     }
@@ -67,9 +74,9 @@ final class InMemoryDomain implements AutoCloseable {
      * Several definitions on one engine, and the bus looped back to it — as {@code sandbox-domain} routes a domain's
      * own events to its queue: a published event starts ({@code schedule.on}) or resumes ({@code listen}) instances.
      */
-    InMemoryDomain(String domain, List<String> yamls, Function<BlobStore, TaskHandlerRegistry> handlers)
+    InMemoryDomain(String domain, List<String> yamls, BiFunction<BlobStore, StateStore, TaskHandlerRegistry> handlers)
             throws Exception {
-        pool = new WorkerPool(new WorkerRuntime(handlers.apply(blobs), blobs, ExecutionTracer.NOOP), 4);
+        pool = new WorkerPool(new WorkerRuntime(handlers.apply(blobs, state), blobs, ExecutionTracer.NOOP), 4);
         InMemoryTaskTransport transport = new InMemoryTaskTransport();
         transport.connectWorker(invoke -> {
             CompletableFuture<CloudEvent> result = new CompletableFuture<>();
@@ -94,8 +101,8 @@ final class InMemoryDomain implements AutoCloseable {
             }
         }
         definition = first;
-        engine = new WorkflowEngine(registry, transport, state, new InMemoryTimerService(), blobs,
-                new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
+        engine = new WorkflowEngine(registry, transport, state, timers, blobs,
+                new TreeInterpreter(new JqExpressionEvaluator()), clock,
                 new DomainTagPublisher(bus, domain), null, ExecutionTracer.NOOP).auditLog(audit)
                 .correctionLog(corrections);
         if (yamls.size() > 1) {
@@ -137,6 +144,12 @@ final class InMemoryDomain implements AutoCloseable {
             snapshot = snapshot(id);
         }
         return snapshot;
+    }
+
+    /** Lets {@code by} pass: the coordinator's wake-up timers (PT5M) come due and fire. */
+    void nap(Duration by) {
+        now.updateAndGet(t -> t.plus(by));
+        timers.tick();
     }
 
     InstanceSnapshot snapshot(String id) throws Exception {

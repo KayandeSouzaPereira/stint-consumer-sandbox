@@ -63,7 +63,7 @@ do:
       switch:
         - passed:
             when: '$context.validated == true'
-            then: validatedEnd
+            then: markValidated
         - again:
             when: '$context.attempt < $context.limit'
             then: nextAttempt
@@ -93,8 +93,8 @@ do:
         material: '${ $context.reportRef }'
         options:
           - resend: { description: "Try again, with fresh attempts", then: resend }
-          - accept: { description: "Accept the SDD as it is", then: acceptedEnd }
-          - cancel: { description: "Cancel this SDD", then: cancelledEnd }
+          - accept: { description: "Accept the SDD as it is", then: markAccepted }
+          - cancel: { description: "Cancel this SDD", then: markCancelled }
         deadline: { hours: 72 }
         remind: { hours: 48 }
         onTimeout: { value: cancel }
@@ -103,6 +103,9 @@ do:
       set: '${ $context + {attempt: ($context.attempt + 1), limit: ($context.attempt + 5)} }'
       export: { as: '${ . }' }
       then: implement
+  - markValidated:
+      set: '${ $context + {outcome: "validated"} }'
+      export: { as: '${ . }' }
   - validatedEnd:
       emit:
         event:
@@ -116,6 +119,10 @@ do:
             sandboxsdd: '${ $context.sddId }'
             data: '${ {sddId: $context.sddId, attempts: $context.attempt, outcome: "validated", reportRef: $context.reportRef} }'
       then: end
+  - markAccepted:
+      set: '${ $context + {outcome: "accepted"} }'
+      export: { as: '${ . }' }
+      then: acceptedEnd
   - acceptedEnd:
       emit:
         event:
@@ -129,6 +136,10 @@ do:
             sandboxsdd: '${ $context.sddId }'
             data: '${ {sddId: $context.sddId, attempts: $context.attempt, outcome: "accepted", reportRef: $context.reportRef} }'
       then: end
+  - markCancelled:
+      set: '${ $context + {outcome: "cancelled"} }'
+      export: { as: '${ . }' }
+      then: cancelledEnd
   - cancelledEnd:
       emit:
         event:
