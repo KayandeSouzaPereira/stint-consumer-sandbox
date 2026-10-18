@@ -19,7 +19,7 @@ export MSYS_NO_PATHCONV=1
 ENDPOINT="${FLOCI_ENDPOINT:-http://localhost:4566}"
 MAILHOG="${MAILHOG_URL:-http://localhost:8025}"
 AWS_CLI="${AWS_CLI:-aws}"
-DOMAINS=(orders billing)
+DOMAINS=(orders billing business engineering delivery)
 
 case "$ENDPOINT" in
   http://localhost:4566|http://127.0.0.1:4566) ;;
@@ -60,6 +60,13 @@ for d in "${DOMAINS[@]}"; do
   delete_schedules "$d-timers"
 done
 delete_table billing-invoices
+# SDD S.5: the pipeline's tables and the shared services' queues.
+delete_table records-catalog
+for d in business engineering delivery; do
+  delete_table "$d-audit"; delete_table "$d-corrections"
+  for svc in privacy records channels; do purge_queue "$svc-tasks-$d"; purge_queue "$svc-tasks-$d-dlq"; done
+done
+for q in target-tasks-delivery channels-domain-events; do purge_queue "$q"; purge_queue "$q-dlq"; done
 purge_queue sandbox-spy
 curl -fsS -X DELETE "$MAILHOG/api/v1/messages" >/dev/null && say deleted "mailhog:messages"
 

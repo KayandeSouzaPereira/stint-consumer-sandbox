@@ -24,6 +24,8 @@ ENDPOINT="${FLOCI_ENDPOINT:-http://localhost:4566}"
 AWS_CLI="${AWS_CLI:-aws}"
 ACCOUNT=000000000000
 DOMAINS=(orders billing)
+# SDD S.5: the meeting pipeline's domains with an engine, and the shared services with a queue per caller (8c, 8l).
+PIPELINE_DOMAINS=(business engineering delivery)
 
 aws_() { "$AWS_CLI" --endpoint-url "$ENDPOINT" --region "$AWS_REGION" "$@"; }
 say() { printf '%-9s %s\n' "$1" "$2"; }
@@ -99,6 +101,18 @@ orders_tables() {
     --key-schema AttributeName=effectKey,KeyType=HASH
 }
 
+# SDD S.5, 8j: the register's catalog (one entry per record version), and Stint's review audit and correction log per
+# pipeline domain (3a.4 / 3a.5, schemas from stint-aws DynamoDbAuditLog / DynamoDbCorrectionLog).
+pipeline_tables() {
+  ensure_table records-catalog     --attribute-definitions AttributeName=recordId,AttributeType=S AttributeName=version,AttributeType=N     --key-schema AttributeName=recordId,KeyType=HASH AttributeName=version,KeyType=RANGE
+  for d in "${PIPELINE_DOMAINS[@]}"; do
+    ensure_table "$d-audit"       --attribute-definitions AttributeName=instanceId,AttributeType=S AttributeName=entry,AttributeType=S       --key-schema AttributeName=instanceId,KeyType=HASH AttributeName=entry,KeyType=RANGE
+    ensure_ttl "$d-audit" expiresAt
+    ensure_table "$d-corrections"       --attribute-definitions AttributeName=definition,AttributeType=S AttributeName=entry,AttributeType=S       --key-schema AttributeName=definition,KeyType=HASH AttributeName=entry,KeyType=RANGE
+    ensure_ttl "$d-corrections" expiresAt
+  done
+}
+
 # --- SQS --------------------------------------------------------------------------------------------------
 queue_url() { aws_ sqs get-queue-url --queue-name "$1" --query QueueUrl --output text 2>/dev/null || true; }
 queue_arn() { echo "arn:aws:sqs:$AWS_REGION:$ACCOUNT:$1"; }
@@ -118,6 +132,16 @@ ensure_queue_with_dlq() { # name
 
 domain_queues() { # domain
   for q in tasks results timers schedules domain-events; do ensure_queue_with_dlq "$1-$q"; done
+}
+
+# SDD S.5, 8c/8l: a task invocation carries no reply address, so each shared service has one queue per caller and
+# answers on that caller's <domain>-results.
+pipeline_queues() {
+  for d in "${PIPELINE_DOMAINS[@]}"; do
+    for svc in privacy records channels; do ensure_queue_with_dlq "$svc-tasks-$d"; done
+  done
+  ensure_queue_with_dlq target-tasks-delivery
+  ensure_queue_with_dlq channels-domain-events
 }
 
 # --- EventBridge ------------------------------------------------------------------------------------------
@@ -158,6 +182,19 @@ done
 billing_tables
 orders_tables
 
+# SDD S.5: the meeting pipeline. Buckets by role; the raw bucket holds restricted audio and transcripts (classes
+# raw-audio and raw-transcript, 7 days: Stint 3a.5 lifecycle, applied for real only on AWS).
+for b in sandbox-meetings-raw sandbox-documents sandbox-records-docs sandbox-target-runs; do ensure_bucket "$b"; done
+for d in "${PIPELINE_DOMAINS[@]}"; do
+  ensure_bucket "sandbox-$d-blobs"
+  domain_tables "$d"
+  domain_queues "$d"
+  ensure_schedule_group "$d-schedules"
+  ensure_schedule_group "$d-timers"
+done
+pipeline_tables
+pipeline_queues
+
 ensure_queue sandbox-spy
 ensure_bus
 # Routing (contracts/events.md): each type to the inbound queue of the domain that consumes it.
@@ -169,6 +206,20 @@ ensure_rule invoice-rejected-to-orders \
   '{"detail-type":["io.sandbox.billing.invoice-rejected.v1"]}' orders-domain-events
 ensure_rule order-placed-to-orders \
   '{"detail-type":["io.sandbox.orders.order-placed.v1"]}' orders-domain-events
+# SDD S.5, 8b (contracts/pipeline-events.md): the pipeline's routing. A business meeting starts Business, a technical one
+# Engineering (by the sandboxstage extension inside the detail, the CloudEvent).
+ensure_rule meeting-recorded-business   '{"detail-type":["io.sandbox.channels.meeting-recorded.v1"],"detail":{"sandboxstage":["business"]}}' business-domain-events
+ensure_rule meeting-recorded-technical   '{"detail-type":["io.sandbox.channels.meeting-recorded.v1"],"detail":{"sandboxstage":["technical"]}}' engineering-domain-events
+ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
+ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
+# Delivery's own events back to Delivery: sdd-ready starts an SDD's instance, the ends resume the coordinator.
+ensure_rule delivery-to-delivery   '{"detail-type":["io.sandbox.delivery.sdd-ready.v1","io.sandbox.delivery.sdd-validated.v1","io.sandbox.delivery.sdd-cancelled.v1"]}'   delivery-domain-events
+ensure_rule pipeline-to-channels   '{"detail-type":["io.sandbox.engineering.refinement-requested.v1","io.sandbox.engineering.questions-sent.v1","io.sandbox.delivery.sdd-dead-lettered.v1","io.sandbox.delivery.cycle-closed.v1"]}'   channels-domain-events
+# Stint's review events (3a.4): requests and reminders to the portal, answers back to the domain that asked.
+ensure_rule review-requests-to-channels   '{"detail-type":["io.stintflow.review.requested.v1","io.stintflow.review.reminder.v1"]}' channels-domain-events
+for d in "${PIPELINE_DOMAINS[@]}"; do
+  ensure_rule "review-completed-to-$d"     "{\"detail-type\":[\"io.stintflow.review.completed.v1\"],\"detail\":{\"sandboxdomain\":[\"$d\"]}}" "$d-domain-events"
+done
 # The spy sees everything that reaches the bus (catch-all pattern proven by Stint's FlociEmitIT).
 ensure_rule spy-all '{"source":[{"prefix":""}]}' sandbox-spy
 
