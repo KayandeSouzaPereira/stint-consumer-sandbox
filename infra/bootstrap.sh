@@ -171,29 +171,29 @@ echo "Bootstrapping sandbox resources on $ENDPOINT"
 ensure_bucket stint-sandbox-reports   # sandbox-reports (Phase 1 regression)
 ensure_bucket sandbox-facts           # facts too large for the bus (dataref) and invoice documents, shared
 ensure_bucket_policy sandbox-facts "$(dirname "$0")/policies/sandbox-facts.json"
-for d in "${DOMAINS[@]}"; do
-  ensure_bucket "sandbox-$d-blobs"
-  domain_tables "$d"
-  domain_queues "$d"
-  ensure_schedule_group "$d-schedules"
-  ensure_schedule_group "$d-timers"
-done
+# SDD S.5: each AWS CLI call costs about a second on Windows, so the domains are set up side by side (they share no
+# resource, and every ensure_* is idempotent); the output of one domain may interleave with another's.
+domain_all() {
+  ensure_bucket "sandbox-$1-blobs"
+  domain_tables "$1"
+  domain_queues "$1"
+  ensure_schedule_group "$1-schedules"
+  ensure_schedule_group "$1-timers"
+}
+for d in "${DOMAINS[@]}"; do domain_all "$d" & done
+wait
 
 billing_tables
 orders_tables
 
 # SDD S.5: the meeting pipeline. Buckets by role; the raw bucket holds restricted audio and transcripts (classes
 # raw-audio and raw-transcript, 7 days: Stint 3a.5 lifecycle, applied for real only on AWS).
-for b in sandbox-meetings-raw sandbox-documents sandbox-records-docs sandbox-target-runs; do ensure_bucket "$b"; done
-for d in "${PIPELINE_DOMAINS[@]}"; do
-  ensure_bucket "sandbox-$d-blobs"
-  domain_tables "$d"
-  domain_queues "$d"
-  ensure_schedule_group "$d-schedules"
-  ensure_schedule_group "$d-timers"
-done
-pipeline_tables
-pipeline_queues
+for b in sandbox-meetings-raw sandbox-documents sandbox-records-docs sandbox-target-runs; do ensure_bucket "$b" & done
+wait
+for d in "${PIPELINE_DOMAINS[@]}"; do domain_all "$d" & done
+pipeline_tables &
+pipeline_queues &
+wait
 
 ensure_queue sandbox-spy
 ensure_bus

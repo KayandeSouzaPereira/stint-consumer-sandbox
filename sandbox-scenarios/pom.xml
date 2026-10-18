@@ -50,6 +50,12 @@
             <artifactId>jackson-databind</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- SDD S.5, 8c: the pipeline's contract (schemas, corpus reader) is the one sandbox module anyone may read -->
+        <dependency>
+            <groupId>io.stintflow.sandbox</groupId>
+            <artifactId>sandbox-contracts</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -111,6 +117,9 @@
                                         <exclude>io.stintflow.sandbox:*</exclude>
                                         <exclude>io.github.stintflow:*</exclude>
                                     </excludes>
+                                    <includes>
+                                        <include>io.stintflow.sandbox:sandbox-contracts</include>
+                                    </includes>
                                 </bannedDependencies>
                             </rules>
                         </configuration>

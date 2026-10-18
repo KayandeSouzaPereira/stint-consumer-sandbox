@@ -53,21 +53,27 @@ delete_schedules() { # group
   done
 }
 
+# SDD S.5: every AWS CLI call costs about a second on Windows, and the pipeline made the reset need hundreds, so the
+# independent ones run in parallel (JOBS at a time) and only what exists is touched (one list call, not one per name).
+JOBS="${RESET_JOBS:-12}"
+parallel() { # runs the command given as arguments in the background, keeping at most JOBS running
+  while [ "$(jobs -rp | wc -l)" -ge "$JOBS" ]; do wait -n; done
+  "$@" &
+}
+
 echo "Resetting the sandbox on $ENDPOINT and $MAILHOG"
-for d in "${DOMAINS[@]}"; do
-  for t in instances waits outbox inbox effects; do delete_table "$d-$t"; done
-  for q in tasks results timers schedules domain-events; do purge_queue "$d-$q"; purge_queue "$d-$q-dlq"; done
-  delete_schedules "$d-timers"
+existing_tables=" $(aws_ dynamodb list-tables --query 'TableNames' --output text | tr '	' ' ') "
+existing_queues=" $(aws_ sqs list-queues --query 'QueueUrls[]' --output text | tr '	' '
+' | sed 's|.*/||' | tr '
+' ' ') "
+for t in $existing_tables; do
+  case "$t" in
+    *-instances|*-waits|*-outbox|*-inbox|*-effects|*-invoices|*-audit|*-corrections|records-catalog) parallel delete_table "$t" ;;
+  esac
 done
-delete_table billing-invoices
-# SDD S.5: the pipeline's tables and the shared services' queues.
-delete_table records-catalog
-for d in business engineering delivery; do
-  delete_table "$d-audit"; delete_table "$d-corrections"
-  for svc in privacy records channels; do purge_queue "$svc-tasks-$d"; purge_queue "$svc-tasks-$d-dlq"; done
-done
-for q in target-tasks-delivery channels-domain-events; do purge_queue "$q"; purge_queue "$q-dlq"; done
-purge_queue sandbox-spy
+for q in $existing_queues; do parallel purge_queue "$q"; done
+for d in "${DOMAINS[@]}"; do parallel delete_schedules "$d-timers"; done
 curl -fsS -X DELETE "$MAILHOG/api/v1/messages" >/dev/null && say deleted "mailhog:messages"
+wait
 
 bash "$(dirname "$0")/bootstrap.sh"

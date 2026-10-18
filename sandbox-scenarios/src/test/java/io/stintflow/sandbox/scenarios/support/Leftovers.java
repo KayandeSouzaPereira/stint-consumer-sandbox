@@ -17,6 +17,8 @@ import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 public final class Leftovers {
 
     public static final List<String> DOMAINS = List.of("orders", "billing");
+    /** SDD S.5: the meeting pipeline's domains with an engine. */
+    public static final List<String> PIPELINE = List.of("business", "engineering", "delivery");
     static final List<String> WORK_QUEUES = List.of("tasks", "results", "timers", "domain-events");
     static final List<String> QUEUES = List.of("tasks", "results", "timers", "schedules", "domain-events");
     static final int OUTBOX_SHARDS = 4;
@@ -71,16 +73,24 @@ public final class Leftovers {
     }
 
     public Map<String, Domain> all() {
+        return all(DOMAINS);
+    }
+
+    public Map<String, Domain> all(List<String> domains) {
         Map<String, Domain> all = new LinkedHashMap<>();
-        DOMAINS.forEach(d -> all.put(d, of(d)));
+        domains.forEach(d -> all.put(d, of(d)));
         return all;
     }
 
     /** Waits (long polls of the spy between checks) until no instance is running and no work queue holds a message. */
     public Map<String, Domain> awaitQuiet(Spy spy, Duration within) {
+        return awaitQuiet(spy, within, DOMAINS);
+    }
+
+    public Map<String, Domain> awaitQuiet(Spy spy, Duration within, List<String> domains) {
         Map<String, Domain>[] last = new Map[1];
         spy.until("every instance terminal and every work queue idle", () -> {
-            last[0] = all();
+            last[0] = all(domains);
             return last[0].values().stream().allMatch(d -> d.nonTerminal().isEmpty() && d.workQueuesIdle()
                     && d.outbox() == 0);
         }, within);
