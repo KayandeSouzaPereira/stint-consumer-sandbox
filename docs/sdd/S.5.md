@@ -549,4 +549,76 @@ Nada é publicado sem seu pedido. Na opção 1, eu só crio a branch local.
 5. **Os achados do gate da 3a continuam abertos:** listen por `.data` restrito (evitado aqui por extensões), PII falada, resposta adiantada do escalonamento (bloqueada no portal, documentada no CA3) e `SqsPollLoop` serial (observado no CA6).
 
 ## 9. Registro de validação
-(preencher na etapa 2)
+
+**Ambiente.** Windows 11, Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2; Docker Desktop (Hyper-V, 10 GB) com floci, MailHog e Jaeger do `docker-compose.yml`; Stint `500dfd1` instalado de um clone limpo sob a versão `0.1.0-3a-500dfd1` (`infra/install-stint.sh`).
+
+### 9.1 Commits (`phase-3a-validation`, só local; ainda sem push)
+| Commit | O que faz |
+|---|---|
+| `a17d6d9` | spec aprovada (8k opção 1, 8a opção A) |
+| `56a21e1` | Stint fixado; contrato v1, `sandbox-contracts`, corpus v2 e o script de áudio |
+| `21e699b` | `sandbox-privacy`, `sandbox-records` e `sandbox-target` (container sem rede) |
+| `5b69fcd` | `sandbox-channels` (gravador, portal com papéis, Confluence falso, e-mail) e o Negócio |
+| `96fe848`, `3eebf83`, `cd2059e` | Engenharia e Entrega: coordenador por ciclo e instância por SDD; o ajuste da espera (9.3) |
+| `a061e82`, `30a0682` | infra no `bootstrap.sh` e `reset.sh`; reset e bootstrap em paralelo |
+| `27a1719` | Orders e Billing no `SqsWorkerBinding` com `WorkerPool` (RF9) |
+| `fddf7af`, `d979182` | esqueleto ponta a ponta e papéis do portal, com as evidências CA2 e CA3 |
+| `0aeee1c` | Stint instalado sob versão própria; evidência CA6 |
+| `68109c9`, `63469b3`, `b17ecca`, `4feeeb1` | áudio com hashes, pilha local, execução manual (CA7) |
+
+### 9.2 Critérios de aceite
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.** Build completo com os testes do S.1 a S.4 (build e testes unitários verdes; a regressão do floci achou uma falha minha, em correção: ver 9.7). O `BoundaryTest` falha se um domínio depender de outro, e um pom plantado prova que ele vê a aresta; o enforcer de cada domínio proíbe os outros módulos | `BoundaryTest` (3), `ContractsArchitectureTest`; `gate-out/…/build.log` |
+| CA2 | **Verde, no floci.** Sete processos. O projeto `p1` (2 SDDs, um refaz a 2ª tentativa) e o `p2` (dúvidas, `questions-sent`, e-mail, ciclo 2) chegam ao `cycle-closed`. Uma cadeia por projeto no barramento (`chainid` do projeto, também nos ciclos seguintes) e no Jaeger, com spans dos sete serviços e links `FOLLOWS_FROM` entre Engenharia → Negócio e Entrega → Engenharia. Todo evento respeita o schema v1, nenhum marcador aparece no barramento, nos spans nem nos logs, e nada sobra (esperas, outbox, DLQs, instâncias não terminais) | `PipelineSkeletonIT`; `S.5-CA2.txt` |
+| CA3 | **Verde.** Pelo portal: papel errado 403, texto livre 422. Forjadas no barramento: papel errado, `source` desconhecido e texto livre não retomam, e a auditoria do Stint registra `wrong-role`, `untrusted-source` e `out-of-contract`. O papel certo, pelo portal, retoma. A resposta adiantada do papel de escalonamento é recusada pelo portal; no barramento é o achado do 3a.4 (9.4) | `PortalRolesIT`, `PortalTest`; `S.5-CA3.txt` |
+| CA4 | **Verde.** Gabarito completo por etapa (14 reuniões: 3 de negócio, uma por canal; 3 técnicas com 2, 3 e 1 SDD; 2 ambíguas; 2 fora do escopo; o ciclo de dúvidas). Todo marcador está plantado e listado, com formas escritas e faladas; `corpus/pii-forms.json` em dia com o corpus. O áudio dos 14 roteiros é reproduzível: `generate-audio.py --verify` regenera e dá o mesmo hash | `PipelineCorpusTest` (8); `--verify`, 14 vezes "same hash" |
+| CA5 | **Verde.** Os testes só resolvem `localhost` (`infra/test-hosts`, no surefire e no failsafe de todos os módulos) e nenhuma chave real está configurada. Nenhum teste chama provedor real | `-Djdk.net.hosts.file`; os falsos do CI |
+| CA6 | **Registrado, sem meta.** Com o binding, a carga do S.4 (N=50, com 5 `fail503-` e 5 `slow-`) deu **p50 4,3 s e p95 7,6 s**, contra 28,3 s e 31,1 s com o laço serial. 50 faturas, 50 e-mails, 50 cadeias, nenhuma sobra | `S.5-CA6.txt` |
+| CA7 | **Verde, na pilha local.** `p1-c1-business` em áudio do Kokoro: o Whisper (CPU) transcreveu, o LitJev (GPU) decidiu o tipo (0,997), a prioridade e o canal (0,90, Confluence, como o gabarito), o llama.cpp (CPU) escreveu o documento, o portal aprovou. **24 s** da gravação ao `design-published`. Memória da GPU: **7 844 MiB de 8 192** (o desktop e o LitJev; Whisper e gerador na CPU, como o plano 8e) | `LocalStackIT`; `S.5-CA7-manual.txt` |
+| Extra | **Verde.** Um container do alvo, com as flags do runner, não alcança a internet, o DNS, o `floci`, o `host.docker.internal` nem o gateway da ponte; só tem a interface `lo`; roda com o uid 65534, sem variável do host; não escreve fora do `/tmp`; um laço infinito é morto no limite de tempo. Os changesets do implementador falso passam e falham de verdade no container, como no runner falso | `TargetIsolationIT` (`-Ptarget`) |
+| Extra | **Verde.** Eventos do esqueleto só com ids e ponteiros (schema `additionalProperties: false`), conferidos na `sandbox-spy` | `PipelineSkeletonIT` |
+
+### 9.3 Desvios e decisões da implementação (para sua revisão)
+- **8a, a espera do coordenador mudou duas vezes.**
+  1. A espera em ordem de chegada, num `listen` em laço, falha no Stint `500dfd1`: ele não reabre a espera na chave que o mesmo save consome (achado 8l-5).
+  2. Sua escolha de esperar cada SDD pelo id dependia de uma janela de inbox de 96 h, mas o Stint limita a janela a **15 min** (`PT15M`).
+  3. Você escolheu a **consulta de estado**: o coordenador chama a tarefa `check-sdds`, que lê o estado das instâncias dos SDDs na tabela do Delivery, e dorme num `listen` de `PT5M` que um fim de SDD acorda. A segurança contra um SDD que nunca termina: 1 008 esperas ociosas (84 h) fecham o ciclo como `stalled`.
+  4. Um fim que chega com o coordenador consultando fica no inbox até expirar (15 min), e os testes aceitam isso.
+- **Roteamento das tarefas compartilhadas.** `RoutingTaskTransport` em cada domínio e uma fila por chamador (`privacy|records|channels-tasks-<domínio>`, `target-tasks-delivery`); o serviço responde na `<domínio>-results`. Nada mudou no Stint. A classe foi **copiada** em cada domínio: nenhum domínio depende de outro.
+- **Etiqueta de domínio nas revisões.** O `DomainTagPublisher` acrescenta `sandboxdomain` aos eventos `io.stintflow.review.*` do engine, para o portal devolver a resposta ao domínio que perguntou. O floci aceita padrão em `detail` (testado), então não precisou do contorno.
+- **O portal aceita ids com barras.** O id de revisão do Stint tem a forma `evt-…:/do/13/approve:1`; o caminho do `POST /reviews/{id}` casa com `.+`.
+- **`try`/`retry` por tentativa de SDD.** O `try` do Stint aceita uma chamada só como corpo, e uma tentativa tem três (implementar, testar, validar). Virou um laço explícito com contador, de 5 tentativas; o SDD sai sempre em `sdd-validated` ou `sdd-cancelled`.
+- **Prioridade (`score`) no Jev.** O adapter exige níveis de pontuação configurados (`scoreLevels`); o Negócio local declara três. O valor do score vem como número, não como o nível.
+- **Dependências do `sandbox-scenarios`.** O módulo de cenários passou a depender do `sandbox-contracts` (schemas e leitor do corpus), a única exceção à regra de que ele não depende de módulo do sandbox. O enforcer dele a permite só para esse módulo.
+- **Stint instalado sob versão própria.** Durante o trabalho outro agente mexeu no Stint (SDD 3a.10, 3b) e um `mvn install` dele no `~/.m2` contaminou o jar do `500dfd1`: o Quarkus não lia o índice do `stint-aws`. O `infra/install-stint.sh` instala o `500dfd1` limpo como `0.1.0-3a-500dfd1`, e o `stint.version` aponta para ele, então outra fase não muda o que o sandbox roda.
+- **`reset.sh` e `bootstrap.sh` em paralelo.** Cada chamada do AWS CLI custa cerca de 1 s no Windows; com o dobro de recursos, o reset passou do limite de 5 min do `Scenario.reset()`. Agora leva 2 min 40 s.
+- **Os buckets não são esvaziados pelo reset** (decisão do S.4). A evidência do CA7 filtra o transcrito da execução pela hora de gravação.
+- **Docker Desktop** estava parado ao retomar o trabalho; foi iniciado e subiu normalmente com o C: a 19 GB livres.
+
+### 9.4 Achados do Stint (fora do escopo, nada alterado daqui)
+| # | Achado | Proposta |
+|---|---|---|
+| 8l-1 | Sem paralelismo dinâmico (`for` concorrente com junção) | SDD 3a.8 (8a, B); contornado por (A) |
+| 8l-2 | O transporte de tasks não leva endereço de resposta | SDD 3a.9: extensão `stintreplyto` na invocação; `RoutingTaskTransport` no `stint-aws` |
+| 8l-3 | Instância sem cancelamento externo (o `stalled` não cancela as filhas) | `WorkflowEngine.cancel(instanceId, reason)` e evento padrão |
+| 8l-5 | Re-esperar na chave consumida no mesmo save falha sempre com `CONFLICT` (in-memory e DynamoDB) | **SDD 3a.10 já existe no repositório do Stint** (`394da56`) |
+| 8l-6 | A janela de eventos adiantados é limitada a 15 min (`PT15M`) | Permitir janela por definição ou por espera, para esperas longas por eventos fora de ordem |
+| 8l-7 | A resposta de uma revisão fica no inbox para as fases seguintes (lembrete e escalonamento) até o TTL | Já era o achado do inbox no 3a.4/3a.5 |
+| 3a.4 | A resposta adiantada do papel de escalonamento, publicada no barramento, é aceita dentro da janela do inbox | O portal a recusa (403); o teste não finge que o Stint a recusa |
+| 3a.6 | **PII falada escapa do redator de referência.** Medido no CA7: o `redact` devolveu `counts: {}` e o e-mail ditado virou só "at." na transcrição; o nome virou `synth PI 2011 Rivera`, que o redator não reconhece | Camada de forma falada no S.6. A lista do scanner (`pii-forms.json`) já traz essa forma |
+| CA7 | O `score` do Jev não declara níveis por padrão | Documentar no 3a.2b que `score` exige `scoreLevels` |
+| CA7 | O LitJev devolve `inputTokens=0` e `outputTokens=0` | Já era o achado do 3a.2b |
+
+### 9.5 O que ficou fora do que o SDD pedia
+- **Subagente de código com modelo local (8e).** O CA7 exige uma geração local; ela foi a do documento de desenho. A medição do implementador com o Qwen2.5-Coder-7B é do S.10, e o risco continua registrado em 8e.
+- **Build nativo** dos módulos novos: não pedido no S.5.
+- **Execução do alvo no container pelo pipeline completo:** o esqueleto usa o runner falso (como o CI); o container real foi provado pelo `TargetIsolationIT`.
+- **Push e PR:** a branch continua só local, à espera do seu pedido.
+
+### 9.6 Pendências
+- Push das branches `phase-2-validation` e `phase-3a-validation`, e os PRs (8k): com o seu pedido.
+- Notion: a página do S.5 e o Log.
+
+### 9.7 Pendente: regressão do S.2 (CA3)
+`FlociBillingIT.ca3_a_transient_503_succeeds_on_the_third_attempt` falha desde `27a1719`: com o `SqsWorkerBinding`, o `shipResult` recebe só o resultado, e a linha de log da falha perdeu a rota e a tentativa ("Task null attempt null"). Correção prevista: logar a falha num decorador de handler (rota e `ctx.attempt()`), como o `ChaosTaskHandler`, no `BillingEngine` e no `OrdersEngine`; depois repetir `gate.sh --regression-only`. Status do SDD: **Em implementação** (não Implementado) até lá.
