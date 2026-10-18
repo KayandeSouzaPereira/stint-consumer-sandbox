@@ -1,0 +1,16 @@
+S.5 CA3: only the right role through the portal moves a review
+  t+   1.3s  started privacy (PRIVACY, pid 285256, :8093) 
+  t+   2.5s  started records (RECORDS, pid 333096, :8094) 
+  t+   4.0s  started channels (CHANNELS, pid 309228, :8095) 
+  t+   5.6s  started business (BUSINESS, pid 348356, :8090) 
+  t+   9.6s  review evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/13/approve:1 open for ["business-rep"]
+  t+   9.6s  portal: technician 403, free text 422
+  t+   9.7s  forged approval from https://portal.sandbox.example as technician
+  t+   9.7s  forged approval from https://somewhere-else.example as business-rep
+  t+   9.7s  forged free text from https://portal.sandbox.example as business-rep
+  t+  11.7s  business-audit outcomes: [requested, wrong-role, untrusted-source, out-of-contract]
+  t+  11.8s  design-published after the business representative's answer
+  review evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/13/approve:1
+  portal: technician -> 403, free text -> 422
+  forged on the bus -> business-audit outcomes [requested, wrong-role, untrusted-source, out-of-contract]
+  right role through the portal -> 202, design-published
