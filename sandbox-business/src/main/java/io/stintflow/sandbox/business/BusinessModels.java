@@ -71,7 +71,11 @@ public record BusinessModels(Transcriber transcriber, List<DecisionAdapter> deci
     public static BusinessModels local(Map<String, String> settings) {
         JevDecisionAdapter litjev = JevDecisionAdapter.builder().server(JevDecisionAdapter.Server.LITJEV)
                 .baseUri(URI.create(settings.getOrDefault("litjev.base-uri", "http://127.0.0.1:8000")))
-                .model(settings.getOrDefault("litjev.model", "Qwen/Qwen3.5-2B")).build();
+                .model(settings.getOrDefault("litjev.model", "Qwen/Qwen3.5-2B"))
+                // a score decision needs its levels, low to high (Stint 3a.2b): the priority of the work
+                .scoreLevels(List.of("Low: no deadline, nobody is waiting", "Medium: wanted within a quarter",
+                        "High: needed this week or blocking other work"))
+                .build();
         String llmModel = settings.getOrDefault("llm.model", "qwen3-4b-instruct-2507-q4_k_m");
         OpenAiChatModel llm = OpenAiChatModel.builder()
                 .baseUrl(settings.getOrDefault("llm.base-uri", "http://127.0.0.1:8080") + "/v1")

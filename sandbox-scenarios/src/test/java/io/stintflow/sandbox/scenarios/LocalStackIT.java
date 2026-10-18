@@ -92,8 +92,9 @@ class LocalStackIT extends ScenarioBase {
 
         // --- how Whisper wrote the planted personal data (the raw transcript is a restricted blob; this reads it as ops) ---
         StringBuilder forms = new StringBuilder();
+        // the raw bucket keeps what earlier runs left (reset.sh keeps buckets): only this run's transcript
         for (var o : floci.s3.listObjectsV2(r -> r.bucket("sandbox-meetings-raw")).contents()) {
-            if (!o.key().contains("transcript")) {
+            if (!o.key().contains("transcript") || o.lastModified().isBefore(begun.minusSeconds(5))) {
                 continue;
             }
             JsonNode transcript = Spy.JSON.readTree(floci.s3.getObjectAsBytes(r -> r.bucket("sandbox-meetings-raw")

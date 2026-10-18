@@ -166,6 +166,8 @@ public final class Corpus {
                 Set<String> forms = new LinkedHashSet<>();
                 forms.add(normalize(pii.marker()));
                 forms.add(normalize(pii.written()));
+                // Seen in the manual run (S.5 CA7): Whisper writes the marker as "synth PI 2011", dropping a letter.
+                forms.add("synthpi" + pii.marker().substring(pii.marker().length() - 4));
                 if ("phone".equals(pii.kind())) {
                     forms.add(pii.written().replaceAll("[^0-9]", ""));
                 }
