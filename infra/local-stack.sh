@@ -16,6 +16,7 @@ SANDBOX="${SANDBOX:-/mnt/c/dev/stint-consumer-sandbox}"
 LOGS="${LOGS:-/mnt/e/stint-s5/logs}"
 REVISION=15852e8c16360a2fea060d615a32b45270f8a8fc
 
+# pkill -f patterns start with a bracketed letter, so they do not match the shell that runs pkill itself
 wsl_() { wsl -d Ubuntu -- bash -lc "$1"; }
 
 up() {
@@ -32,7 +33,7 @@ up() {
 }
 
 down() {
-  wsl_ "pkill -f whisper-server.py; pkill -f 'litjev --model'; pkill -f llama-server; sleep 1; echo stopped" || true
+  wsl_ "pkill -f '[w]hisper-server.py'; pkill -f '[l]itjev --model'; pkill -f '[l]lama-server'; sleep 2; echo stopped" || true
 }
 
 status() {
