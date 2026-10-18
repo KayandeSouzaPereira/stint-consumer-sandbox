@@ -43,13 +43,12 @@ since S.5. Phases 1 and 2 were validated on `9be0898` (`main`).
 
 ## 1. Install Stint at the pinned SHA
 
-Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install it locally:
+Stint isn't published to a remote repository yet, so install it locally. The script clones it, checks out the pinned
+SHA and installs it under the version `0.1.0-3a-500dfd1`, so that installing Stint's own working tree (`0.1.0-SNAPSHOT`,
+for other phases) never changes what the sandbox builds and runs:
 
 ```bash
-git clone https://github.com/stintflow/stint.git
-cd stint
-git checkout 500dfd1
-mvn install -DskipTests
+bash infra/install-stint.sh            # clones into ./stint-pinned; or give it a directory
 ```
 
 ## 2. Start the infrastructure
