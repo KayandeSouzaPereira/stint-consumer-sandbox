@@ -1,0 +1,31 @@
+[gate 23:59:36] Stint pinned: Stint `500dfd1`; sandbox fa59ace
+[gate 23:59:36] mvn clean install (log /c/dev/stint-consumer-sandbox/gate-out/20261018-235934/build.log)
+    Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.412 s -- in io.stintflow.sandbox.orders.OrdersIndependenceTest
+    Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.428 s -- in io.stintflow.sandbox.orders.PlaceOrderWorkflowTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.386 s -- in io.stintflow.sandbox.billing.BillingIndependenceTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.253 s -- in io.stintflow.sandbox.billing.BillingSummaryWorkflowTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in io.stintflow.sandbox.billing.ChaosPointsTest
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.209 s -- in io.stintflow.sandbox.billing.IssueInvoiceWorkflowTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.111 s -- in io.stintflow.sandbox.contracts.BoundaryTest
+    Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.981 s -- in io.stintflow.sandbox.contracts.ContractsArchitectureTest
+    Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.272 s -- in io.stintflow.sandbox.contracts.ContractsTest
+    Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.237 s -- in io.stintflow.sandbox.contracts.PipelineCorpusTest
+    Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.410 s -- in io.stintflow.sandbox.privacy.PrivacyHandlersTest
+    Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.242 s -- in io.stintflow.sandbox.records.RegisterDocumentHandlerTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.306 s -- in io.stintflow.sandbox.channels.PortalTest
+    Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.333 s -- in io.stintflow.sandbox.target.ChangesetTest
+    Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.931 s -- in io.stintflow.sandbox.business.BusinessDesignWorkflowTest
+    Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.093 s -- in io.stintflow.sandbox.engineering.EngineeringWorkflowsTest
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.837 s -- in io.stintflow.sandbox.delivery.DeliveryWorkflowsTest
+    BUILD SUCCESS
+[gate 00:03:02] === regression run 1 of 1 ===
+[gate 00:05:57] mvn verify -Pfloci -pl sandbox-billing (log /c/dev/stint-consumer-sandbox/gate-out/20261018-235934/billing-floci-1.log)
+    Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 384.1 s -- in io.stintflow.sandbox.billing.floci.FlociBillingIT
+    BUILD SUCCESS
+[gate 00:16:13] mvn verify -Pfloci -pl sandbox-orders (log /c/dev/stint-consumer-sandbox/gate-out/20261018-235934/orders-floci-1.log)
+    Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 210.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+    BUILD SUCCESS
+[gate 00:20:24] mvn verify -Pscenarios -pl sandbox-scenarios -Dtest=RegressionIT -Dscenarios.run=1 (log /c/dev/stint-consumer-sandbox/gate-out/20261018-235934/regression-1.log)
+    Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 550.1 s -- in io.stintflow.sandbox.scenarios.RegressionIT
+    BUILD SUCCESS
+[gate 00:29:39] PASSED. Evidence and logs: /c/dev/stint-consumer-sandbox/gate-out/20261018-235934

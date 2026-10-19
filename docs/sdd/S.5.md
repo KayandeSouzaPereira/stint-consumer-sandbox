@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.5 |
-| Status | **Em implementação** (spec aprovada por Kayan em 15/10/2026, sem escolha explícita: valem as recomendações, 8k opção 1 e 8a opção A) |
+| Status | **Implementado** em 19/10/2026 (spec aprovada por Kayan em 15/10/2026, sem escolha explícita: valem as recomendações, 8k opção 1 e 8a opção A; a espera do coordenador mudou por decisão dele em 18/10/2026, 9.3). Validado e Mergeado ficam com o Kayan |
 | Depende de | S.1–S.4 (Implementados). Stint Fase 3a: 3a.1–3a.7 (Implementados, PR #5 aberto) |
 | Bloqueia | S.6 a S.11 |
 | Branch | `phase-3a-validation`, criada a partir de `ba14068` (`phase-2-validation`), empilhada (8k, opção 1). Só local |
@@ -569,7 +569,7 @@ Nada é publicado sem seu pedido. Na opção 1, eu só crio a branch local.
 ### 9.2 Critérios de aceite
 | CA | Resultado | Evidência |
 |---|---|---|
-| CA1 | **Verde.** Build completo com os testes do S.1 a S.4 (build e testes unitários verdes; a regressão do floci achou uma falha minha, em correção: ver 9.7). O `BoundaryTest` falha se um domínio depender de outro, e um pom plantado prova que ele vê a aresta; o enforcer de cada domínio proíbe os outros módulos | `BoundaryTest` (3), `ContractsArchitectureTest`; `gate-out/…/build.log` |
+| CA1 | **Verde.** Build completo com os testes do S.1 a S.4 (`gate.sh --regression-only` verde em 19/10/2026: build com todos os testes unitários, `FlociBillingIT` 5/5, `FlociOrdersIT` 6/6 e `RegressionIT` 3/3, com a carga e os papéis do pipeline à parte). O `BoundaryTest` falha se um domínio depender de outro, e um pom plantado prova que ele vê a aresta; o enforcer de cada domínio proíbe os outros módulos | `BoundaryTest` (3), `ContractsArchitectureTest`; `S.5-CA1-regression.txt` |
 | CA2 | **Verde, no floci.** Sete processos. O projeto `p1` (2 SDDs, um refaz a 2ª tentativa) e o `p2` (dúvidas, `questions-sent`, e-mail, ciclo 2) chegam ao `cycle-closed`. Uma cadeia por projeto no barramento (`chainid` do projeto, também nos ciclos seguintes) e no Jaeger, com spans dos sete serviços e links `FOLLOWS_FROM` entre Engenharia → Negócio e Entrega → Engenharia. Todo evento respeita o schema v1, nenhum marcador aparece no barramento, nos spans nem nos logs, e nada sobra (esperas, outbox, DLQs, instâncias não terminais) | `PipelineSkeletonIT`; `S.5-CA2.txt` |
 | CA3 | **Verde.** Pelo portal: papel errado 403, texto livre 422. Forjadas no barramento: papel errado, `source` desconhecido e texto livre não retomam, e a auditoria do Stint registra `wrong-role`, `untrusted-source` e `out-of-contract`. O papel certo, pelo portal, retoma. A resposta adiantada do papel de escalonamento é recusada pelo portal; no barramento é o achado do 3a.4 (9.4) | `PortalRolesIT`, `PortalTest`; `S.5-CA3.txt` |
 | CA4 | **Verde.** Gabarito completo por etapa (14 reuniões: 3 de negócio, uma por canal; 3 técnicas com 2, 3 e 1 SDD; 2 ambíguas; 2 fora do escopo; o ciclo de dúvidas). Todo marcador está plantado e listado, com formas escritas e faladas; `corpus/pii-forms.json` em dia com o corpus. O áudio dos 14 roteiros é reproduzível: `generate-audio.py --verify` regenera e dá o mesmo hash | `PipelineCorpusTest` (8); `--verify`, 14 vezes "same hash" |
@@ -620,5 +620,9 @@ Nada é publicado sem seu pedido. Na opção 1, eu só crio a branch local.
 - Push das branches `phase-2-validation` e `phase-3a-validation`, e os PRs (8k): com o seu pedido.
 - Notion: a página do S.5 e o Log.
 
-### 9.7 Pendente: regressão do S.2 (CA3)
-`FlociBillingIT.ca3_a_transient_503_succeeds_on_the_third_attempt` falha desde `27a1719`: com o `SqsWorkerBinding`, o `shipResult` recebe só o resultado, e a linha de log da falha perdeu a rota e a tentativa ("Task null attempt null"). Correção prevista: logar a falha num decorador de handler (rota e `ctx.attempt()`), como o `ChaosTaskHandler`, no `BillingEngine` e no `OrdersEngine`; depois repetir `gate.sh --regression-only`. Status do SDD: **Em implementação** (não Implementado) até lá.
+### 9.7 Uma regressão minha, achada e corrigida na própria validação
+`FlociBillingIT.ca3_a_transient_503…` falhou depois do `27a1719` (Orders e Billing no `SqsWorkerBinding`): o `shipResult` recebe só o resultado, e a linha de log da falha perdeu a rota e a tentativa. Corrigido em duas etapas, sem mudar nenhuma asserção do S.2:
+1. `FailureLog`, um decorador de handler (rota, tentativa e instância), nos dois domínios;
+2. o decorador loga sob o nome do logger do engine (`BillingEngine`, `OrdersEngine`), onde o teste do S.2 escuta a linha desde sempre.
+
+O `ca3` passou sozinho e depois a regressão inteira.
