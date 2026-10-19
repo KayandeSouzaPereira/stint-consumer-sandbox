@@ -21,7 +21,8 @@ import io.stintflow.worker.TaskHandlerRegistry;
  */
 public final class FailureLog implements TaskHandler {
 
-    private static final Logger LOG = Logger.getLogger(FailureLog.class);
+    /** Under the engine's logger name, where the failure line has always been written. */
+    private static final Logger LOG = Logger.getLogger("io.stintflow.sandbox.orders.OrdersEngine");
 
     private final String route;
     private final TaskHandler delegate;
