@@ -49,6 +49,7 @@ import io.stintflow.sandbox.billing.aws.S3InvoiceDocuments;
 import io.stintflow.sandbox.billing.chaos.Chaos;
 import io.stintflow.sandbox.billing.chaos.ChaosEventPublisher;
 import io.stintflow.sandbox.billing.chaos.ChaosTaskHandler;
+import io.stintflow.sandbox.billing.worker.FailureLog;
 import io.stintflow.sandbox.billing.worker.BillingHandlers;
 import io.stintflow.sandbox.billing.worker.FaultInjection;
 import io.stintflow.spi.BlobStore;
@@ -231,12 +232,11 @@ public class BillingEngine {
         BillingHandlers handlers = new BillingHandlers(new S3InvoiceDocuments(s3, factsBucket),
                 new DynamoDbInvoiceRecords(ddb, invoicesTable), new DynamoDbEffectMarkers(ddb, effectsTable),
                 new QuarkusMailSender(mailer), new FaultInjection(slowDelay), InstantSource.system(), mailFrom, mailTo);
-        WorkerRuntime runtime = new WorkerRuntime(registry(handlers.registry(), haltInTask, Chaos.HALT), blobs, tracer);
+        WorkerRuntime runtime = new WorkerRuntime(registry(FailureLog.wrap(handlers.registry(), List.of(Billing.ROUTE_RENDER_INVOICE, Billing.ROUTE_RECORD_INVOICE, Billing.ROUTE_COUNT_INVOICES, Billing.ROUTE_SEND_SUMMARY)), haltInTask, Chaos.HALT), blobs, tracer);
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(tasksQueue)
                 .pool(new WorkerPool(runtime, workerConcurrency)).waitTime(Duration.ofSeconds(5))
                 .visibilityTimeout(Duration.ofSeconds(30))
                 .shipResult(result -> CompletableFuture.runAsync(() -> {
-                    logIfFailed(result);
                     sqs.sendMessage(r -> r.queueUrl(resultsQueue)
                             .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
                 }))
@@ -264,17 +264,6 @@ public class BillingEngine {
     }
 
     /** CA3: a failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
-    private static void logIfFailed(CloudEvent result) {
-        JsonNode data = result.getData() == null ? null : Json.read(result.getData().toBytes());
-        if (data == null || !"FAILED".equals(data.path("status").asText())) {
-            return;
-        }
-        JsonNode error = data.path("error");
-        LOG.warnf("Task %s attempt %s of instance %s failed: type=%s status=%s detail=%s", result.getSubject(),
-                result.getExtension(StintEvents.EXT_ATTEMPT), result.getExtension(StintEvents.EXT_WORKFLOW_INSTANCE_ID),
-                error.path("type").asText(), error.path("status").asText(), error.path("detail").asText());
-    }
-
     void onStop(@Observes ShutdownEvent event) {
         workerRunning = false;
         if (worker != null) {

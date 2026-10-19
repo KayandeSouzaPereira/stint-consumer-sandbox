@@ -42,6 +42,7 @@ import io.stintflow.otel.OpenTelemetryExecutionTracer;
 import io.stintflow.sandbox.orders.aws.DynamoDbEffectMarkers;
 import io.stintflow.sandbox.orders.aws.QuarkusMailSender;
 import io.stintflow.sandbox.orders.aws.S3InvoiceDocuments;
+import io.stintflow.sandbox.orders.worker.FailureLog;
 import io.stintflow.sandbox.orders.worker.OrdersHandlers;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.spi.ExecutionTracer;
@@ -211,12 +212,11 @@ public class OrdersEngine {
     private void startWorker(BlobStore blobs) {
         OrdersHandlers handlers = new OrdersHandlers(new S3InvoiceDocuments(s3), new DynamoDbEffectMarkers(ddb, effectsTable),
                 new QuarkusMailSender(mailer), InstantSource.system(), mailFrom, factsBucket);
-        WorkerRuntime runtime = new WorkerRuntime(handlers.registry(), blobs, tracer);
+        WorkerRuntime runtime = new WorkerRuntime(FailureLog.wrap(handlers.registry(), List.of(Orders.ROUTE_SEND_CONFIRMATION, Orders.ROUTE_SEND_REJECTION, Orders.ROUTE_SEND_DELAY_NOTICE)), blobs, tracer);
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(tasksQueue)
                 .pool(new WorkerPool(runtime, workerConcurrency)).waitTime(Duration.ofSeconds(5))
                 .visibilityTimeout(Duration.ofSeconds(30))
                 .shipResult(result -> CompletableFuture.runAsync(() -> {
-                    logIfFailed(result);
                     sqs.sendMessage(r -> r.queueUrl(resultsQueue)
                             .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
                 }))
@@ -226,17 +226,6 @@ public class OrdersEngine {
     }
 
     /** A failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
-    private static void logIfFailed(CloudEvent result) {
-        JsonNode data = result.getData() == null ? null : Json.read(result.getData().toBytes());
-        if (data == null || !"FAILED".equals(data.path("status").asText())) {
-            return;
-        }
-        JsonNode error = data.path("error");
-        LOG.warnf("Task %s attempt %s of instance %s failed: type=%s status=%s detail=%s", result.getSubject(),
-                result.getExtension(StintEvents.EXT_ATTEMPT), result.getExtension(StintEvents.EXT_WORKFLOW_INSTANCE_ID),
-                error.path("type").asText(), error.path("status").asText(), error.path("detail").asText());
-    }
-
     void onStop(@Observes ShutdownEvent event) {
         workerRunning = false;
         if (worker != null) {
