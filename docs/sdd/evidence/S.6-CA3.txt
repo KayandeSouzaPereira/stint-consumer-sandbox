@@ -1,0 +1,12 @@
+S.6 CA3: fail closed — what happens when a layer, the model check or the model is in doubt or fails
+  (JUnit results of the build on 20/10/2026; each is a test of the sandbox, run offline)
+
+  ok    FilterOverCorpusTest.a_layer_in_doubt_is_the_redactions_doubt
+  ok    FilterOverCorpusTest.a_model_in_doubt_or_failing_puts_the_redaction_in_doubt_and_never_clears_it
+  ok    BusinessDesignWorkflowTest.a_redaction_in_doubt_stops_the_meeting_before_any_model
+  ok    EngineeringWorkflowsTest.a_redaction_in_doubt_stops_the_technical_meeting_before_any_model
+
+  a model check at or above the threshold, exactly at it, a failure, NaN and an answer out of range -> doubt true;
+  below the threshold -> doubt false; the model sees the text as the earlier layers left it and never changes it;
+  a redaction in doubt: the workflow ends at its doubt branch after the transcription, no decision, no writer,
+  no register, no channel, nothing on the bus, no review asked (only 'transcribe' was dispatched).

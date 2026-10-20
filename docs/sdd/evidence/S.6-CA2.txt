@@ -1,0 +1,100 @@
+S.6 CA2/CA7: the layered filter over the real Whisper transcripts of the corpus
+  (fixtures corpus/transcripts, distil-small.en; layers: spoken, patterns, names, presentation)
+  a1-c1-business residue after the filter: none
+  a1-c1-business: 2 planted; layer counts {spoken-email=1, person=2}
+      SYNTH-PII-2101 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2102 email written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 27 of 27 (100%)
+      raw:      I am Synth PI 2101 Rivera. We should talk about the database indexes and the API, but also about what the readers want. It's not clear if this is a design meeting or a technical one. Maybe both. Let's write something on confluence and see. Questions to Synth PII21002 at Example.
+      redacted: I am PERSON_46b1e2_e91824. We should talk about the database indexes and the API, but also about what the readers want. It's not clear if this is a design meeting or a technical one. Maybe both. Let's write something on confluence and see. Questions to SPOKEN-EMAIL_b7cb22
+  a2-c1-technical residue after the filter: none
+  a2-c1-technical: 1 planted; layer counts {person=2}
+      SYNTH-PII-2111 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      words kept (not personal): 25 of 25 (100%)
+      raw:      technical meeting about search speed. I am synth PI 2111 Rivera. We could add an index or a cash or both. I am not sure what business really needs. We didn't decide anything. Let's ask business what response time they expect.
+      redacted: technical meeting about search speed. I am PERSON_46b1e2_a176b8. We could add an index or a cash or both. I am not sure what business really needs. We didn't decide anything. Let's ask business what response time they expect.
+  o1-c1-business residue after the filter: none
+  o1-c1-business: 2 planted; layer counts {spoken-email=1, person=2}
+      SYNTH-PII-2121 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2122 email written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      words kept (not personal): 14 of 14 (100%)
+      raw:      Happy Friday, everyone. I am synth PI 2121 Rivera. This is just the team lunch planning. Pizza or sushi. Send your vote to synth PII 2122 at Example. Calm.
+      redacted: Happy Friday, everyone. I am PERSON_46b1e2_3784b8. This is just the team lunch planning. Pizza or sushi. Send your vote to SPOKEN-EMAIL_cfe9a5
+  o2-c1-technical residue after the filter: none
+  o2-c1-technical: 1 planted; layer counts {person=2}
+      SYNTH-PII-2131 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 15 of 15 (100%)
+      raw:      I am Sinthe-I-2-1-131 Rivera. This call is about the payroll system, not the library. Then it belongs to another project. Let's end it here.
+      redacted: I am PERSON_4abee0_db297e. This call is about the payroll system, not the library. Then it belongs to another project. Let's end it here.
+  p1-c1-business residue after the filter: none
+  p1-c1-business: 2 planted; layer counts {person=2}
+      SYNTH-PII-2011 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2012 email written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 42 of 42 (100%)
+      raw:      Thanks for joining. This is the design meeting for the book catalog. I am synth PI 2011 Rivera product owner. Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers. Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason. Please put the design document on confluence so the whole team can comment. at.
+      redacted: Thanks for joining. This is the design meeting for the book catalog. I am PERSON_46b1e2_c61e78 product owner. Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers. Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason. Please put the design document on confluence so the whole team can comment. at.
+  p1-c1-technical residue after the filter: none
+  p1-c1-technical: 2 planted; layer counts {person=2}
+      SYNTH-PII-2021 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2022 phone written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 26 of 26 (100%)
+      raw:      technical refinement for the catalog design. I am synth PI 2021 Rivera. I read the design, two pieces of work, search by author and ISBN validation. Search by author, a function that takes an author name and returns the matching books, case insensitive. ISBN validation. Check the length and the check digit of ISBN 13. and.
+      redacted: technical refinement for the catalog design. I am PERSON_46b1e2_8a3a80. I read the design, two pieces of work, search by author and ISBN validation. Search by author, a function that takes an author name and returns the matching books, case insensitive. ISBN validation. Check the length and the check digit of ISBN 13. and.
+  p2-c1-business residue after the filter: none
+  p2-c1-business: 2 planted; layer counts {spoken-email=1, person=2}
+      SYNTH-PII-2031 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      SYNTH-PII-2032 email written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 27 of 27 (100%)
+      raw:      Design meeting for book loans. I am Sinthe P.I. 2031 Rivera. Members should borrow books and return them. We also want a limit per member. Send the design by email to the board first. They don't use confluence. My address is Sinthe-I-2032 at example.
+      redacted: Design meeting for book loans. I am PERSON_cb1a22_db297e. Members should borrow books and return them. We also want a limit per member. Send the design by email to the board first. They don't use confluence. My address is SPOKEN-EMAIL_500783
+  p2-c1-technical residue after the filter: none
+  p2-c1-technical: 1 planted; layer counts {person=2}
+      SYNTH-PII-2041 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 34 of 35 (97%)
+      raw:      Refignment of the loans design. I am since P.I. 2041 Rivera. The design says a limit per member, but not which limit, and not what happens to late returns. We can't write the SDDs without the limit. That is a blocking question for business. Let's send the questions by email and meet again when we have answers.
+      redacted: Refignment of the loans design. I am PERSON_db297e. The design says a limit per member, but not which limit, and not what happens to late returns. We can't write the SDDs without the limit. That is a blocking question for business. Let's send the questions by email and meet again when we have answers.
+  p2-c2-business residue after the filter: none
+  p2-c2-business: 2 planted; layer counts {spoken-email=1, person=2}
+      SYNTH-PII-2051 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2052 email written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 27 of 27 (100%)
+      raw:      Follow-up on the loans design with the answers engineering asked for. I am synth PI 2051 Rivera. The limit is three books per member. A late return blocks new loans until the book is back. Update the design and send it by email again. Reach me at synth PII2 at Example. Calm.
+      redacted: Follow-up on the loans design with the answers engineering asked for. I am PERSON_46b1e2_0499bd. The limit is three books per member. A late return blocks new loans until the book is back. Update the design and send it by email again. Reach me at SPOKEN-EMAIL_2cb0c3
+  p2-c2-technical residue after the filter: none
+  p2-c2-technical: 1 planted; layer counts {person=2}
+      SYNTH-PII-2061 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 20 of 21 (95%)
+      raw:      refinement of the updated loans design. I am Sinthepi 2016 Rivera. Now it is clear. Two pieces, borrowing with the limit of three and blocking after a late return. No blocking questions left. Two SDD.
+      redacted: refinement of the updated loans design. I am PERSON_28e60b_db297e. Now it is clear. Two pieces, borrowing with the limit of three and blocking after a late return. No blocking questions left. Two SDD.
+  p3-c1-business residue after the filter: none
+  p3-c1-business: 2 planted; layer counts {spoken-email=1, person=2}
+      SYNTH-PII-2071 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      SYNTH-PII-2072 email written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      words kept (not personal): 30 of 30 (100%)
+      raw:      We need to talk about reading lists, but half of the team is missing today. I am synth PI 2001 Rivera. Then let's not publish anything yet. Schedule a new meeting with everyone next week. Agreed a new meeting. Low priority for now. Invites go to synth PII, 2072 at Example, Calm.
+      redacted: We need to talk about reading lists, but half of the team is missing today. I am PERSON_46b1e2_313b24. Then let's not publish anything yet. Schedule a new meeting with everyone next week. Agreed a new meeting. Low priority for now. Invites go to SPOKEN-EMAIL_aafc36
+  p4-c1-technical residue after the filter: none
+  p4-c1-technical: 2 planted; layer counts {spoken-number=1, person=3}
+      SYNTH-PII-2081 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      SYNTH-PII-2082 phone written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      words kept (not personal): 24 of 24 (100%)
+      raw:      Refignment for book reviews. I am synth PI 2018-1 Rivera. Three parts, store a review with a rating, compute the average rating, and hide reviews flagged by moderators. All clear, three SDDs. Call Plus 551198,98, O82, synth PI, 2082, for access to the test data.
+      redacted: Refignment for book reviews. I am PERSON_46b1e2_18863a. Three parts, store a review with a rating, compute the average rating, and hide reviews flagged by moderators. All clear, three SDDs. Call SPOKEN-NUMBER_bec56a, PERSON_06af72, for access to the test data.
+  p5-c1-technical residue after the filter: none
+  p5-c1-technical: 1 planted; layer counts {person=2}
+      SYNTH-PII-2091 name  written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 16 of 16 (100%)
+      raw:      short refinement, the catalog must export to CSV. I am Sinthe-i-291 Rivera. One SDD is enough. Export every book with title, author, and ISBN.
+      redacted: short refinement, the catalog must export to CSV. I am PERSON_84719e_db297e. One SDD is enough. Export every book with title, author, and ISBN.
+  p6-c1-business residue after the filter: none
+  p6-c1-business: 2 planted; layer counts {person=2}
+      SYNTH-PII-2141 name  written form in the raw text: no , scanner sees it raw: yes, left after the filter: no
+      SYNTH-PII-2142 phone written form in the raw text: no , scanner sees it raw: no , left after the filter: no
+      words kept (not personal): 24 of 24 (100%)
+      raw:      design meeting for book recommendations. I am synth PI 2141 Rivera. Recommend books by the same author a reader liked. Keep it simple in this first version. Send the design by email to the reading club. Medium Priority. Reach.....
+      redacted: design meeting for book recommendations. I am PERSON_46b1e2_3e2074. Recommend books by the same author a reader liked. Keep it simple in this first version. Send the design by email to the reading club. Medium Priority. Reach.....
+  recall by type (planted / left after the filter):
+    email  6 planted, 0 left -> recall 100%
+    name   14 planted, 0 left -> recall 100%
+    phone  3 planted, 0 left -> recall 100%
+  worst preservation 95%; redactions in doubt with the model check: 0 of 14
