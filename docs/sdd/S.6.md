@@ -3,13 +3,13 @@
 | Campo | Valor |
 |---|---|
 | ID | S.6 |
-| Status | **Em especificação** (19/10/2026). Aguarda a aprovação do Kayan e as escolhas de 8a e 8h |
+| Status | **Em implementação** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as recomendações, 8a como proposta e 8h opção 1, sem NER) |
 | Depende de | S.5 (Implementado). Stint 3a.5 (compliance de entrada) e 3a.6 (marco), `500dfd1` |
 | Bloqueia | S.7 a S.11 (todo domínio chama o filtro) |
 | Branch | `phase-3a-validation` (a mesma do S.5; os PRs da fase são empilhados) |
 | Commits analisados | sandbox `f12bf94`+ · Stint `500dfd1` |
 | Data da análise | 19/10/2026 |
-| Notion | **Inacessível nesta sessão** (o MCP do Notion não conectou). A página do S.6 em "Stint · SDDs" não pôde ser lida: a spec parte do plano de 12/10/2026 (copiado no S.5), dos SDDs 3a.5 e 3a.6 e do que o CA7 do S.5 mediu. Se a página tiver requisitos que não estão aqui, a divergência se resolve na aprovação |
+| Notion | A página do S.6 (rascunho de 12/10/2026) foi lida depois da aprovação: seus 6 requisitos e 4 critérios estão cobertos por esta spec. Dois pontos pedem o limite real: "criptografados" (o floci aceita SSE e não o aplica; o sandbox declara e confere a classe e a retenção) e "blob bruto expira na retenção" (provado com relógio controlável, não pelo lifecycle do S3, que só existe na AWS) |
 
 ## 1. Análise
 
