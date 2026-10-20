@@ -74,6 +74,9 @@ public class PrivacyWorker {
     String checkKind;
     @ConfigProperty(name = "privacy.check.threshold", defaultValue = "0.5")
     double threshold;
+    /** The threshold of the LitJev check. 1.01 = observation only (never doubts but on a failure): see the properties. */
+    @ConfigProperty(name = "privacy.check.litjev.threshold", defaultValue = "1.01")
+    double litjevThreshold;
     @ConfigProperty(name = "privacy.check.litjev.base-uri", defaultValue = "http://127.0.0.1:8000")
     String litjevBase;
     @ConfigProperty(name = "privacy.check.litjev.model", defaultValue = "Qwen/Qwen3.5-2B")
@@ -91,7 +94,8 @@ public class PrivacyWorker {
             case "off" -> null;
             default -> new CorpusKeyCheck(corpus);
         };
-        WorkerRuntime runtime = new WorkerRuntime(handlers(corpus, blobs, check, threshold), blobs,
+        WorkerRuntime runtime = new WorkerRuntime(handlers(corpus, blobs, check,
+                "litjev".equals(checkKind) ? litjevThreshold : threshold), blobs,
                 new OpenTelemetryExecutionTracer(openTelemetry));
         for (String caller : callers) {
             bindings.add(SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + "privacy-tasks-" + caller)

@@ -91,4 +91,33 @@ class PolicyTest {
         return new TaskContext("/do/1/x", "i-1", "c-1", 1, Json.obj(), new WorkflowRef("business", "business-design",
                 "1.0.0"), "chn-1", Lineage.NONE, null, level, null);
     }
+
+    /**
+     * The raw classes the workers use are the ones the policy declares, and a raw blob is gone after its seven days (with
+     * a controllable clock; the S3 lifecycle that does the same in AWS cannot be shown on floci, which accepts the rule
+     * and does not apply it: the gate of 3a.5, "execução manual na AWS").
+     */
+    @Test
+    void a_raw_blob_expires_after_its_retention() throws Exception {
+        Policy p = policy();
+        assertThat(io.stintflow.worker.transcription.TranscriptionHandler.RAW_TRANSCRIPT.ttl())
+                .isEqualTo(p.retentionOf("raw-transcript").orElseThrow());
+        io.stintflow.spi.RetentionClass rawAudio = new io.stintflow.spi.RetentionClass("raw-audio",
+                p.retentionOf("raw-audio").orElseThrow());
+        java.util.concurrent.atomic.AtomicReference<java.time.Instant> now = new java.util.concurrent.atomic.AtomicReference<>(
+                java.time.Instant.parse("2026-10-20T12:00:00Z"));
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("s6-retention");
+        var store = new io.stintflow.inmemory.FilesystemBlobStore(dir, () -> now.get());
+        java.net.URI audio = store.put(new byte[] {1, 2, 3}, "audio/a.wav", rawAudio).toCompletableFuture().join();
+        java.net.URI transcript = store.put(new byte[] {4, 5, 6}, "transcripts/t.json",
+                io.stintflow.worker.transcription.TranscriptionHandler.RAW_TRANSCRIPT).toCompletableFuture().join();
+
+        now.updateAndGet(t -> t.plus(Duration.ofDays(6)));
+        assertThat(store.get(audio).toCompletableFuture().join()).containsExactly(1, 2, 3);
+        now.updateAndGet(t -> t.plus(Duration.ofDays(2)));   // eight days in
+        for (java.net.URI raw : List.of(audio, transcript)) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> store.get(raw).toCompletableFuture().join())
+                    .hasRootCauseInstanceOf(io.stintflow.spi.BlobNotFoundException.class);
+        }
+    }
 }
