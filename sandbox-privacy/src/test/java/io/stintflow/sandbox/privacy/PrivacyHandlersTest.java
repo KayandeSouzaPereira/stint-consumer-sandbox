@@ -25,8 +25,9 @@ import io.stintflow.wire.redaction.RedactionContract;
 import io.stintflow.worker.TaskContext;
 
 /**
- * SDD S.5, 8c: the privacy service's reference redactor, over every meeting of the corpus as the fake transcriber
- * writes it: no written marker survives. (Spoken forms do survive the reference: that is S.6, Stint 3a.6 finding.)
+ * SDD S.5, 8c and S.6: the privacy service's filter, over every meeting of the corpus as the fake transcriber writes
+ * it: no written marker survives, and since S.6 no spoken form does either (the reference redactor let them through:
+ * Stint 3a.6 finding).
  */
 class PrivacyHandlersTest {
 
@@ -77,7 +78,7 @@ class PrivacyHandlersTest {
     }
 
     @Test
-    void spoken_forms_escape_the_reference_redactor_as_stint_3a6_found() {
+    void spoken_forms_no_longer_escape_the_layered_filter() {
         var handler = PrivacyWorker.handlers(CORPUS, new MapBlobs()).find(PrivacyWorker.ROUTE).orElseThrow();
         Corpus.Pii pii = CORPUS.meeting("p1-c1-business").pii().get(1);
         ObjectNode request = Json.obj().put(RedactionContract.INPUT, "Write to " + pii.spoken().get(1) + " please.");
@@ -85,7 +86,7 @@ class PrivacyHandlersTest {
         JsonNode result = handler.execute(new TaskContext("/do/2/redact", "i-1", "c-1", 1, request,
                 new WorkflowRef("business", "business-design", "1.0.0"), "chn-1", Lineage.NONE))
                 .toCompletableFuture().join();
-        // Recorded, not hidden: the S.6 filter must make this list empty.
-        assertThat(CORPUS.leaksIn(result.path("output").asText())).isNotEmpty();
+        // S.6: the layered filter catches what Stint's reference redactor did not (3a.6 finding, S.5 CA7).
+        assertThat(CORPUS.leaksIn(result.path("output").asText())).isEmpty();
     }
 }

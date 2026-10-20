@@ -16,15 +16,18 @@ import io.stintflow.aws.S3BlobStore;
 import io.stintflow.aws.worker.SqsWorkerBinding;
 import io.stintflow.otel.OpenTelemetryExecutionTracer;
 import io.stintflow.sandbox.contracts.Corpus;
+import io.stintflow.sandbox.privacy.filter.CorpusKeyCheck;
+import io.stintflow.sandbox.privacy.filter.LayeredFilter;
+import io.stintflow.sandbox.privacy.filter.LitJevPersonalDataCheck;
+import io.stintflow.sandbox.privacy.filter.LlmCheckLayer;
+import io.stintflow.sandbox.privacy.filter.PersonalDataCheck;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.WorkerPool;
 import io.stintflow.worker.WorkerRuntime;
 import io.stintflow.worker.redaction.LayeredRedactor;
-import io.stintflow.worker.redaction.PatternLayer;
 import io.stintflow.worker.redaction.Pseudonyms;
 import io.stintflow.worker.redaction.RedactionHandler;
-import io.stintflow.worker.redaction.TermListLayer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
@@ -37,8 +40,10 @@ import software.amazon.awssdk.services.sqs.SqsClient;
  * carries no reply address (finding 8l). It reads the raw transcript by pointer (any bucket) and returns the redacted
  * text with its provenance; nothing of the text is logged.
  * <p>
- * S.5 runs Stint's reference redactor: the patterns, plus every planted marker of the corpus as a term (a marker is
- * the stand-in of a name). It does not catch spoken PII (Stint 3a.6 finding): the layered filter is S.6.
+ * S.6 (8a): the filter is layered — patterns, spoken forms, listed and introduced names, and a local model's check —
+ * and fails closed: doubt of any layer is the redaction's doubt. {@code privacy.check} picks the model check:
+ * {@code litjev} (the local LitJev, loopback only), {@code fake} (the CI: it knows the corpus's markers and says so when
+ * one is left) or {@code off}.
  */
 @ApplicationScoped
 public class PrivacyWorker {
@@ -65,27 +70,46 @@ public class PrivacyWorker {
     String blobsBucket;
     @ConfigProperty(name = "privacy.worker.concurrency", defaultValue = "4")
     int concurrency;
+    @ConfigProperty(name = "privacy.check", defaultValue = "fake")
+    String checkKind;
+    @ConfigProperty(name = "privacy.check.threshold", defaultValue = "0.5")
+    double threshold;
+    @ConfigProperty(name = "privacy.check.litjev.base-uri", defaultValue = "http://127.0.0.1:8000")
+    String litjevBase;
+    @ConfigProperty(name = "privacy.check.litjev.model", defaultValue = "Qwen/Qwen3.5-2B")
+    String litjevModel;
+    @ConfigProperty(name = "privacy.check.timeout", defaultValue = "PT30S")
+    Duration checkTimeout;
 
     private final List<SqsWorkerBinding> bindings = new ArrayList<>();
 
-    void onStart(@Observes StartupEvent event) {
+    void onStart(@Observes StartupEvent event) throws Exception {
         S3BlobStore blobs = new S3BlobStore(s3, blobsBucket);
-        WorkerRuntime runtime = new WorkerRuntime(handlers(Corpus.load(Path.of(corpusDir)), blobs), blobs,
+        Corpus corpus = Corpus.load(Path.of(corpusDir));
+        PersonalDataCheck check = switch (checkKind) {
+            case "litjev" -> new LitJevPersonalDataCheck(java.net.URI.create(litjevBase), litjevModel, checkTimeout);
+            case "off" -> null;
+            default -> new CorpusKeyCheck(corpus);
+        };
+        WorkerRuntime runtime = new WorkerRuntime(handlers(corpus, blobs, check, threshold), blobs,
                 new OpenTelemetryExecutionTracer(openTelemetry));
         for (String caller : callers) {
             bindings.add(SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + "privacy-tasks-" + caller)
                     .resultQueueUrl(queueBase + caller + "-results").pool(new WorkerPool(runtime, concurrency))
                     .waitTime(Duration.ofSeconds(5)).build().start());
         }
-        LOG.infof("Privacy service started: route %s for callers %s", ROUTE, callers);
+        LOG.infof("Privacy service started: route %s for callers %s, model check %s", ROUTE, callers, checkKind);
     }
 
-    /** The reference redactor (8c): patterns, and the corpus's markers as terms. */
+    /** The layered filter (S.6) with the CI's model check: the corpus-aware fake. */
     public static TaskHandlerRegistry handlers(Corpus corpus, BlobStore blobs) {
-        List<String> markers = corpus.meetings().stream().flatMap(m -> m.pii().stream()).map(Corpus.Pii::marker)
-                .toList();
-        LayeredRedactor redactor = new LayeredRedactor("sandbox-reference", "s5",
-                List.of(new PatternLayer(), new TermListLayer("person", markers)));
+        return handlers(corpus, blobs, new CorpusKeyCheck(corpus), LlmCheckLayer.DEFAULT_THRESHOLD);
+    }
+
+    /** The layered filter (S.6, 8a) behind the {@code redactor} route; {@code check} null = no model layer. */
+    public static TaskHandlerRegistry handlers(Corpus corpus, BlobStore blobs, PersonalDataCheck check,
+            double threshold) {
+        LayeredRedactor redactor = LayeredFilter.build(LayeredFilter.namesOf(corpus), check, threshold);
         return new TaskHandlerRegistry().register(ROUTE, new RedactionHandler(redactor, new Pseudonyms(TEST_SECRET),
                 blobs));
     }
