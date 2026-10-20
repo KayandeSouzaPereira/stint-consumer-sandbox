@@ -30,10 +30,13 @@ public record EngineeringModels(Transcriber transcriber, List<DecisionAdapter> d
     public static EngineeringModels fakes(Corpus corpus) {
         Map<String, Transcriber.Transcript> transcripts = new HashMap<>();
         for (Corpus.Meeting meeting : corpus.meetings()) {
+            // the real Whisper's text when the corpus has it (S.6), else the script it was spoken from
+            List<String> texts = corpus.whisperSegments(meeting.id())
+                    .orElseGet(() -> meeting.script().stream().map(Corpus.Turn::text).toList());
             List<Transcriber.Segment> segments = new ArrayList<>();
-            for (int i = 0; i < meeting.script().size(); i++) {
+            for (int i = 0; i < texts.size(); i++) {
                 segments.add(new Transcriber.Segment(Duration.ofSeconds(4L * i), Duration.ofSeconds(4L * i + 4),
-                        meeting.script().get(i).text()));
+                        texts.get(i)));
             }
             transcripts.put(FakeTranscriber.sha256(Corpus.syntheticAudio(meeting.id())),
                     new Transcriber.Transcript("en", Duration.ofSeconds(4L * segments.size()), segments));

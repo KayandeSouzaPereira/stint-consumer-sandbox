@@ -33,7 +33,8 @@ import jakarta.ws.rs.core.Response;
  *   <li>{@code GET /reviews}, {@code POST /reviews/{reviewId}}: the portal, with HTTP Basic and the test users of
  *       {@code channels.portal.users.*}. The role comes from the credential, never from the request.</li>
  *   <li>{@code POST /meetings} {@code {"meetingId"}}: the recorder, for a corpus meeting.</li>
- *   <li>{@code GET /dev/confluence/pages}: what the fake Confluence holds (ids, space, title, labels; no body), and
+ *   <li>{@code GET /dev/confluence/pages}: what the fake Confluence holds (ids, space, title, labels; the body only with
+ *       {@code ?bodies=true}, for the PII sweeper), and
  *       {@code GET /dev/reviews}: every open review — for the scenarios, which watch from outside.</li>
  * </ul>
  */
@@ -135,11 +136,14 @@ public class ChannelsResource {
 
     @GET
     @Path("dev/confluence/pages")
-    public String pages() {
+    public String pages(@jakarta.ws.rs.QueryParam("bodies") boolean bodies) {
         ArrayNode out = Json.MAPPER.createArrayNode();
         service.confluence().pages().forEach(p -> {
             var page = out.addObject().put("id", p.id()).put("space", p.spaceKey()).put("title", p.title());
             page.set("labels", Json.MAPPER.valueToTree(p.labels()));
+            if (bodies) {
+                page.put("body", p.body());   // the sweeper reads it (S.6); synthetic data, a dev endpoint
+            }
         });
         return out.toString();
     }

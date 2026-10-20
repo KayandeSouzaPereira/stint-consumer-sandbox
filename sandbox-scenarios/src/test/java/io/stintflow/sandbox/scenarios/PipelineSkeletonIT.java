@@ -32,6 +32,7 @@ import io.stintflow.sandbox.scenarios.support.MailHog;
 import io.stintflow.sandbox.scenarios.support.Portal;
 import io.stintflow.sandbox.scenarios.support.Scenario;
 import io.stintflow.sandbox.scenarios.support.ScenarioBase;
+import io.stintflow.sandbox.scenarios.support.Sweeper;
 import io.stintflow.sandbox.scenarios.support.Spy;
 
 /**
@@ -101,19 +102,20 @@ class PipelineSkeletonIT extends ScenarioBase {
                 "[p1 c1] Technical refinement invitation", "[p1 c1] Cycle closed");
         assertThat(portal.pages()).hasSize(1);      // p1 publishes on Confluence; p2's channel is e-mail
 
-        // --- the contract, and no content: every event of the bus, every log line ---
+        // --- the contract of every event of the bus, and the sweep (S.6): logs, bus, e-mails, pages, buckets, tables ---
         List<String> broken = new ArrayList<>();
-        List<String> leaks = new ArrayList<>();
         for (Spy.Event e : spy.events()) {
-            JsonNode json = Spy.JSON.readTree(e.json());
             if (CONTRACTS.isPipelineType(e.type())) {
-                broken.addAll(CONTRACTS.violations(json));
+                broken.addAll(CONTRACTS.violations(Spy.JSON.readTree(e.json())));
             }
-            CORPUS.leaksIn(e.json()).forEach(l -> leaks.add("bus " + e.type() + ": " + l));
         }
+        Sweeper sweeper = new Sweeper(CORPUS, floci, mail, Module.CHANNELS.port());
+        List<Sweeper.Finding> found = new ArrayList<>();
+        found.addAll(sweeper.texts("bus", spy.events().stream().map(Spy.Event::json).toList()));
         for (App app : running.values()) {
-            app.lines().forEach(line -> CORPUS.leaksIn(line).forEach(l -> leaks.add(app.name() + " log: " + l)));
+            found.addAll(sweeper.texts("log " + app.name(), app.lines()));
         }
+        found.addAll(sweeper.stores());
         assertThat(broken).as("events out of the v1 contract").isEmpty();
 
         // --- Jaeger: the spans of p1's chain, in every service, linked across services ---
@@ -140,9 +142,8 @@ class PipelineSkeletonIT extends ScenarioBase {
                 }
             }
         }
-        for (JsonNode s : spans.values()) {
-            CORPUS.leaksIn(s.toString()).forEach(l -> leaks.add("span " + s.path("operationName").asText() + ": " + l));
-        }
+        found.addAll(sweeper.texts("span", spans.values().stream().map(JsonNode::toString).toList()));
+        List<String> leaks = found.stream().map(Sweeper.Finding::toString).toList();
 
         evidence(running, left, ofP1, ofP2, spansByService, links, leaks, broken);
         assertThat(leaks).as("planted markers, in any form, outside the restricted blobs").isEmpty();

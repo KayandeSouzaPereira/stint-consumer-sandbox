@@ -133,6 +133,26 @@ public final class Corpus {
                 .flatMap(m -> m.expected().sdds().stream()).filter(s -> s.id().equals(sddId)).findFirst();
     }
 
+    /**
+     * What the real Whisper wrote for a meeting's audio (S.6, 8e): the segments' texts, from
+     * {@code transcripts/<id>.json} (scripts/transcribe-corpus.py), or empty if there is no fixture. The CI's fake
+     * transcribers return this in place of the script, so the pipeline runs on speech-to-text as it is — garbled
+     * markers, cut-off sentences — and not on the clean text it was spoken from.
+     */
+    public Optional<List<String>> whisperSegments(String meetingId) {
+        Path file = dir.resolve("transcripts").resolve(meetingId + ".json");
+        if (!Files.exists(file)) {
+            return Optional.empty();
+        }
+        try {
+            List<String> texts = new ArrayList<>();
+            JSON.readTree(file.toFile()).path("segments").forEach(seg -> texts.add(seg.path("text").asText().strip()));
+            return Optional.of(texts);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** Lowercase letters and digits only: how text is compared with the scanner's forms. */
     public static String normalize(String text) {
         StringBuilder out = new StringBuilder(text.length());

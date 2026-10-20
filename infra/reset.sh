@@ -6,7 +6,8 @@
 #   - purges every sandbox SQS queue (work queues, their DLQs and the spy);
 #   - deletes the one-time schedules of the <domain>-timers groups (the cron schedules are reconciled by the apps);
 #   - deletes every MailHog message.
-# Buckets and their objects are kept (documents are keyed by order, so a rerun overwrites them).
+# Buckets and their objects are kept (documents are keyed by order, so a rerun overwrites them), except the meeting
+# pipeline's (S.6): the PII sweeper reads every object that is not restricted, so what an earlier run left would taint it.
 set -euo pipefail
 
 export AWS_ACCESS_KEY_ID=test
@@ -43,6 +44,13 @@ purge_queue() {
   if [ -n "$url" ]; then aws_ sqs purge-queue --queue-url "$url" >/dev/null; say purged "sqs:$1"; fi
 }
 
+empty_bucket() { # bucket (the meeting pipeline's; it may not exist yet on a first run)
+  if aws_ s3api head-bucket --bucket "$1" >/dev/null 2>&1; then
+    aws_ s3 rm "s3://$1" --recursive >/dev/null 2>&1 || true
+    say emptied "s3:$1"
+  fi
+}
+
 delete_schedules() { # group
   local names
   names=$(aws_ scheduler list-schedules --group-name "$1" --query 'Schedules[].Name' --output text 2>/dev/null || true)
@@ -73,6 +81,8 @@ for t in $existing_tables; do
 done
 for q in $existing_queues; do parallel purge_queue "$q"; done
 for d in "${DOMAINS[@]}"; do parallel delete_schedules "$d-timers"; done
+for b in sandbox-meetings-raw sandbox-documents sandbox-records-docs sandbox-target-runs sandbox-business-blobs \
+         sandbox-engineering-blobs sandbox-delivery-blobs; do parallel empty_bucket "$b"; done
 curl -fsS -X DELETE "$MAILHOG/api/v1/messages" >/dev/null && say deleted "mailhog:messages"
 wait
 

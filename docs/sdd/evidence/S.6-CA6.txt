@@ -1,0 +1,7 @@
+S.6 CA6: the sweeper sees a planted leak in every kind of store, and not in the restricted one
+  planted: a log line, a span, a bus event, an e-mail, an S3 object, a DynamoDB item; and a marker in the
+  restricted bucket sandbox-meetings-raw (must not be reported)
+  found:
+    mailhog plant@sandbox.local | Notes: fragment 'Sinthe'
+    s3 s3://sandbox-documents/plant/design.md: SYNTH-PII-2011 as synthpii2011; fragment 'SYNTH'; fragment 'Rivera'
+    dynamodb records-catalog AttributeValue(S=plant): SYNTH-PII-2012 as sinthepii2012atexamplecalm; fragment 'Sinthe'
