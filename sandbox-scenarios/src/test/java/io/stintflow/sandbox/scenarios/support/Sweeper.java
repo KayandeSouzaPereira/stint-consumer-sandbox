@@ -44,6 +44,7 @@ public final class Sweeper {
     private final MailHog mail;
     private final Integer channelsPort;
     private final HttpClient http = HttpClient.newHttpClient();
+    private final java.util.Map<String, Integer> scanned = new java.util.TreeMap<>();
 
     /** @param channelsPort the running sandbox-channels' port (for the Confluence pages), or null */
     public Sweeper(Corpus corpus, Floci floci, MailHog mail, Integer channelsPort) {
@@ -137,7 +138,13 @@ public final class Sweeper {
         return v.toString();
     }
 
+    /** How many items the sweeper has looked at, by kind of store: what a zero covers. */
+    public String coverage() {
+        return scanned.toString();
+    }
+
     private void check(List<Finding> out, String source, String where, String text) {
+        scanned.merge(source.split(" ")[0], 1, Integer::sum);
         List<String> leaks = leaksIn(text);
         if (!leaks.isEmpty()) {
             out.add(new Finding(source, where, String.join("; ", leaks)));

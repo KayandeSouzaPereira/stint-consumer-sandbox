@@ -53,6 +53,7 @@ class PipelineSkeletonIT extends ScenarioBase {
 
     final HttpClient http = HttpClient.newHttpClient();
     final List<String> answered = new ArrayList<>();
+    String coverage = "";
 
     @Test
     void two_projects_go_through_the_three_domains_each_on_one_chain() throws Exception {
@@ -145,6 +146,7 @@ class PipelineSkeletonIT extends ScenarioBase {
         found.addAll(sweeper.texts("span", spans.values().stream().map(JsonNode::toString).toList()));
         List<String> leaks = found.stream().map(Sweeper.Finding::toString).toList();
 
+        coverage = sweeper.coverage();
         evidence(running, left, ofP1, ofP2, spansByService, links, leaks, broken);
         assertThat(leaks).as("planted markers, in any form, outside the restricted blobs").isEmpty();
         assertThat(links).as("cross-service FOLLOWS_FROM links on p1's chain")
@@ -245,7 +247,8 @@ class PipelineSkeletonIT extends ScenarioBase {
         links.stream().distinct().sorted().forEach(l -> e.append("    ").append(l).append('\n'));
         e.append("  events out of the contract: ").append(broken).append('\n')
                 .append("  markers found (bus, spans, ").append(running.size()).append(" process logs): ")
-                .append(leaks).append('\n').append("  e-mails:\n").append(mails(mail.all()))
+                .append(leaks).append('\n').append("  items the sweeper looked at, by kind of store: ").append(coverage)
+                .append('\n').append("  e-mails:\n").append(mails(mail.all()))
                 .append(Leftovers.report(left));
         Scenario.evidence("S.5-CA2.txt", e.toString());
         Files.writeString(Scenario.out().resolve("S.5-CA2-spy.json"), Spy.JSON.writerWithDefaultPrettyPrinter()

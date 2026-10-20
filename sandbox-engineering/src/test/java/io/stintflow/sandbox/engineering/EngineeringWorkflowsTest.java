@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import io.stintflow.worker.redaction.RedactionLayer;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -166,6 +167,42 @@ class EngineeringWorkflowsTest {
             assertThat(d.published(PipelineEvents.REVIEW_REQUESTED)).isNotEmpty()
                     .allMatch(e -> "tech-rep".equals(e.getExtension(StintEvents.EXT_ROLE)));
             assertThat(d.awaitPublished(PipelineEvents.QUESTIONS_SENT, 1, Duration.ofSeconds(5))).hasSize(1);
+        }
+    }
+
+    /** SDD S.6, CA3: a redaction in doubt stops the technical meeting before any model sees the text. */
+    @Test
+    void a_redaction_in_doubt_stops_the_technical_meeting_before_any_model() throws Exception {
+        Corpus.Meeting m = CORPUS.meeting("p1-c1-technical");
+        List<String> dispatched = new java.util.concurrent.CopyOnWriteArrayList<>();
+        try (InMemoryDomain d = new InMemoryDomain("engineering", "technical-meeting.yaml", blobs -> {
+            TaskHandlerRegistry normal = handlers(blobs);
+            TaskHandlerRegistry watched = new TaskHandlerRegistry();
+            for (String route : List.of("transcribe", "decide-meeting-type", "decide-priority", "decide-outcome",
+                    "decide-blocking", "write-sdds", "write-questions", "register-document", "send-email")) {
+                watched.register(route, ctx -> {
+                    dispatched.add(route);
+                    return normal.find(route).orElseThrow().execute(ctx);
+                });
+            }
+            return watched.register("redactor", new RedactionHandler(new LayeredRedactor("doubtful", "1", List.of(
+                    new RedactionLayer() {
+                        @Override
+                        public String name() {
+                            return "unsure";
+                        }
+
+                        @Override
+                        public Result apply(String text, Scope scope) {
+                            return new Result(text, java.util.Map.of(), true);
+                        }
+                    })), new Pseudonyms("test-secret-0123456789".getBytes(StandardCharsets.UTF_8)), blobs));
+        })) {
+            InstanceSnapshot end = d.run(recorded(d, m), r -> asTheKey(r, m), Duration.ofSeconds(30));
+            assertThat(end.status()).isEqualTo(InstanceStatus.COMPLETED);
+            assertThat(end.position()).as("the doubt branch, whose context rests in a restricted blob").endsWith("/doubt");
+            assertThat(dispatched).as("only the transcription ran").containsExactly("transcribe");
+            assertThat(d.bus.published()).as("nothing was published, no review asked").isEmpty();
         }
     }
 }
