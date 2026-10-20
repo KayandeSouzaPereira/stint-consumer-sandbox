@@ -52,8 +52,11 @@ class FilterOverCorpusTest {
                 String text = transcript(m, form);
                 RedactionLayer.Result result = filter.redact(text, SCOPE);
                 checked++;
-                CORPUS.leaksIn(result.text()).forEach(l -> escaped.add(m.id() + " form " + l));
-                assertThat(result.doubt()).as(m.id() + " form " + text.length()).isFalse();
+                final int f = form;
+                CORPUS.leaksIn(result.text()).forEach(l -> escaped.add(m.id() + " form " + f + ": " + l + " in [" + result.text() + "]"));
+                if (result.doubt() && CORPUS.leaksIn(result.text()).isEmpty()) {
+                    escaped.add(m.id() + " form " + f + ": doubt without a leak");
+                }
             }
         }
         assertThat(checked).isEqualTo(CORPUS.meetings().size() * 3);

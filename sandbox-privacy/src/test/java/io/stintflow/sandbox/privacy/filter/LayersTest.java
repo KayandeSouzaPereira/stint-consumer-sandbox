@@ -99,6 +99,6 @@ class LayersTest {
         assertThat(CORPUS.leaksIn(result.text())).isEmpty();
         assertThat(result.counts()).containsKeys("person", "spoken-email", "spoken-number");
         assertThat(result.doubt()).isFalse();
-        assertThat(filter.layerNames()).containsExactly("patterns", "spoken", "names", "presentation");
+        assertThat(filter.layerNames()).containsExactly("spoken", "patterns", "names", "presentation");
     }
 }
