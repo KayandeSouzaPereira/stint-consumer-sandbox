@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.6 |
-| Status | **Em implementação** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as recomendações, 8a como proposta e 8h opção 1, sem NER) |
+| Status | **Implementado** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as recomendações, 8a como proposta e 8h opção 1, sem NER) |
 | Depende de | S.5 (Implementado). Stint 3a.5 (compliance de entrada) e 3a.6 (marco), `500dfd1` |
 | Bloqueia | S.7 a S.11 (todo domínio chama o filtro) |
 | Branch | `phase-3a-validation` (a mesma do S.5; os PRs da fase são empilhados) |
@@ -144,4 +144,64 @@ O S.6 troca o redator de referência por um filtro em camadas dentro do `sandbox
 - O `LayeredRedactor.reference()` não traz a camada falada: a camada fica no sandbox. Se o Stint quiser o filtro falado, é proposta de SDD.
 
 ## 8. Registro de validação
-(preencher na etapa 2)
+
+**Ambiente.** O do S.5 (Windows 11, Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2, Docker Desktop, Stint `500dfd1` sob a versão `0.1.0-3a-500dfd1`), mais a pilha local do WSL2 para o Whisper (`distil-small.en`, CPU) e, na medição do `noul`, o LitJev (Qwen3.5-2B, GPU).
+
+### 8.1 Commits (`phase-3a-validation`, só local; ainda sem push)
+| Commit | O que faz |
+|---|---|
+| `c3674dc`, `a75b3c7` | spec e aprovação (8a como proposta, 8h opção 1, sem NER) |
+| `e070089`, `8b0799e` | `SpokenFormLayer`, `NameLayer`, `PresentationLayer`, `LlmCheckLayer` com a porta `PersonalDataCheck` e o `LayeredFilter` no `sandbox-privacy` |
+| `ab66850`, `67a71de` | ordem das camadas e ajuste sobre o texto real do Whisper, com o critério de resíduo |
+| `c9632da` | `Sweeper`, `PiiSweepIT` e o texto real do Whisper nos transcritores falsos do CI |
+| `d3561c7` | testes da dúvida nos dois workflows de reunião; cobertura da varredura no relatório |
+| `18aa91e`, `86327c0` | medição do `noul` real; o limiar de observação; expiração do blob bruto |
+
+### 8.2 Critérios de aceite
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.** Cada camada tem teste próprio (e-mail ditado em três grafias, número ditado, soletrado, nome com uma letra a menos, nome apresentado, dia que não é nome). O filtro composto, sobre as 14 reuniões em três formas (escrita e duas faladas), deixa zero marcador e não põe nenhuma em dúvida | `LayersTest` (7), `FilterOverCorpusTest` (4) |
+| CA2 | **Verde, com a ressalva de 8.3.** Sobre os 14 transcritos do Whisper real: zero marcador pelo varredor e **zero resíduo** pelo critério estrito (`synth*`/`sinthe*`, o sobrenome sintético e o id de 4 dígitos do marcador). Recall de 100% por tipo: nome 14/14, e-mail 6/6, telefone 3/3. Pior preservação: 95%. Nenhuma redação em dúvida com a verificação do modelo | `RealTranscriptsTest`; `S.6-CA2.txt` |
+| CA3 | **Verde.** Dúvida de qualquer camada, verificação ≥ limiar, no limiar, falha do modelo, NaN e resposta fora de [0, 1] resultam em `doubt: true`; abaixo do limiar, não. O modelo vê o texto como as camadas o deixaram e nunca o altera. Nos dois workflows, a dúvida para a reunião logo depois da transcrição: só o `transcribe` foi despachado, nada no barramento, nenhuma revisão pedida | `FilterOverCorpusTest`, `BusinessDesignWorkflowTest`, `EngineeringWorkflowsTest`; `S.6-CA3.txt` |
+| CA4 | **Verde.** Política dos três workflows: restrito só chega a `transcribe` e `redactor`; confidencial não chega ao `transcribe`; a Entrega não toca dado bruto. Um provedor remoto é recusado para dado confidencial e restrito (e sem nível, que vale restrito), um local não. As classes `raw-audio`, `raw-transcript` e `restricted` são de 7 dias, e a do handler é a da política. Um blob bruto some depois de 7 dias (relógio controlável; o lifecycle do S3 só existe na AWS) | `PolicyTest` (5 no Negócio, 4 na Engenharia, 1 na Entrega) |
+| CA5 | **Verde.** O esqueleto do S.5 de novo, com o **texto real do Whisper** nos transcritores do CI, o filtro em camadas e o varredor sobre todos os depósitos: zero achado. O que a varredura cobriu: 50 eventos do barramento, 1 página do Confluence, 153 itens do DynamoDB, 121 linhas de log, 10 e-mails, 66 objetos do S3 e 143 spans | `PipelineSkeletonIT`; `S.6-CA5.txt` |
+| CA6 | **Verde.** O varredor acha um dado plantado em cada tipo de depósito (log, span, evento, e-mail, objeto S3, item do DynamoDB), em formas diferentes (escrita, falada, fragmento de marcador garbado), não aponta o bucket restrito `sandbox-meetings-raw` e dá zero num emulador limpo | `PiiSweepIT`; `S.6-CA6.txt` |
+| CA7 | **Verde.** Pelo menos 90% das palavras que não são dado pessoal sobrevivem: o pior transcrito mantém 95%, e quase todos 100% | `RealTranscriptsTest` |
+| CA8 | **Verde.** `gate.sh --regression-only`: build completo (todos os módulos), `FlociBillingIT` 5/5, `FlociOrdersIT` 6/6 e `RegressionIT` 3/3 (S.1–S.5), PASSED em 20/10/2026 | `gate.sh --regression-only` |
+| 8f | **Medido.** O `noul` do LitJev (Qwen3.5-2B) sobre os 14 transcritos, antes e depois das camadas: 8 de 14 em ≥ 0,50 nos dois casos, e `o1` sobe de 0,47 para 0,71 depois de redigido. **Ele não distingue texto redigido de texto bruto.** Chamada mais lenta: 1,9 s | `LitJevCheckTest` (`-Dprivacy.litjev=true`); `S.6-noul.txt` |
+
+### 8.3 Ressalvas que valem tanto quanto os números
+1. **As camadas foram ajustadas nos mesmos 14 transcritos em que são testadas.** O CA2 mostra que o filtro cobre o que o Whisper escreveu **nesses** áudios; não é uma medida fora da amostra. Um áudio novo, com outra voz, outro modelo de fala ou outro nome, pode escrever o dado de uma forma que nenhuma camada conhece. O que dá alguma garantia fora da amostra é a falha fechada (o `noul`, se um dia for confiável, e a revisão humana), não o recall deste corpus.
+2. **O Whisper não preserva o dado, nem o marcador.** Ele cortou o final de várias falas (`My address is Sinthe-I-2032 at example.`, `Reach.....`, `at.`: o e-mail ou o telefone muitas vezes nem chega à transcrição) e escreveu o marcador sintético de formas variadas (`synth PI 2018-1`, `Sinthe-I-2-1-131`, `2016` por `2061`, `since P.I. 2041`). Por isso o critério "o varredor não vê o marcador" sozinho **enganava**: um nome meio redigido passava. O critério passou a incluir o resíduo (8.2, CA2), e a comparação do varredor com as formas listadas ficou como segunda linha.
+3. **Os marcadores são sintéticos e garbados por uma máquina; nomes reais seriam outra coisa.** O `NameLayer` compara com uma lista; um nome real que não esteja nela e que ninguém apresente por "I am…" só seria pego pelo `noul` ou pelo humano (8g da spec). Nada aqui mede esse caso, e sem NER (8h, opção 1) ele continua aberto.
+4. **O recall por tipo conta só o dado plantado que chegou ao filtro de alguma forma.** Onde o Whisper cortou o final e o e-mail ou o telefone sumiu da transcrição (`scanner sees it raw: no` no relatório), não há o que redigir; o relatório mostra isso por dado.
+
+### 8.4 Desvios e decisões da implementação (para sua revisão)
+- **Ordem das camadas: forma falada primeiro, depois os padrões.** Foi achado: a camada de padrões do Stint fica em dúvida diante de uma sequência de dígitos que não classifica ("5511 98022 4022"), e essa dúvida permanece mesmo que uma camada seguinte a redija. Com a forma falada antes, o número já é um pseudônimo quando os padrões olham. O custo é um IP ou um cartão escrito em dígitos ser rotulado como número, não como ele mesmo; a redação é a mesma.
+- **Camadas a mais que a spec:** a lista dos sobrenomes dos nomes listados (`TermListLayer`), antes da apresentação, e a **absorção** dos fragmentos entre "I am" e o nome já redigido, porque o Whisper garbla o marcador em pedaços.
+- **Duas edições de tolerância** para nomes de 15 ou mais caracteres, com a janela de menor distância e, no empate, a mais longa. O primeiro ajuste (qualquer janela dentro da tolerância) engolia a palavra seguinte ("PERSON read the design"): achado na leitura do texto redigido, não pelos testes.
+- **O `noul` fica em observação com o LitJev (limiar 1,01).** A spec propunha 0,5 (8a). A medição de 8f mostra que com 0,5 ele mandaria 8 de 14 reuniões limpas à revisão humana. A camada continua ligada e continua falhando fechada (uma chamada que falha é dúvida), mas só observa; o relatório traz a probabilidade. No CI, o `CorpusKeyCheck` (um falso que conhece os marcadores) faz o papel de um modelo bom, e os testes provam as camadas determinísticas, não o modelo.
+- **Asserção trocada, como você aprovou:** o `PrivacyHandlersTest` registrava que a forma falada escapava do redator de referência; agora exige que ela não escape.
+- **`reset.sh` esvazia os buckets do pipeline** (`sandbox-meetings-raw`, `-documents`, `-records-docs`, `-target-runs` e os três `-blobs`). Antes mantinha os objetos (decisão do S.4), e as sobras de rodadas antigas contaminavam o varredor. O `sandbox-facts` do S.4 continua como estava.
+- **A API de pseudônimo do Stint `500dfd1`** é `scope.pseudonyms().label(instanceId, tipo, valor)`; o `Scope.label` do Stint mais novo (3b.2) não existe nessa versão. O sandbox usa o que o commit fixado oferece.
+- **O endpoint `/dev/confluence/pages` aceita `?bodies=true`** para o varredor ler o corpo das páginas (dados sintéticos, endpoint de desenvolvimento).
+- **Estratégia de fixtures:** o Whisper deu o mesmo texto nas duas transcrições de cada um dos 14 áudios (`repeatable: true`), então as fixtures são estáveis; o teste do CA2 só lê as fixtures, sem Docker e sem modelo.
+
+### 8.5 Achados (nada foi alterado no Stint)
+| # | Achado | Proposta |
+|---|---|---|
+| S6-1 | O `distil-small.en` corta o final de várias falas e garbla até um marcador soletrado | Medir com um Whisper maior (`small.en`/`medium.en`) e com áudio mais longo antes de qualquer dado real; guardar a duração e o corte no relatório |
+| S6-2 | O `noul` do LitJev Qwen3.5-2B não distingue texto redigido de bruto (8 de 14 acima de 0,5 nos dois) | Modelo maior ou calibrado antes de usá-lo como porta; até lá, observação |
+| S6-3 | Uma camada em dúvida (os padrões, diante de dígitos que não classifica) mantém a redação em dúvida mesmo que uma camada seguinte a resolva | Proposta ao Stint: a dúvida de uma camada poderia ser "resolvida" por camada posterior que a redige; hoje o sandbox contorna pela ordem |
+| S6-4 | O Stint não traz uma camada de forma falada; o filtro falado é do sandbox | Se o Stint quiser, é proposta de SDD (e-mail e número ditos, soletrado) |
+| S6-5 | O `LayeredRedactor` não relata o que cada camada fez ao texto, só contagens | O diagnóstico por camada precisou de um relatório próprio no teste |
+
+### 8.6 Fora do que o SDD pedia
+- NER local (8h, opção 1): fora, como aprovado.
+- Detecção de nome real arbitrário: fora; limite declarado em 8.3.
+- Efeito real do lifecycle do S3 e o SSE-KMS: só na AWS (gate pendente do 3a.5). Em 8c, o sandbox declara a classe, a retenção e as rotas, e prova a expiração com relógio controlável.
+- Dado real: continua proibido até o gate do DPO e do jurídico.
+
+### 8.7 Pendências
+- Push da branch e atualização do PR #2, com o seu pedido.
+- Notion: a página do S.6 e o Log.
