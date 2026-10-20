@@ -28,7 +28,7 @@ public final class SpokenFormLayer implements RedactionLayer {
 
     private static final String DIGIT_WORD = "zero|oh|one|two|three|four|five|six|seven|eight|nine";
     /** One token of a dictation: a letter, a digit or a digit word. */
-    private static final String ATOM = "(?:[a-z0-9]|" + DIGIT_WORD + ")";
+    private static final String ATOM = "(?:[a-z0-9]|\\d{1,6}|" + DIGIT_WORD + ")";
     /** The top-level domain as it is dictated or misheard ({@code com} written "calm", "come", "comm"). */
     private static final String TLD = "(?:com|calm|come|comm|org|net|io|edu|gov|co|br)";
 
@@ -41,9 +41,18 @@ public final class SpokenFormLayer implements RedactionLayer {
             "(?i)(?<![\\p{L}\\p{N}])(?:(?!" + FUNCTION_WORDS + ")[a-z]{2,12}[-\\s]+)?(?:" + ATOM + "[-\\s]+){1,16}at\\s+[a-z0-9-]+(?:\\s*\\.\\s*|\\s+dot\\s+)"
                     + TLD + "\\b\\.?");
 
+    /**
+     * A dictated address whose local part holds a digit group — "synth PII 2122 at Example. Calm.", "Sinthe-I-2032 at
+     * example." (cut short, no top-level domain) — with up to two short fragments before the group, which is where
+     * speech-to-text puts the pieces of a name it garbled. The top-level domain is optional.
+     */
+    private static final Pattern EMAIL_WITH_DIGITS = Pattern.compile(
+            "(?i)(?<![\\p{L}\\p{N}])(?:(?!" + FUNCTION_WORDS + ")[a-z]{1,6}[,\\s-]+){0,2}[a-z]*\\d[a-z0-9]*[,\\s-]+at\\s+[a-z0-9-]+"
+                    + "(?:[\\s.,]+" + TLD + "\\b\\.?|\\s*\\.)?");
+
     /** Digit words and digit groups, separated by spaces, dots, commas or dashes: a dictated number. */
     private static final Pattern NUMBER_RUN = Pattern.compile(
-            "(?i)(?<![\\p{L}\\p{N}])(?:plus\\s+)?(?:(?:" + DIGIT_WORD + "|\\d+)[\\s,.-]+){2,}(?:" + DIGIT_WORD + "|\\d+)(?![\\p{L}\\p{N}])");
+            "(?i)(?<![\\p{L}\\p{N}])(?:plus\\s+)?(?:(?:" + DIGIT_WORD + "|o?\\d+)[\\s,.-]+){1,}(?:" + DIGIT_WORD + "|o?\\d+)(?![\\p{L}\\p{N}])");
     private static final int MIN_DIGITS = 7;
 
     private static final Pattern SPELLING = Pattern.compile("(?<![\\p{L}\\p{N}])(?:\\p{L}[-\\s]+){2,}\\p{L}(?![\\p{L}\\p{N}])");
@@ -58,6 +67,7 @@ public final class SpokenFormLayer implements RedactionLayer {
         Map<String, Integer> counts = new LinkedHashMap<>();
         String current = text;
         if (scope.wants(EMAIL)) {
+            current = replace(EMAIL_WITH_DIGITS, current, EMAIL, scope, counts, null);
             current = replace(SPOKEN_EMAIL, current, EMAIL, scope, counts, null);
         }
         if (scope.wants(NUMBER)) {
@@ -89,9 +99,10 @@ public final class SpokenFormLayer implements RedactionLayer {
     /** At least {@value #MIN_DIGITS} digits, counting a digit word as one and a number by its length. */
     static boolean enoughDigits(String run) {
         int digits = 0;
-        Matcher m = Pattern.compile("(?i)" + DIGIT_WORD + "|\\d+").matcher(run);
+        Matcher m = Pattern.compile("(?i)" + DIGIT_WORD + "|o?\\d+").matcher(run);
         while (m.find()) {
-            digits += Character.isDigit(m.group().charAt(0)) ? m.group().length() : 1;
+            String token = m.group().toLowerCase(java.util.Locale.ROOT);
+            digits += Character.isDigit(token.charAt(0)) ? token.length() : token.startsWith("o") && token.length() > 1 && Character.isDigit(token.charAt(1)) ? token.length() : 1;
         }
         return digits >= MIN_DIGITS;
     }

@@ -1,0 +1,46 @@
+{
+  "meetingId": "p3-c1-business",
+  "audioSha256": "f923884ef8d2b5fe04879e2dd2d06c1ce22e0ca97cddc38ed920d666808f200c",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 21.3,
+  "repeatable": true,
+  "text": "We need to talk about reading lists, but half of the team is missing today. I am synth PI 2001 Rivera. Then let's not publish anything yet. Schedule a new meeting with everyone next week. Agreed a new meeting. Low priority for now. Invites go to synth PII, 2072 at Example, Calm.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.08,
+      "text": " We need to talk about reading lists, but half of the team is missing today."
+    },
+    {
+      "start": 4.08,
+      "end": 7.56,
+      "text": " I am synth PI 2001 Rivera."
+    },
+    {
+      "start": 7.56,
+      "end": 9.84,
+      "text": " Then let's not publish anything yet."
+    },
+    {
+      "start": 9.84,
+      "end": 13.52,
+      "text": " Schedule a new meeting with everyone next week."
+    },
+    {
+      "start": 13.52,
+      "end": 14.88,
+      "text": " Agreed a new meeting."
+    },
+    {
+      "start": 14.88,
+      "end": 16.56,
+      "text": " Low priority for now."
+    },
+    {
+      "start": 16.56,
+      "end": 20.68,
+      "text": " Invites go to synth PII, 2072 at Example, Calm."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "meetingId": "o2-c1-technical",
+  "audioSha256": "cc643f2235c59db9bbbb4434015460dcdf8cb3545c7531138b4930c782da9123",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 11.18,
+  "repeatable": true,
+  "text": "I am Sinthe-I-2-1-131 Rivera. This call is about the payroll system, not the library. Then it belongs to another project. Let's end it here.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.84,
+      "text": " I am Sinthe-I-2-1-131 Rivera."
+    },
+    {
+      "start": 3.84,
+      "end": 7.36,
+      "text": " This call is about the payroll system, not the library."
+    },
+    {
+      "start": 7.36,
+      "end": 9.72,
+      "text": " Then it belongs to another project."
+    },
+    {
+      "start": 9.72,
+      "end": 10.48,
+      "text": " Let's end it here."
+    }
+  ]
+}

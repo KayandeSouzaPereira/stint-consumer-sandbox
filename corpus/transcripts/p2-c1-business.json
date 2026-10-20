@@ -1,0 +1,31 @@
+{
+  "meetingId": "p2-c1-business",
+  "audioSha256": "0f3b05406ec17b30841dfebe3ffc9bf35d81066d3acde8b30455074499274e1e",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 21.9,
+  "repeatable": true,
+  "text": "Design meeting for book loans. I am Sinthe P.I. 2031 Rivera. Members should borrow books and return them. We also want a limit per member. Send the design by email to the board first. They don't use confluence. My address is Sinthe-I-2032 at example.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "text": " Design meeting for book loans. I am Sinthe P.I. 2031 Rivera."
+    },
+    {
+      "start": 5.0,
+      "end": 10.0,
+      "text": " Members should borrow books and return them. We also want a limit per member."
+    },
+    {
+      "start": 10.0,
+      "end": 14.0,
+      "text": " Send the design by email to the board first. They don't use confluence."
+    },
+    {
+      "start": 14.0,
+      "end": 20.0,
+      "text": " My address is Sinthe-I-2032 at example."
+    }
+  ]
+}

@@ -14,8 +14,9 @@ import io.stintflow.worker.redaction.RedactionLayer;
 /**
  * SDD S.6, 8a (layer 3): names from a synthetic list, found whatever the speech-to-text did to them. A listed name is
  * compared with the text <em>normalized</em> — lowercase letters and digits only, digit words as digits, spaces,
- * dashes and punctuation gone — over a window of consecutive words, and a window one edit away from the name counts:
- * Whisper writes {@code SYNTH-PII-2011 Rivera} as {@code synth PI 2011 Rivera}, a letter short. The longest window that
+ * dashes and punctuation gone — over a window of consecutive words, and a window one edit away from the name counts (two, for a name of 15 characters or more):
+ * Whisper writes {@code SYNTH-PII-2011 Rivera} as {@code synth PI 2011 Rivera}, a letter short, and
+ * {@code ...2061...} as {@code ...2016...}. The longest window that
  * matches wins, so a surname that is part of the listed name goes with it.
  */
 public final class NameLayer implements RedactionLayer {
@@ -74,19 +75,28 @@ public final class NameLayer implements RedactionLayer {
         return new Result(out.toString(), counts, false);
     }
 
-    /** The last word index of the longest window starting at {@code start} that is (nearly) a listed name, or null. */
+    /**
+     * The last word index of the window starting at {@code start} that is closest to a listed name (within the edits
+     * allowed), or null. The fewest edits win, and the longer window on a tie, so the slack that lets {@code synth PI
+     * 2021 Rivera} match never reaches for the next word (that costs an edit more).
+     */
     private int[] longestMatch(String text, List<int[]> words, int start) {
         StringBuilder window = new StringBuilder();
         int best = -1;
+        int bestEdits = Integer.MAX_VALUE;
         for (int j = start; j < Math.min(words.size(), start + MAX_WORDS); j++) {
             window.append(normalize(text.substring(words.get(j)[0], words.get(j)[1])));
-            if (window.length() > names.get(0).length() + 1) {
+            if (window.length() > names.get(0).length() + 2) {
                 break;
             }
             for (String name : names) {
-                if (Math.abs(name.length() - window.length()) <= 1 && withinOneEdit(window.toString(), name)) {
+                int allowed = name.length() >= 15 ? 2 : 1;
+                int edits = Math.abs(name.length() - window.length()) <= allowed
+                        ? distance(window.toString(), name, allowed) : allowed + 1;
+                // the fewest edits win; on a tie the longer window, which takes the surname with the name
+                if (edits <= allowed && edits <= bestEdits) {
                     best = j;
-                    break;
+                    bestEdits = edits;
                 }
             }
         }
@@ -104,23 +114,32 @@ public final class NameLayer implements RedactionLayer {
         return out.toString();
     }
 
-    /** Whether {@code a} and {@code b} differ by at most one insertion, deletion or substitution. */
-    static boolean withinOneEdit(String a, String b) {
-        if (a.equals(b)) {
-            return true;
+    /** The edit distance between {@code a} and {@code b} (insertions, deletions, substitutions), or {@code max + 1}. */
+    static int distance(String a, String b, int max) {
+        int[] previous = new int[b.length() + 1];
+        int[] current = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) {
+            previous[j] = j;
         }
-        if (Math.abs(a.length() - b.length()) > 1) {
-            return false;
+        for (int i = 1; i <= a.length(); i++) {
+            current[0] = i;
+            int rowMin = current[0];
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                current[j] = Math.min(Math.min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                rowMin = Math.min(rowMin, current[j]);
+            }
+            if (rowMin > max) {
+                return max + 1;
+            }
+            int[] swap = previous;
+            previous = current;
+            current = swap;
         }
-        int i = 0;
-        while (i < a.length() && i < b.length() && a.charAt(i) == b.charAt(i)) {
-            i++;
-        }
-        if (a.length() == b.length()) {
-            return a.substring(i + 1).equals(b.substring(i + 1));
-        }
-        String longer = a.length() > b.length() ? a : b;
-        String shorter = a.length() > b.length() ? b : a;
-        return longer.substring(i + 1).equals(shorter.substring(i));
+        return Math.min(previous[b.length()], max + 1);
+    }
+
+    static boolean withinEdits(String a, String b, int max) {
+        return distance(a, b, max) <= max;
     }
 }

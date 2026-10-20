@@ -1,0 +1,31 @@
+{
+  "meetingId": "p2-c1-technical",
+  "audioSha256": "96e92304e0c4b44d7ed7c9cf73620acdecea9c2816dddc27c9b45e0b13fb8716",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 22.45,
+  "repeatable": true,
+  "text": "Refignment of the loans design. I am since P.I. 2041 Rivera. The design says a limit per member, but not which limit, and not what happens to late returns. We can't write the SDDs without the limit. That is a blocking question for business. Let's send the questions by email and meet again when we have answers.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "text": " Refignment of the loans design. I am since P.I. 2041 Rivera."
+    },
+    {
+      "start": 5.0,
+      "end": 12.0,
+      "text": " The design says a limit per member, but not which limit, and not what happens to late returns."
+    },
+    {
+      "start": 12.0,
+      "end": 17.0,
+      "text": " We can't write the SDDs without the limit. That is a blocking question for business."
+    },
+    {
+      "start": 17.0,
+      "end": 22.0,
+      "text": " Let's send the questions by email and meet again when we have answers."
+    }
+  ]
+}

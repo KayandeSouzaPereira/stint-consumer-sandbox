@@ -1,0 +1,46 @@
+{
+  "meetingId": "p2-c2-business",
+  "audioSha256": "b0b0a6c98e66ac71513cbb05597d9c41957d31b5563fba297889bb1d577b5671",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 23.13,
+  "repeatable": true,
+  "text": "Follow-up on the loans design with the answers engineering asked for. I am synth PI 2051 Rivera. The limit is three books per member. A late return blocks new loans until the book is back. Update the design and send it by email again. Reach me at synth PII2 at Example. Calm.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.76,
+      "text": " Follow-up on the loans design with the answers engineering asked for."
+    },
+    {
+      "start": 4.76,
+      "end": 8.36,
+      "text": " I am synth PI 2051 Rivera."
+    },
+    {
+      "start": 8.36,
+      "end": 10.68,
+      "text": " The limit is three books per member."
+    },
+    {
+      "start": 10.68,
+      "end": 14.8,
+      "text": " A late return blocks new loans until the book is back."
+    },
+    {
+      "start": 14.8,
+      "end": 18.0,
+      "text": " Update the design and send it by email again."
+    },
+    {
+      "start": 18.0,
+      "end": 22.0,
+      "text": " Reach me at synth PII2 at Example."
+    },
+    {
+      "start": 22.0,
+      "end": 23.0,
+      "text": " Calm."
+    }
+  ]
+}

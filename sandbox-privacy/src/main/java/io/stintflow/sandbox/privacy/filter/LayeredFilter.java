@@ -7,6 +7,7 @@ import io.stintflow.sandbox.contracts.Corpus;
 import io.stintflow.worker.redaction.LayeredRedactor;
 import io.stintflow.worker.redaction.PatternLayer;
 import io.stintflow.worker.redaction.RedactionLayer;
+import io.stintflow.worker.redaction.TermListLayer;
 
 /**
  * SDD S.6, 8a: the pipeline's PII filter — Stint's {@link LayeredRedactor} over, in order: the spoken forms, the
@@ -30,11 +31,22 @@ public final class LayeredFilter {
      */
     public static LayeredRedactor build(List<String> listedNames, PersonalDataCheck check, double threshold) {
         List<RedactionLayer> layers = new ArrayList<>(List.of(new SpokenFormLayer(), new PatternLayer(),
-                new NameLayer(listedNames), new PresentationLayer()));
+                new NameLayer(listedNames)));
+        List<String> surnames = surnamesOf(listedNames);
+        if (!surnames.isEmpty()) {
+            layers.add(new TermListLayer("person", surnames));   // before the introductions: they absorb what precedes it
+        }
+        layers.add(new PresentationLayer());
         if (check != null) {
             layers.add(new LlmCheckLayer(check, threshold));
         }
         return new LayeredRedactor(NAME, VERSION, layers);
+    }
+
+    /** The word after the marker of each listed name ({@code SYNTH-PII-2011 Rivera} -> {@code Rivera}), if there is one. */
+    static List<String> surnamesOf(List<String> listedNames) {
+        return listedNames.stream().map(n -> n.trim().split("\\s+")).filter(parts -> parts.length == 2)
+                .map(parts -> parts[1]).distinct().toList();
     }
 
     /** The names of a corpus: each name's written form and each marker on its own (any person-bearing marker). */

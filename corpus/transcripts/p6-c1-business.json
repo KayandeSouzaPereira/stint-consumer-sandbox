@@ -1,0 +1,66 @@
+{
+  "meetingId": "p6-c1-business",
+  "audioSha256": "d803bdf3633994b47dcdf80438087cf9e2c9bf3ea8adc0f5e9495fc373141045",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 29.11,
+  "repeatable": true,
+  "text": "design meeting for book recommendations. I am synth PI 2141 Rivera. Recommend books by the same author a reader liked. Keep it simple in this first version. Send the design by email to the reading club. Medium Priority. Reach.....",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.92,
+      "text": " design meeting for book recommendations."
+    },
+    {
+      "start": 2.92,
+      "end": 7.0,
+      "text": " I am synth PI 2141 Rivera."
+    },
+    {
+      "start": 7.0,
+      "end": 10.52,
+      "text": " Recommend books by the same author a reader liked."
+    },
+    {
+      "start": 10.52,
+      "end": 13.48,
+      "text": " Keep it simple in this first version."
+    },
+    {
+      "start": 13.48,
+      "end": 16.52,
+      "text": " Send the design by email to the reading club."
+    },
+    {
+      "start": 16.52,
+      "end": 18.32,
+      "text": " Medium Priority."
+    },
+    {
+      "start": 18.32,
+      "end": 40.64,
+      "text": " Reach."
+    },
+    {
+      "start": 40.64,
+      "end": 41.64,
+      "text": "."
+    },
+    {
+      "start": 41.64,
+      "end": 45.64,
+      "text": "."
+    },
+    {
+      "start": 45.64,
+      "end": 46.64,
+      "text": "."
+    },
+    {
+      "start": 46.64,
+      "end": 47.64,
+      "text": "."
+    }
+  ]
+}
