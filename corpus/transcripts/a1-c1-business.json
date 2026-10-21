@@ -1,0 +1,46 @@
+{
+  "meetingId": "a1-c1-business",
+  "audioSha256": "1b6f7fbbe0a7d2ed4e55250d9498431b42decc56c43fac6fd2690366cc90fdb4",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 22.28,
+  "repeatable": true,
+  "text": "I am Synth PI 2101 Rivera. We should talk about the database indexes and the API, but also about what the readers want. It's not clear if this is a design meeting or a technical one. Maybe both. Let's write something on confluence and see. Questions to Synth PII21002 at Example.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.64,
+      "text": " I am Synth PI 2101 Rivera."
+    },
+    {
+      "start": 3.64,
+      "end": 8.24,
+      "text": " We should talk about the database indexes and the API, but also about what the readers"
+    },
+    {
+      "start": 8.24,
+      "end": 9.24,
+      "text": " want."
+    },
+    {
+      "start": 9.24,
+      "end": 13.52,
+      "text": " It's not clear if this is a design meeting or a technical one."
+    },
+    {
+      "start": 13.52,
+      "end": 14.52,
+      "text": " Maybe both."
+    },
+    {
+      "start": 14.52,
+      "end": 17.8,
+      "text": " Let's write something on confluence and see."
+    },
+    {
+      "start": 17.8,
+      "end": 21.52,
+      "text": " Questions to Synth PII21002 at Example."
+    }
+  ]
+}

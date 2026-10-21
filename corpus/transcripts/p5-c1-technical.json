@@ -1,0 +1,31 @@
+{
+  "meetingId": "p5-c1-technical",
+  "audioSha256": "48d11934b9b84b9cf6cc8b7d8d4baea06712b1f6960e2d25f1680a9cb9e7a342",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 12.57,
+  "repeatable": true,
+  "text": "short refinement, the catalog must export to CSV. I am Sinthe-i-291 Rivera. One SDD is enough. Export every book with title, author, and ISBN.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.96,
+      "text": " short refinement, the catalog must export to CSV."
+    },
+    {
+      "start": 3.96,
+      "end": 7.52,
+      "text": " I am Sinthe-i-291 Rivera."
+    },
+    {
+      "start": 7.52,
+      "end": 9.32,
+      "text": " One SDD is enough."
+    },
+    {
+      "start": 9.32,
+      "end": 11.92,
+      "text": " Export every book with title, author, and ISBN."
+    }
+  ]
+}

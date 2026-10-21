@@ -1,0 +1,31 @@
+{
+  "meetingId": "p4-c1-technical",
+  "audioSha256": "617b7661d68db1293fcd51be8b547a5aa706f8df58cedc9b493922f8b3de37ff",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 25.78,
+  "repeatable": true,
+  "text": "Refignment for book reviews. I am synth PI 2018-1 Rivera. Three parts, store a review with a rating, compute the average rating, and hide reviews flagged by moderators. All clear, three SDDs. Call Plus 551198,98, O82, synth PI, 2082, for access to the test data.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.44,
+      "text": " Refignment for book reviews. I am synth PI 2018-1 Rivera."
+    },
+    {
+      "start": 5.44,
+      "end": 11.08,
+      "text": " Three parts, store a review with a rating, compute the average rating, and hide reviews"
+    },
+    {
+      "start": 11.08,
+      "end": 13.36,
+      "text": " flagged by moderators."
+    },
+    {
+      "start": 13.36,
+      "end": 24.12,
+      "text": " All clear, three SDDs. Call Plus 551198,98, O82, synth PI, 2082, for access to the test data."
+    }
+  ]
+}

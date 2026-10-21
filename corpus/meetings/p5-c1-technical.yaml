@@ -1,0 +1,36 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p5-c1-technical
+project: p5
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_heart
+- id: s2
+  voice: am_adam
+script:
+- speaker: s1
+  text: 'Short refinement: the catalog must export to CSV. I am SYNTH-PII-2091 Rivera.'
+- speaker: s2
+  text: 'One SDD is enough: export every book with title, author and ISBN.'
+expected:
+  meetingType: technical-refinement
+  outcome: sdds
+  blockingQuestion: false
+  priority: 0.3
+  review: false
+  sddCount: 1
+  sdds:
+  - id: p5-sdd-1
+    title: Export the catalog to CSV
+    covers:
+    - title author and isbn columns
+pii:
+- marker: SYNTH-PII-2091
+  kind: name
+  written: SYNTH-PII-2091 Rivera
+  spoken:
+  - synth p i i two zero nine one rivera
+  - Sinthe P I I 2091 Rivera

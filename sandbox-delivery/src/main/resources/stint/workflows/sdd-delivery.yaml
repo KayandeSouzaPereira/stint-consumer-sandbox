@@ -1,0 +1,155 @@
+# SDD S.5, 8a (A): one SDD's delivery, its own instance (its own attempts, memory, DLQ and trace). Each attempt:
+# implement -> sdd-implemented -> the target's tests in an isolated container (sandbox-target) -> validate. Up to 5
+# attempts. Stint's 'try' takes one call or one listen as its body (SDD 1.3 scope note), so an attempt of three calls
+# is an explicit loop with a counter, not a try/retry (S.5 9.3; finding). Out of attempts: sdd-dead-lettered and the
+# technician's choice (resend with fresh attempts, accept, or cancel; cancel by default at the deadline). It always
+# ends in sdd-validated (validated | accepted) or sdd-cancelled, which the coordinator waits for. The agents are S.10.
+document:
+  dsl: '1.0.0'
+  namespace: delivery
+  name: sdd-delivery
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ "confidential" }'
+      routes:
+        confidential: [implement, run-target-tests, validate]
+        internal: ['*']
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.delivery.sdd-ready.v1 }
+do:
+  - sdd:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, sddId: .data.sddId, recordId: .data.recordId, sddRef: .data.sddRef, designRecordId: .data.designRecordId, techRecordId: .data.techRecordId, attempt: 1, limit: 5} }'
+      export: { as: '${ . }' }
+  - implement:
+      call: remote
+      with:
+        task: implement
+        input: '${ $context | {sddId, sddRef, attempt, designRecordId, techRecordId} }'
+      timeout: { after: { minutes: 30 } }
+      export: { as: '${ $context + {changesetRef: .changesetRef} }' }
+  - implemented:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-implemented:" + $context.sddId + ":" + ($context.attempt | tostring) }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-implemented.v1
+            subject: '${ $context.sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sddId }'
+            data: '${ $context | {sddId, attempt, changesetRef} }'
+  - test:
+      call: remote
+      with:
+        task: run-target-tests
+        input: '${ $context | {sddId, attempt, changesetRef} }'
+      timeout: { after: { minutes: 10 } }
+      export: { as: '${ $context + {tests: .} }' }
+  - validate:
+      call: remote
+      with:
+        task: validate
+        input: '${ $context | {sddId, sddRef, attempt, designRecordId, techRecordId, tests} }'
+      timeout: { after: { minutes: 30 } }
+      export: { as: '${ $context + {validated: .validated, reportRef: .reportRef} }' }
+  - verdict:
+      switch:
+        - passed:
+            when: '$context.validated == true'
+            then: markValidated
+        - again:
+            when: '$context.attempt < $context.limit'
+            then: nextAttempt
+        - exhausted:
+            then: deadLetter
+  - nextAttempt:
+      set: '${ $context + {attempt: ($context.attempt + 1)} }'
+      export: { as: '${ . }' }
+      then: implement
+  - deadLetter:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-dead-lettered:" + $context.sddId + ":" + ($context.attempt | tostring) }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-dead-lettered.v1
+            subject: '${ $context.sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sddId }'
+            data: '${ {sddId: $context.sddId, attempts: $context.attempt, lastReportRef: $context.reportRef} }'
+  - technician:
+      call: review
+      with:
+        kind: choice
+        role: technician
+        material: '${ $context.reportRef }'
+        options:
+          - resend: { description: "Try again, with fresh attempts", then: resend }
+          - accept: { description: "Accept the SDD as it is", then: markAccepted }
+          - cancel: { description: "Cancel this SDD", then: markCancelled }
+        deadline: { hours: 72 }
+        remind: { hours: 48 }
+        onTimeout: { value: cancel }
+      export: { as: '${ $context + {decision: .value, defaulted: ((.reviewed.defaulted // .defaulted // false) == true)} }' }
+  - resend:
+      set: '${ $context + {attempt: ($context.attempt + 1), limit: ($context.attempt + 5)} }'
+      export: { as: '${ . }' }
+      then: implement
+  - markValidated:
+      set: '${ $context + {outcome: "validated"} }'
+      export: { as: '${ . }' }
+  - validatedEnd:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-validated:" + $context.sddId }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-validated.v1
+            subject: '${ $context.sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sddId }'
+            data: '${ {sddId: $context.sddId, attempts: $context.attempt, outcome: "validated", reportRef: $context.reportRef} }'
+      then: end
+  - markAccepted:
+      set: '${ $context + {outcome: "accepted"} }'
+      export: { as: '${ . }' }
+      then: acceptedEnd
+  - acceptedEnd:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-validated:" + $context.sddId }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-validated.v1
+            subject: '${ $context.sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sddId }'
+            data: '${ {sddId: $context.sddId, attempts: $context.attempt, outcome: "accepted", reportRef: $context.reportRef} }'
+      then: end
+  - markCancelled:
+      set: '${ $context + {outcome: "cancelled"} }'
+      export: { as: '${ . }' }
+      then: cancelledEnd
+  - cancelledEnd:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-cancelled:" + $context.sddId }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-cancelled.v1
+            subject: '${ $context.sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sddId }'
+            data: '${ {sddId: $context.sddId, attempts: $context.attempt, reason: (if $context.defaulted then "timeout" else "technician" end)} }'
+      then: end

@@ -9,18 +9,32 @@ library.
 | `sandbox-reports` | 8080 | Phase 1 regression: YAML contracts, remote task handlers, in-memory engine, real S3 and real SMTP |
 | `sandbox-orders` | 8081 | Phase 2: the Orders domain (S.3): HTTP orders that request an invoice and wait for it, with correlation, timeouts and a 24 h late-invoice wait. See [its README](sandbox-orders/README.md) |
 | `sandbox-billing` | 8082 | Phase 2: the Billing domain (S.2): invoices with retry, rejection and a scheduled summary. See [its README](sandbox-billing/README.md) |
-| `sandbox-scenarios` | — | Phase 2 gate (S.4): tests only. They run the packaged apps as processes, kill them at chosen moments, load them and read Jaeger, all from outside |
+| `sandbox-scenarios` | — | Phase 2 gate (S.4) and the pipeline skeleton (S.5): tests only. They run the packaged apps as processes, kill them at chosen moments, load them and read Jaeger, all from outside |
+| `sandbox-contracts` | — | Phase 3a (S.5): the meeting pipeline's v1 event contract ([`contracts/pipeline-events.md`](contracts/pipeline-events.md)), its checker and the corpus reader. A library, the only module the domains share |
+| `sandbox-business` | 8090 | Phase 3a: Business — a business meeting's recording becomes an approved design (`business-design`) |
+| `sandbox-engineering` | 8091 | Phase 3a: Engineering — a design's technical meeting becomes an approved batch of SDDs, or questions that restart the cycle |
+| `sandbox-delivery` | 8092 | Phase 3a: Delivery — a coordinator per cycle and an instance per SDD: implement, test, validate, up to 5 attempts, then the technician |
+| `sandbox-privacy` | 8093 | Phase 3a: the PII filter every domain calls (`redactor`); S.5 runs Stint's reference redactor, S.6 the layered filter |
+| `sandbox-records` | 8094 | Phase 3a: the document register (`register-document`): versions and hashes |
+| `sandbox-channels` | 8095 | Phase 3a: the meeting recorder, the approval portal with roles (test credentials only), e-mail (MailHog) and a fake Confluence |
+| `sandbox-target` | 8096 | Phase 3a: the target project the agents change, and its runner: tests in a container with no network |
 
-Orders and Billing never depend on each other (the build fails if they do). They coordinate only through the
+Orders and Billing never depend on each other (the build fails if they do). Neither do the meeting pipeline's modules
+(S.5): each depends only on `sandbox-contracts`, which `BoundaryTest` and every module's enforcer check. They coordinate only through the
 domain events in [`contracts/events.md`](contracts/events.md). Billing (S.2) and Orders (S.3) are in place, and S.4
 runs them together under failures and load. The specs live in [`docs/sdd`](docs/sdd); the gate report is
 [`docs/evidence/phase-2-gate.md`](docs/evidence/phase-2-gate.md).
 
 ## Stint version
 
-The sandbox is pinned to **Stint `9be0898`** (`main`, the merge of Phase 2 in PR #3, with SDDs 2.1–2.10).
+The sandbox is pinned to **Stint `500dfd1`** (branch `phase-3a/ai-decision-workers`, Phase 3a: SDDs 3a.1–3a.7, PR #5),
+since S.5. Phases 1 and 2 were validated on `9be0898` (`main`).
 
 ## Prerequisites
+
+> **Disk C: on Windows.** With less than about 20 GB free on C:, Docker Desktop's VM may hang at boot (seen on
+> 15/10/2026 at 98 %). Free space on C: or move Docker Desktop's disk image to another drive (Settings → Resources →
+> Disk image location) before running the gate. Keep model caches (`HF_HOME`, `UV_CACHE_DIR`) off C: as well.
 
 - JDK 25 and Maven 3.9+
 - Docker (floci, MailHog, Jaeger)
@@ -29,13 +43,12 @@ The sandbox is pinned to **Stint `9be0898`** (`main`, the merge of Phase 2 in PR
 
 ## 1. Install Stint at the pinned SHA
 
-Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install it locally:
+Stint isn't published to a remote repository yet, so install it locally. The script clones it, checks out the pinned
+SHA and installs it under the version `0.1.0-3a-500dfd1`, so that installing Stint's own working tree (`0.1.0-SNAPSHOT`,
+for other phases) never changes what the sandbox builds and runs:
 
 ```bash
-git clone https://github.com/stintflow/stint.git
-cd stint
-git checkout 9be0898
-mvn install -DskipTests
+bash infra/install-stint.sh            # clones into ./stint-pinned; or give it a directory
 ```
 
 ## 2. Start the infrastructure

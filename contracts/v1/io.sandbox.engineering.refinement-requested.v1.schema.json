@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/io.sandbox.engineering.refinement-requested.v1.schema.json",
+  "title": "io.sandbox.engineering.refinement-requested.v1 — data (SDD S.5, 8b)",
+  "description": "Engineering asks for the technical meeting of a published design. Ids, pointers, enums and counts only: never any text of a meeting, document or person. Additive changes only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentId",
+    "recordId"
+  ],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "recordId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    }
+  }
+}

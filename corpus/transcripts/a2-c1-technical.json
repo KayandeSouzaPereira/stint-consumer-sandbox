@@ -1,0 +1,41 @@
+{
+  "meetingId": "a2-c1-technical",
+  "audioSha256": "0d8577d5e0a43a5085705af0528b84428fb8c30ccf3efc5d3bed6c737e55f980",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 17.69,
+  "repeatable": true,
+  "text": "technical meeting about search speed. I am synth PI 2111 Rivera. We could add an index or a cash or both. I am not sure what business really needs. We didn't decide anything. Let's ask business what response time they expect.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.52,
+      "text": " technical meeting about search speed."
+    },
+    {
+      "start": 2.52,
+      "end": 6.4,
+      "text": " I am synth PI 2111 Rivera."
+    },
+    {
+      "start": 6.4,
+      "end": 9.64,
+      "text": " We could add an index or a cash or both."
+    },
+    {
+      "start": 9.64,
+      "end": 12.6,
+      "text": " I am not sure what business really needs."
+    },
+    {
+      "start": 12.6,
+      "end": 14.2,
+      "text": " We didn't decide anything."
+    },
+    {
+      "start": 14.2,
+      "end": 17.04,
+      "text": " Let's ask business what response time they expect."
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p2-c2-technical
+project: p2
+cycle: 2
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_heart
+- id: s2
+  voice: am_adam
+script:
+- speaker: s1
+  text: Refinement of the updated loans design. I am SYNTH-PII-2061 Rivera.
+- speaker: s2
+  text: 'Now it is clear. Two pieces: borrowing with the limit of three, and blocking after a late return.'
+- speaker: s1
+  text: No blocking questions left. Two SDDs.
+expected:
+  meetingType: technical-refinement
+  outcome: sdds
+  blockingQuestion: false
+  priority: 0.5
+  review: false
+  sddCount: 2
+  sdds:
+  - id: p2-sdd-1
+    title: Borrow with a limit of three
+    covers:
+    - limit of three books
+    - refuse a fourth loan
+  - id: p2-sdd-2
+    title: Block loans after a late return
+    covers:
+    - late return detected
+    - new loans blocked
+pii:
+- marker: SYNTH-PII-2061
+  kind: name
+  written: SYNTH-PII-2061 Rivera
+  spoken:
+  - synth p i i two zero six one rivera
+  - Sinthe P I I 2061 Rivera

@@ -1,0 +1,37 @@
+# SDD S.5, 8h: a published design asks for its technical meeting. The meeting itself starts technical-meeting when its
+# recording arrives (meeting-recorded, stage technical): Engineering never waits on a restricted event in a listen
+# (Stint 3a.5 finding), it starts from it.
+document:
+  dsl: '1.0.0'
+  namespace: engineering
+  name: refinement
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ "confidential" }'
+      routes:
+        confidential: ['*']
+        internal: ['*']
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.business.design-published.v1 }
+do:
+  - design:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, documentId: .data.documentId, recordId: .data.recordId} }'
+      export: { as: '${ . }' }
+  - invite:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":refinement-requested" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.engineering.refinement-requested.v1
+            subject: '${ $context.documentId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {documentId: $context.documentId, recordId: $context.recordId} }'
+      then: end

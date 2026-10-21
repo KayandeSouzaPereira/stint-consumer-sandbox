@@ -27,6 +27,11 @@
             <groupId>io.github.stintflow</groupId>
             <artifactId>stint-worker-sdk</artifactId>
         </dependency>
+        <!-- SDD S.5, RF9: the SQS worker binding with a WorkerPool (Stint 3a.7) -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-aws-worker</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.github.stintflow</groupId>
             <artifactId>stint-otel</artifactId>

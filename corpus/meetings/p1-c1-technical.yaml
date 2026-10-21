@@ -1,0 +1,57 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p1-c1-technical
+project: p1
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_bella
+- id: s2
+  voice: bm_george
+script:
+- speaker: s1
+  text: Technical refinement for the catalog design. I am SYNTH-PII-2021 Rivera.
+- speaker: s2
+  text: 'I read the design. Two pieces of work: search by author, and ISBN validation.'
+- speaker: s1
+  text: 'Search by author: a function that takes an author name and returns the matching books, case insensitive.'
+- speaker: s2
+  text: 'ISBN validation: check the length and the check digit of ISBN-13, and refuse the entry otherwise.'
+- speaker: s1
+  text: No open questions from my side. Let's write the two SDDs. My phone is +55 11 98022-4022 (SYNTH-PII-2022) if anything
+    comes up.
+expected:
+  meetingType: technical-refinement
+  outcome: sdds
+  blockingQuestion: false
+  priority: 0.8
+  review: false
+  sddCount: 2
+  sdds:
+  - id: p1-sdd-1
+    title: Search books by author
+    covers:
+    - case insensitive author match
+    - returns a list of books
+  - id: p1-sdd-2
+    title: Validate ISBN-13
+    covers:
+    - length check
+    - check digit
+    - refuse invalid entries
+    failAttempts: 1
+pii:
+- marker: SYNTH-PII-2021
+  kind: name
+  written: SYNTH-PII-2021 Rivera
+  spoken:
+  - synth p i i two zero two one rivera
+  - Sinthe P I I 2021 Rivera
+- marker: SYNTH-PII-2022
+  kind: phone
+  written: +55 11 98022-4022
+  spoken:
+  - plus five five one one nine eight zero two two four zero two two
+  - plus 5511 98022 4022

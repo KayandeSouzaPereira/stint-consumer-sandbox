@@ -5,8 +5,7 @@ import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -50,6 +49,7 @@ import io.stintflow.sandbox.billing.aws.S3InvoiceDocuments;
 import io.stintflow.sandbox.billing.chaos.Chaos;
 import io.stintflow.sandbox.billing.chaos.ChaosEventPublisher;
 import io.stintflow.sandbox.billing.chaos.ChaosTaskHandler;
+import io.stintflow.sandbox.billing.worker.FailureLog;
 import io.stintflow.sandbox.billing.worker.BillingHandlers;
 import io.stintflow.sandbox.billing.worker.FaultInjection;
 import io.stintflow.spi.BlobStore;
@@ -59,6 +59,8 @@ import io.stintflow.spi.wire.StintEvents;
 import io.stintflow.wire.CeWire;
 import io.stintflow.wire.Json;
 import io.stintflow.worker.TaskHandlerRegistry;
+import io.stintflow.aws.worker.SqsWorkerBinding;
+import io.stintflow.worker.WorkerPool;
 import io.stintflow.worker.WorkerRuntime;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -68,14 +70,13 @@ import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.scheduler.SchedulerClient;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.Message;
 
 /**
  * SDD S.1: the Billing domain's own engine, over Stint's AWS connectors only (no stint-inmemory). It is built like
  * Stint's {@code stint-example-aws-smoke} (SDD 2.7), from the clients the Quarkus extensions produce:
  * <ul>
  *   <li>state, waits, outbox and inbox in the domain's DynamoDB tables;</li>
- *   <li>tasks over the domain's SQS queues, with an in-process worker loop;</li>
+ *   <li>tasks over the domain's SQS queues, served by Stint's SqsWorkerBinding with a WorkerPool (S.5 RF9);</li>
  *   <li>timers composed from SQS (up to 15 min) and EventBridge Scheduler;</li>
  *   <li>facts on the {@code sandbox-domain} EventBridge bus through the outbox, swept every 30 s;</li>
  *   <li>inbound domain events from the domain's SQS queue, started ({@code schedule.on}) or resumed
@@ -174,11 +175,10 @@ public class BillingEngine {
     private volatile ScheduledStart scheduledStart;
     private volatile ExecutionTracer tracer = ExecutionTracer.NOOP;
     private volatile boolean workerRunning;
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "billing-worker");
-        t.setDaemon(true);
-        return t;
-    });
+    /** SDD S.5, RF9: Stint's SQS worker binding (3a.7) with a WorkerPool, in place of the serial loop of S.1-S.4. */
+    private volatile SqsWorkerBinding worker;
+    @ConfigProperty(name = "billing.worker.concurrency", defaultValue = "8")
+    int workerConcurrency;
 
     void onStart(@Observes StartupEvent event) throws Exception {
         tracer = new OpenTelemetryExecutionTracer(openTelemetry);
@@ -232,26 +232,17 @@ public class BillingEngine {
         BillingHandlers handlers = new BillingHandlers(new S3InvoiceDocuments(s3, factsBucket),
                 new DynamoDbInvoiceRecords(ddb, invoicesTable), new DynamoDbEffectMarkers(ddb, effectsTable),
                 new QuarkusMailSender(mailer), new FaultInjection(slowDelay), InstantSource.system(), mailFrom, mailTo);
-        WorkerRuntime runtime = new WorkerRuntime(registry(handlers.registry(), haltInTask, Chaos.HALT), blobs, tracer);
+        WorkerRuntime runtime = new WorkerRuntime(registry(FailureLog.wrap(handlers.registry(), List.of(Billing.ROUTE_RENDER_INVOICE, Billing.ROUTE_RECORD_INVOICE, Billing.ROUTE_COUNT_INVOICES, Billing.ROUTE_SEND_SUMMARY)), haltInTask, Chaos.HALT), blobs, tracer);
+        worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(tasksQueue)
+                .pool(new WorkerPool(runtime, workerConcurrency)).waitTime(Duration.ofSeconds(5))
+                .visibilityTimeout(Duration.ofSeconds(30))
+                .shipResult(result -> CompletableFuture.runAsync(() -> {
+                    sqs.sendMessage(r -> r.queueUrl(resultsQueue)
+                            .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
+                }))
+                .build().start();
         workerRunning = true;
-        worker.submit(() -> {
-            while (workerRunning) {
-                try {
-                    for (Message m : sqs.receiveMessage(r -> r.queueUrl(tasksQueue).waitTimeSeconds(5)).messages()) {
-                        CloudEvent invoke = CeWire.fromJson(m.body().getBytes(StandardCharsets.UTF_8));
-                        CloudEvent result = runtime.handle(invoke).toCompletableFuture().get(60, TimeUnit.SECONDS);
-                        logIfFailed(invoke, result);
-                        sqs.sendMessage(r -> r.queueUrl(resultsQueue)
-                                .messageBody(new String(CeWire.toJson(result), StandardCharsets.UTF_8)));
-                        sqs.deleteMessage(r -> r.queueUrl(tasksQueue).receiptHandle(m.receiptHandle()));
-                    }
-                } catch (Exception e) {
-                    if (workerRunning) {
-                        LOG.warn("Billing worker poll failed", e);
-                    }
-                }
-            }
-        });
+        LOG.infof("Billing worker: SqsWorkerBinding with a WorkerPool of %d", workerConcurrency);
     }
 
     /** SDD S.4, 8b: the domain's publisher, decorated with the chaos point only when one is configured. */
@@ -273,20 +264,11 @@ public class BillingEngine {
     }
 
     /** CA3: a failed result as it goes back to the engine, with its DSL 1.0 error type and status. */
-    private static void logIfFailed(CloudEvent invoke, CloudEvent result) {
-        JsonNode data = result.getData() == null ? null : Json.read(result.getData().toBytes());
-        if (data == null || !"FAILED".equals(data.path("status").asText())) {
-            return;
-        }
-        JsonNode error = data.path("error");
-        LOG.warnf("Task %s attempt %s of instance %s failed: type=%s status=%s detail=%s", invoke.getSubject(),
-                invoke.getExtension(StintEvents.EXT_ATTEMPT), invoke.getExtension(StintEvents.EXT_WORKFLOW_INSTANCE_ID),
-                error.path("type").asText(), error.path("status").asText(), error.path("detail").asText());
-    }
-
     void onStop(@Observes ShutdownEvent event) {
         workerRunning = false;
-        worker.shutdownNow();
+        if (worker != null) {
+            worker.close();
+        }
     }
 
     /** Whether this process runs the engine and it started. */

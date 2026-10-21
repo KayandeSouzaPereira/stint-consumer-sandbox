@@ -1,0 +1,39 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p2-c1-business
+project: p2
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_heart
+- id: s2
+  voice: am_adam
+script:
+- speaker: s1
+  text: Design meeting for book loans. I am SYNTH-PII-2031 Rivera.
+- speaker: s2
+  text: Members should borrow books and return them. We also want a limit per member.
+- speaker: s1
+  text: Send the design by e-mail to the board first; they don't use Confluence. My address is SYNTH-PII-2032@example.com.
+- speaker: s2
+  text: Fine. Priority is medium.
+expected:
+  meetingType: business-design
+  channel: email
+  priority: 0.5
+  review: false
+pii:
+- marker: SYNTH-PII-2031
+  kind: name
+  written: SYNTH-PII-2031 Rivera
+  spoken:
+  - synth p i i two zero three one rivera
+  - Sinthe P I I 2031 Rivera
+- marker: SYNTH-PII-2032
+  kind: email
+  written: SYNTH-PII-2032@example.com
+  spoken:
+  - synth p i i two zero three two at example dot com
+  - Sinthe-P-I-I-2-0-3-2 at Example. Calm.

@@ -1,0 +1,132 @@
+# SDD S.5, 8a (A): the cycle's coordinator, one instance per (project, cycle). Stint has no fork, no for and no
+# listen.until (3a.3c), so the SDDs run in parallel as instances of their own (sdd-delivery), each started by an
+# sdd-ready with a deterministic id (a redelivery starts nothing twice).
+# The coordinator learns that an SDD ended from the Delivery's own state, not from the events: it asks the task
+# 'check-sdds', which reads the SDD instances' status, in a loop. Between two asks it sleeps in a listen on the cycle's
+# ends (sdd-validated / sdd-cancelled by project and cycle, extensions, never data) with a timeout of PT5M: an end wakes
+# it at once, a quiet cycle wakes it every 5 minutes. Waiting for each SDD in turn and trusting the inbox does not work:
+# Stint keeps an early event 15 minutes at most (S.5 9.3, finding 8l-5; Kayan's choice, 18/10/2026), and waiting again on
+# the key the same save consumed conflicts (SDD 3a.10).
+# A batch holds at most 20 SDDs (the contract): the emits of one activation share the checkpoint's transaction.
+# Safety net: every sdd-delivery always ends (deadlines on each attempt and on the technician's review, ~78 h); if
+# 'limit' quiet waits (1 008 x 5 min = 84 h) pass without the batch ending, the cycle closes as 'stalled' with the pending
+# ids. The domain logic is S.10.
+document:
+  dsl: '1.0.0'
+  namespace: delivery
+  name: delivery-cycle
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ "confidential" }'
+      routes:
+        confidential: [load-batch, check-sdds]
+        internal: ['*']
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.engineering.sdd-batch-approved.v1 }
+do:
+  - batch:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, batchId: .data.batchId, batchRef: .data.batchRef, sddIds: .data.sddIds} }'
+      export: { as: '${ . }' }
+  - load:
+      call: remote
+      with:
+        task: load-batch
+        input: '${ {batchRef: $context.batchRef} }'
+      export: { as: '${ $context + {sdds: .sdds, designRecordId: .designRecordId, techRecordId: .techRecordId, next: 0, idle: 0, limit: 1008, settled: [], pending: $context.sddIds} }' }
+  - nextReady:
+      switch:
+        - more:
+            when: '$context.next < ($context.sdds | length)'
+            then: ready
+        - done:
+            then: check
+  - ready:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-ready:" + $context.sdds[$context.next].sddId }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.sdd-ready.v1
+            subject: '${ $context.sdds[$context.next].sddId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            sandboxsdd: '${ $context.sdds[$context.next].sddId }'
+            data: '${ $context.sdds[$context.next] | {sddId, recordId, sddRef, designRecordId: $context.designRecordId, techRecordId: $context.techRecordId} }'
+  - advance:
+      set: '${ $context + {next: ($context.next + 1)} }'
+      export: { as: '${ . }' }
+      then: nextReady
+  - check:
+      call: remote
+      with:
+        task: check-sdds
+        input: '${ $context | {projectId, cycle, sddIds} }'
+      export: { as: '${ $context + {settled: .settled, pending: .pending} }' }
+  - decide:
+      switch:
+        - all:
+            when: '($context.pending | length) == 0'
+            then: closed
+        - quiet:
+            when: '$context.idle >= $context.limit'
+            then: stalled
+        - more:
+            then: pause
+  - pause:
+      try:
+        - end:
+            listen:
+              to:
+                any:
+                  - with: { type: io.sandbox.delivery.sdd-validated.v1 }
+                    correlate:
+                      project: { from: '${ .sandboxproject }', expect: '${ $context.projectId }' }
+                      cycle: { from: '${ .sandboxcycle }', expect: '${ $context.cycle }' }
+                  - with: { type: io.sandbox.delivery.sdd-cancelled.v1 }
+                    correlate:
+                      project: { from: '${ .sandboxproject }', expect: '${ $context.projectId }' }
+                      cycle: { from: '${ .sandboxcycle }', expect: '${ $context.cycle }' }
+              read: envelope
+            timeout:
+              after: PT5M
+            export:
+              as: '${ $context }'
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/timeout }
+        then: tick
+      then: check
+  - tick:
+      set: '${ $context + {idle: ($context.idle + 1)} }'
+      export: { as: '${ . }' }
+      then: check
+  - closed:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":cycle-closed" }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.cycle-closed.v1
+            subject: '${ $context.projectId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ $context.settled | {outcome: (if any(.[]; .outcome == "cancelled") then "partial" else "complete" end), validated: ([.[] | select(.outcome == "validated")] | length), accepted: ([.[] | select(.outcome == "accepted")] | length), cancelled: ([.[] | select(.outcome == "cancelled")] | length), pending: []} }'
+      then: end
+  - stalled:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":cycle-closed" }'
+            source: https://sandbox.stintflow.io/delivery
+            type: io.sandbox.delivery.cycle-closed.v1
+            subject: '${ $context.projectId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ ($context.settled) as $s | {outcome: "stalled", validated: ([$s[] | select(.outcome == "validated")] | length), accepted: ([$s[] | select(.outcome == "accepted")] | length), cancelled: ([$s[] | select(.outcome == "cancelled")] | length), pending: ($context.sddIds - [$s[].sddId])} }'
+      then: end

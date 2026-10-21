@@ -1,0 +1,34 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: o1-c1-business
+project: o1
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_heart
+- id: s2
+  voice: am_adam
+script:
+- speaker: s1
+  text: Happy Friday everyone. I am SYNTH-PII-2121 Rivera. This is just the team lunch planning.
+- speaker: s2
+  text: Pizza or sushi? Send your vote to SYNTH-PII-2122@example.com.
+expected:
+  meetingType: out-of-scope
+  priority: 0.0
+  review: false
+pii:
+- marker: SYNTH-PII-2121
+  kind: name
+  written: SYNTH-PII-2121 Rivera
+  spoken:
+  - synth p i i two one two one rivera
+  - Sinthe P I I 2121 Rivera
+- marker: SYNTH-PII-2122
+  kind: email
+  written: SYNTH-PII-2122@example.com
+  spoken:
+  - synth p i i two one two two at example dot com
+  - Sinthe-P-I-I-2-1-2-2 at Example. Calm.

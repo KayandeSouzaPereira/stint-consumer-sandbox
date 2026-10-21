@@ -31,7 +31,11 @@ import java.util.function.Predicate;
 public final class App implements AutoCloseable {
 
     public enum Module {
-        ORDERS("sandbox-orders", 8081), BILLING("sandbox-billing", 8082), REPORTS("sandbox-reports", 8080);
+        ORDERS("sandbox-orders", 8081), BILLING("sandbox-billing", 8082), REPORTS("sandbox-reports", 8080),
+        // SDD S.5: the meeting pipeline
+        BUSINESS("sandbox-business", 8090), ENGINEERING("sandbox-engineering", 8091),
+        DELIVERY("sandbox-delivery", 8092), PRIVACY("sandbox-privacy", 8093), RECORDS("sandbox-records", 8094),
+        CHANNELS("sandbox-channels", 8095), TARGET("sandbox-target", 8096);
 
         final String dir;
         final int port;
@@ -39,6 +43,10 @@ public final class App implements AutoCloseable {
         Module(String dir, int port) {
             this.dir = dir;
             this.port = port;
+        }
+
+        public int port() {
+            return port;
         }
     }
 

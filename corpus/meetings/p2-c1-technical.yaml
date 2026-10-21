@@ -1,0 +1,37 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p2-c1-technical
+project: p2
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: bf_emma
+- id: s2
+  voice: am_michael
+script:
+- speaker: s1
+  text: Refinement of the loans design. I am SYNTH-PII-2041 Rivera.
+- speaker: s2
+  text: The design says a limit per member, but not which limit, and not what happens to late returns.
+- speaker: s1
+  text: We can't write the SDDs without the limit. That is a blocking question for business.
+- speaker: s2
+  text: Let's send the questions by e-mail and meet again when we have answers.
+expected:
+  meetingType: technical-refinement
+  outcome: questions
+  blockingQuestion: true
+  priority: 0.5
+  review: false
+  questions:
+  - What is the loan limit per member?
+  - What happens when a book is returned late?
+pii:
+- marker: SYNTH-PII-2041
+  kind: name
+  written: SYNTH-PII-2041 Rivera
+  spoken:
+  - synth p i i two zero four one rivera
+  - Sinthe P I I 2041 Rivera
