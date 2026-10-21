@@ -105,4 +105,42 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 - O escalonamento em teste exige um temporizador controlável no domínio em memória; se o `InMemoryDomain` não o tiver, o teste usa o do Stint (`ListenTimeoutTest` mostra o caminho) ou vira achado.
 
 ## 8. Registro de validação
-(preencher na etapa 2)
+
+**Ambiente.** O do S.5 a S.7 (Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2, Stint `500dfd1` sob `0.1.0-3a-500dfd1`, floci). A pilha de modelos subiu só para a medição de 8g (LitJev, GPU) e foi parada em seguida.
+
+### 8.1 Critérios de aceite
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.** Os sete roteiros de negócio terminam no caminho do gabarito: tipo, canal e artefato; o fora de escopo não escreve, registra nem envia nada; o ambíguo (`a1`) vai ao Representante, que responde como o gabarito; a prioridade do evento fica dentro de ±0,2 do gabarito | `BusinessCorpusTest` (7) |
+| CA2 | **Verde.** Sem resposta: lembrete em 40h, escalonamento em 48h para o papel `business-lead` (o pedido traz `escalatedFrom: business-rep`), fim em `approval-timeout` em 72h, sem `design-published`; documentado por um registro `report` (`p1-c1-design-approval-timeout`), um `document-registered` do tipo `report`, o aviso `approval-timeout` ao `business-lead` e ao `tech-rep`, e as entradas de auditoria `requested`, `reminded` e `escalated`. O `business-lead` que responde dentro das 24h aprova e o desenho é publicado. Relógio controlável, sem sleep | `BusinessApprovalTest` (4), `NoticesTest` (1) |
+| CA3 | **Verde.** Uma rejeição com `noteRef` reabre o `write-design` com a rodada 2, o ponteiro da nota e a versão anterior; a v2 é registrada sob o mesmo `documentId`, o evento da v2 tem outro id e traz `supersedes: 1`, a página é publicada de novo pela mesma chave e o `design-published` leva a v2. Três rejeições terminam em `rejected`, com três escritas e três versões, sem publicar nem gerar relatório de travamento. A nota viaja só por ponteiro | `BusinessApprovalTest` |
+| CA4 | **Verde.** Cada canal produz o artefato certo e nenhum outro: Confluence → uma `publish-page` com a chave do documento e nenhum e-mail; e-mail → um `send-email` `design` e nenhuma página; nova reunião → um `send-email` `meeting`, nenhuma página e nenhum `design-published` | `BusinessCorpusTest` |
+| CA5 | **Verde.** No esqueleto, o `p2` tem duas instâncias do Negócio (ciclos 1 e 2): dois `design-published` (`p2-c1-design` e `p2-c2-design`), todos os eventos do `p2` na mesma cadeia `chn-3cf066c1…`, e os dois desenhos no catálogo | `PipelineSkeletonIT`, `S.7-CA6.txt` |
+| CA6 | **Verde.** `design-published` aceita `priority` entre 0 e 1 e continua aceitando a forma antiga; recusa 1,4, um texto e um campo de conteúdo | `DesignPublishedContractTest` |
+| CA7 | **Verde, com o desvio de 8.2.** O `p2` é rejeitado uma vez no esqueleto: o catálogo tem `rec-p2-c1-design` v1 e v2, a v2 com `supersedes: 1`; o varredor continua em zero | `PipelineSkeletonIT`; `S.8-CA7.txt` |
+| CA8 | @REGR@ | `gate.sh --regression-only` |
+| 8g | **Medido.** LitJev (Qwen3.5-2B) sobre os sete transcritos reais já redigidos pelo filtro do S.6: **tipo 6 de 7** (errou o `o1`, o almoço da equipe, que chamou de desenho), **canal 7 de 7** nos de negócio, **prioridade dentro de ±0,2 em 3 de 7** (e 1 de 7 antes do ajuste de escala, S8-1). O ambíguo `a1` acertou o tipo | `S.8-litjev.txt` |
+
+### 8.2 Ressalvas e desvios
+- **A rejeição do esqueleto é no `p2`, não no `p1`** como a spec dizia (CA7). Rejeitar o `p1` mudaria uma asserção do esqueleto que já existe (4 `document-registered` do `p1`), e a regra é parar nesse caso; o `p2` não tem essa contagem. O que o CA7 pede, a prova de `supersedes` num ciclo real, está igual.
+- **O CA4 é provado no `BusinessCorpusTest`** (um caso por roteiro), não numa classe `BusinessChannelsTest` à parte: os sete roteiros já cobrem os três canais.
+- **O aviso a todos os leads sai do `sandbox-channels`, não do workflow.** O Stint escala a revisão a um papel só; o `Notices` vê o pedido escalado (`escalatedFrom`) e manda `approval-overdue` ao `business-lead` e ao `tech-rep`. Como o evento de revisão não traz projeto nem ciclo, o aviso os lê do ponteiro do desenho (`design/<p>-c<n>-design.md`) e usa `unknown`/`0` se o material não for um desenho. O `NoticesTest` prova o envio (o pedido escalado avisa o `business-lead` e o `tech-rep`, um primeiro pedido não avisa ninguém e a reentrega não avisa duas vezes); o `BusinessApprovalTest` prova o pedido escalado. O e-mail ao vivo, no MailHog, não é exercitado pelo esqueleto, que não escala.
+- **O redator de desenho, na rodada de retrabalho, não chama o modelo**: acrescenta ao texto anterior uma seção `Revision n`. Ele não lê a nota (é texto de uma pessoa, e só um redator depois do filtro devia lê-la). Para a rodada manual com o LLM real isso significa que a v2 não incorpora o que o aprovador pediu: achado S8-3.
+- **O `id` do `document-registered` ganha `:v<n>` só da v2 em diante**; o da v1 não mudou.
+- **O `register-document` guarda `priority`** (campo opcional da entrada, no catálogo); o `ListCatalog` do teste do S.7 não foi tocado.
+- **Papel novo `business-lead`**: usuário de teste no portal (`test-business-lead`), endereço no `Mail` e dois templates (`approval-overdue`, `approval-timeout`).
+- **Nenhuma asserção existente mudou.** O `onTimeout` e o `escalate` entraram no workflow sem alterar os testes do S.5.
+
+### 8.3 Achados (nada alterado no Stint)
+| # | Achado | Proposta |
+|---|---|---|
+| S8-1 | Uma decisão `score` do Jev responde na escala do índice dos níveis (0 a n-1; com três níveis, 0 a 2), não em 0 a 1. Sem ajuste, a prioridade real (1,54, 1,91…) violaria o contrato de `design-published` (máximo 1) | O sandbox normaliza no adaptador local (`ScoreOnUnitScale`). Proposta ao Stint: documentar a escala, ou devolver o score já em [0, 1] |
+| S8-2 | O `noul`/a escolha do 2B confunde o almoço da equipe com uma reunião de desenho (`o1`) e a prioridade só acerta 3 de 7 | Como no S.6, o modelo pequeno não é a garantia: o que a protege é o `onUncertain` para o Representante. Medir com um modelo maior antes de qualquer uso real |
+| S8-3 | Uma revisão rejeitada traz a nota só por ponteiro (`noteRef`), e o redator real não a lê; o desenho refeito não incorpora o pedido | Um redator que leia a nota depois de passá-la pelo filtro do S.6; é trabalho de um SDD próprio |
+| S8-4 | O pedido de revisão escalado não traz projeto nem ciclo (só o ponteiro do material), então o aviso a todos os leads os infere | Proposta ao Stint: carregar as extensões do chamador (`sandboxproject`/`sandboxcycle`) nos eventos de revisão |
+
+A dúvida de 8h se resolveu sem achado: o `noteRef` chega ao contexto sem o `onReject` (usei um `switch` sobre o veredito), e o domínio em memória aceita um relógio controlável (`InMemoryTimerService` de teste).
+
+### 8.4 Pendências
+- Validado e Mergeado são seus. O push, com o seu pedido.
+- Notion: página do S.8 e Log.
