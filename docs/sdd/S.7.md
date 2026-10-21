@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.7 |
-| Status | **Em implementação** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as propostas 8a a 8f) |
+| Status | **Implementado** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as propostas 8a a 8f) |
 | Depende de | S.5 e S.6 (Implementados). Stint `500dfd1` |
 | Bloqueia | S.8 a S.10 (os domínios registram o que produzem), S.11 (gate), 3b (ingestão) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
@@ -102,4 +102,33 @@ O S.7 completa o catálogo (campos, `supersedes`, aprovações, tipos), fecha o 
 - Se a `TaskContext` não expuser o `causationId` do evento que iniciou a cadeia, vira achado, e o catálogo grava o `eventId` que houver.
 
 ## 8. Registro de validação
-(preencher na etapa 2)
+
+**Ambiente.** O do S.5 e S.6 (Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2, Stint `500dfd1` sob `0.1.0-3a-500dfd1`, floci). A pilha de modelos não foi necessária: o registro não lê fala.
+
+### 8.1 Critérios de aceite
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.** A entrada guarda reunião de origem, `chainId`, `causationId`, `supersedes` e a classe de retenção; a v2 aponta para a v1 e a v1 e a cópia dela não mudam | `RegisterDocumentHandlerTest` (6) |
+| CA2 | **Verde.** Repetir o último conteúdo não cria versão; A, B, A cria a v3 que substitui a v2; duas corridas do mesmo conteúdo (as duas leem "sem versão" antes de qualquer escrita, travadas por uma barreira, sem sleep) dão uma versão só | `RegisterDocumentHandlerTest`, `RecordsAccessTest` |
+| CA3 | **Verde.** A aprovação cai na versão certa, uma vez por `reviewId`; a rejeição fica registrada; o catálogo fica idêntico; a mesma revisão com outra decisão é 409 e uma versão inexistente é 404; a resposta não leva a nota | `RecordsAccessTest` |
+| CA4 | **Verde.** O dono lê (resposta é só o ponteiro); Engenharia e Entrega recebem 403 sobre um registro do Negócio; registro inexistente é 404 | `RecordsAccessTest` |
+| CA5 | **Verde.** O evento satisfaz o contrato (com `supersedes` opcional e os tipos novos) e os campos `text`, `content`, `body`, `document`, `transcript` e `note` são recusados | `RecordsAccessTest` |
+| CA6 | **Verde, com a ressalva de 8.2.** No esqueleto do S.5 (288 s) o catálogo tem 10 versões de 10 documentos, os mesmos que o barramento anunciou; todos na cadeia do projeto (`chn-<uuid do projeto>`), todo desenho e toda pergunta com a reunião de origem, e toda entrada com a causa | `PipelineSkeletonIT`; `S.7-CA6.txt` |
+| CA7 | **Verde.** O registro recusa um `documentRef` do bucket restrito `sandbox-meetings-raw`, um nível e um papel desconhecidos, e um documento de reunião sem `sourceMeetingId`; aceita os cinco tipos novos | `RegisterDocumentHandlerTest` |
+| CA8 | **Verde.** `gate.sh --regression-only`: build completo, `FlociBillingIT` 5/5, `FlociOrdersIT` 6/6 e `RegressionIT` 3/3 (S.1–S.6), PASSED em 20/10/2026 | `gate.sh --regression-only` |
+
+### 8.2 Ressalvas e desvios
+- **O relatório de validação ainda não é registrado.** O esqueleto produz 10 documentos (desenho, perguntas, lote e SDDs); o `report` do `sdd-delivery` e os tipos novos (`transcript-redacted`, `email`, `page`, `patch`, `dlq-decision`) são aceitos e testados no registro, mas quem os registra são os workflows de S.8–S.10, como a spec diz. O CA6 cobre o que o ciclo de hoje produz.
+- **Nenhum documento do esqueleto tem `supersedes`.** Cada ciclo registra ids diferentes (`p2-c1-design`, `p2-c2-design`), então a substituição é provada no registro (CA1 e CA2), não no ciclo. Quando S.8 refizer um desenho rejeitado sob o mesmo id, a cadeia de versões aparece.
+- **Os workflows passaram a enviar `sourceMeetingId`** (Negócio: desenho; Engenharia: perguntas). É uma mudança aditiva na entrada de `register-document`; nenhuma asserção existente mudou.
+- **A leitura só pelo dono é de rota (8e).** O floci não tem controle de acesso por objeto, e o `documentRef` original continua sendo um objeto do bucket de quem o produziu.
+- **Versionamento do bucket (8b):** não habilitei. A imutabilidade é a da chave por versão e da condição do catálogo, como proposto; o critério não depende dele.
+- **Quatro novas rotas nos três domínios:** `approve-record` e `read-record` entraram na tabela de roteamento dos três (`SHARED`); nenhum workflow as chama ainda (S.8–S.10).
+- **A nota da aprovação** é guardada como o chamador a mandou, que já deve ter passado pelo filtro do S.6; o registro não filtra de novo.
+
+### 8.3 Achados (nada alterado no Stint)
+Nenhum novo. A dúvida de 8g não se confirmou: a `TaskContext` traz o `causationId` (a coluna `cause` de `S.7-CA6.txt` está preenchida em todas as entradas).
+
+### 8.4 Pendências
+- Push e atualização do PR #2, com o seu pedido.
+- Notion: página do S.7 e Log.
