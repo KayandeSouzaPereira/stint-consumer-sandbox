@@ -42,7 +42,7 @@ public final class DynamoDbCatalog implements RegisterDocumentHandler.Catalog {
                 s(i, "ownerRole"), s(i, "sensitivity"), s(i, "storedRef"), s(i, "projectId"), s(i, "cycle"),
                 s(i, "sourceMeetingId"), s(i, "chainId"), s(i, "causationId"),
                 i.get("supersedes") == null ? null : Integer.valueOf(i.get("supersedes").n()),
-                s(i, "retentionClass"));
+                s(i, "retentionClass"), i.get("priority") == null ? null : Double.valueOf(i.get("priority").n()));
     }
 
     @Override
@@ -65,6 +65,9 @@ public final class DynamoDbCatalog implements RegisterDocumentHandler.Catalog {
         put(item, "chainId", e.chainId());
         put(item, "causationId", e.causationId());
         put(item, "retentionClass", e.retentionClass());
+        if (e.priority() != null) {
+            item.put("priority", AttributeValue.fromN(String.valueOf(e.priority())));
+        }
         if (e.supersedes() != null) {
             item.put("supersedes", AttributeValue.fromN(String.valueOf(e.supersedes())));
         }

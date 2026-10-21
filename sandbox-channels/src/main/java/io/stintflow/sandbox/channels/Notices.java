@@ -42,7 +42,12 @@ public final class Notices {
         String cycle = ext(event, PipelineEvents.EXT_CYCLE);
         JsonNode data = event.getData() == null ? Json.obj() : Json.read(event.getData().toBytes());
         switch (event.getType()) {
-            case PipelineEvents.REVIEW_REQUESTED -> portal.requested(event);
+            case PipelineEvents.REVIEW_REQUESTED -> {
+                portal.requested(event);
+                if (data.hasNonNull("escalatedFrom")) {
+                    overdue(data);
+                }
+            }
             case PipelineEvents.REVIEW_REMINDER -> LOG.infof("Review %s: reminder for %s", event.getSubject(),
                     event.getExtension("stintrole"));
             case PipelineEvents.REFINEMENT_REQUESTED -> {
@@ -65,6 +70,23 @@ public final class Notices {
                 mail.send("cycle-closed", "tech-rep", project, cycle, null, text);
             }
             default -> LOG.debugf("Event %s of type %s: nothing to do", event.getId(), event.getType());
+        }
+    }
+
+    /** The leads of the domains that depend on the design (SDD S.8, RF3): told when its approval is escalated. */
+    static final java.util.List<String> LEADS = java.util.List.of("business-lead", "tech-rep");
+    private static final java.util.regex.Pattern DESIGN = java.util.regex.Pattern
+            .compile("/([a-z0-9-]+)-c(\\d+)-design\\.md$");
+
+    private void overdue(JsonNode review) throws Exception {
+        // a review event carries no project or cycle: they are read off the design's pointer (design/<p>-c<n>-design.md)
+        var found = DESIGN.matcher(review.path("materialRef").asText());
+        boolean known = found.find();
+        String project = known ? found.group(1) : "unknown";
+        String cycle = known ? found.group(2) : "0";
+        for (String lead : LEADS) {
+            mail.send("approval-overdue", lead, project, cycle, null,
+                    "The approval of a design was not answered in time and was escalated to the business lead.\n");
         }
     }
 

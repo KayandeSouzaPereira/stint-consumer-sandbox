@@ -63,6 +63,7 @@ class PipelineSkeletonIT extends ScenarioBase {
             running.put(m.name(), start(m.name().toLowerCase(), m, Map.of()));
         }
         Portal portal = new Portal(Module.CHANNELS.port());
+        portal.rejectFirstApprovalOf("p2-c1-design");   // SDD S.8, CA7: p2's first design is rejected once, then approved
 
         assertThat(portal.record("p1-c1-business")).isEqualTo(202);
         note("recorded p1-c1-business");
@@ -126,6 +127,14 @@ class PipelineSkeletonIT extends ScenarioBase {
                 assertThat(item.get("sourceMeetingId")).as(item.get("recordId").s() + " names its meeting").isNotNull();
             }
         }
+        // SDD S.8, CA7: the rejected design is a second version of the same document, and it supersedes the first
+        var reworked = catalog.stream().filter(i -> i.get("recordId").s().equals("rec-p2-c1-design")).toList();
+        assertThat(reworked).as("p2's design has two versions").extracting(i -> i.get("version").n())
+                .containsExactlyInAnyOrder("1", "2");
+        assertThat(reworked.stream().filter(i -> i.get("version").n().equals("2")).findFirst().orElseThrow()
+                .get("supersedes").n()).isEqualTo("1");
+        Scenario.evidence("S.8-CA7.txt", "S.8 CA7: p2's first design was rejected once and rewritten as version 2\n"
+                + register);
         Scenario.evidence("S.7-CA6.txt", "S.7 CA6: the register after the pipeline's skeleton (" + catalog.size()
                 + " versions, " + inCatalog.size() + " documents; the bus announced the same documents)\n" + register);
 

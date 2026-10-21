@@ -90,6 +90,17 @@ public final class Portal {
      * project it belongs to. Returns the review ids answered in this round.
      */
     public List<String> answerAsTheKey(Corpus corpus, String... roles) {
+        return answerAsTheKey(corpus, roles, null);
+    }
+
+    /** Reviews whose material names one of these tokens get a rejection, once each (SDD S.8, CA7). */
+    private final java.util.Set<String> rejectOnce = new java.util.HashSet<>();
+
+    public void rejectFirstApprovalOf(String materialToken) {
+        rejectOnce.add(materialToken);
+    }
+
+    private List<String> answerAsTheKey(Corpus corpus, String[] roles, Void unused) {
         List<String> done = new ArrayList<>();
         for (String role : roles) {
             for (JsonNode review : open(role)) {
@@ -97,7 +108,17 @@ public final class Portal {
                 if (answered.contains(id)) {
                     continue;
                 }
-                int status = answer(role, id, asTheKey(corpus, review));
+                ObjectNode body = asTheKey(corpus, review);
+                String material = review.path("materialRef").asText();
+                if ("approval".equals(review.path("kind").asText()) && review.path("items").isEmpty()) {
+                    String token = rejectOnce.stream().filter(material::contains).findFirst().orElse(null);
+                    if (token != null) {
+                        rejectOnce.remove(token);
+                        body = Spy.JSON.createObjectNode().put("verdict", "rejected").put("noteRef",
+                                "s3://sandbox-documents/notes/" + id.replaceAll("[^A-Za-z0-9._-]", "-") + ".txt");
+                    }
+                }
+                int status = answer(role, id, body);
                 if (status == 202) {
                     answered.add(id);
                     done.add(role + " " + review.path("kind").asText() + " " + id);

@@ -55,6 +55,12 @@
             <artifactId>quarkus-opentelemetry</artifactId>
         </dependency>
 
+        <!-- SDD S.8, 8g: the manual measurement of the Business decisions over the redacted transcripts -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-worker-decision-jev</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.github.stintflow</groupId>
             <artifactId>stint-inmemory</artifactId>

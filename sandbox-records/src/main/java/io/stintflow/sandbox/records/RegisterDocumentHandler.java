@@ -46,7 +46,7 @@ public final class RegisterDocumentHandler implements TaskHandler {
     public interface Catalog {
         record Entry(String recordId, int version, String sha256, String kind, String ownerRole, String sensitivity,
                 String storedRef, String projectId, String cycle, String sourceMeetingId, String chainId,
-                String causationId, Integer supersedes, String retentionClass) {
+                String causationId, Integer supersedes, String retentionClass, Double priority) {
         }
 
         Optional<Entry> latest(String recordId);
@@ -116,7 +116,8 @@ public final class RegisterDocumentHandler implements TaskHandler {
             return copies.put(bytes, recordId + "/v" + version).thenApply(stored -> {
                 Catalog.Entry entry = new Catalog.Entry(recordId, version, sha, kind, owner, level, stored.toString(),
                         in.path("projectId").asText(null), in.path("cycle").asText(null), meeting, chainId,
-                        causationId, latest.map(Catalog.Entry::version).orElse(null), retention);
+                        causationId, latest.map(Catalog.Entry::version).orElse(null), retention,
+                        in.path("priority").isNumber() ? in.path("priority").asDouble() : null);
                 if (!catalog.putIfAbsent(entry)) {
                     Catalog.Entry won = catalog.latest(recordId).orElseThrow();
                     if (!won.sha256().equals(sha)) {

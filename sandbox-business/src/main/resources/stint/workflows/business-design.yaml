@@ -16,7 +16,7 @@ document:
       routes:
         restricted: [transcribe, redactor]
         confidential: [redactor, decide-meeting-type, decide-priority, write-design, register-document, decide-channel,
-                       publish-page, send-email]
+                       publish-page, send-email, write-timeout-report]
         internal: ['*']
       retention:
         restricted: { days: 7 }
@@ -88,31 +88,38 @@ do:
         task: decide-priority
         kind: score
         input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
-      export: { as: '${ $context + {priority: .value} }' }
+      export: { as: '${ $context + {priority: .value, round: 1} }' }
   - write:
       call: remote
       with:
         task: write-design
-        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted} }'
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted, round: $context.round, previousRef: $context.designRef, noteRef: $context.noteRef} }'
       timeout: { after: { minutes: 15 } }
       export: { as: '${ $context + {documentId: .documentId, designRef: .designRef} }' }
   - register:
       call: remote
       with:
         task: register-document
-        input: '${ {documentId: $context.documentId, documentRef: $context.designRef, kind: "design", ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle} }'
-      export: { as: '${ $context + {recordId: .recordId, version: .version, sha256: .sha256} }' }
+        input: '${ {documentId: $context.documentId, documentRef: $context.designRef, kind: "design", ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, priority: $context.priority, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {recordId: .recordId, version: .version, sha256: .sha256, supersedes: .supersedes} }' }
   - registered:
       emit:
         event:
           with:
-            id: '${ $context.projectId + ":" + $context.cycle + ":design-registered" }'
+            id: '${ $context.projectId + ":" + $context.cycle + ":design-registered" + (if $context.version > 1 then ":v" + ($context.version | tostring) else "" end) }'
             source: https://sandbox.stintflow.io/business
             type: io.sandbox.records.document-registered.v1
             subject: '${ $context.recordId }'
             sandboxproject: '${ $context.projectId }'
             sandboxcycle: '${ $context.cycle }'
-            data: '${ {recordId: $context.recordId, version: $context.version, sha256: $context.sha256, kind: "design", sensitivity: "confidential", ownerRole: "business-rep"} }'
+            data: '${ {recordId: $context.recordId, version: $context.version, sha256: $context.sha256, kind: "design", sensitivity: "confidential", ownerRole: "business-rep"} + (if $context.supersedes != null then {supersedes: $context.supersedes} else {} end) }'
+  - channelKnown:
+      switch:
+        - known:
+            when: '$context.channel != null'
+            then: deliver
+        - decide:
+            then: channel
   - channel:
       call: decision
       with:
@@ -131,6 +138,16 @@ do:
           remind: { hours: 20 }
           onTimeout: { value: email }
       export: { as: '${ $context + {channel: .value} }' }
+  - deliver:
+      switch:
+        - confluence:
+            when: '$context.channel == "confluence"'
+            then: publish
+        - email:
+            when: '$context.channel == "email"'
+            then: mailDesign
+        - meeting:
+            then: mailMeeting
   - publish:
       call: remote
       with:
@@ -158,9 +175,22 @@ do:
         material: '${ $context.designRef }'
         deadline: { hours: 48 }
         remind: { hours: 40 }
-      onReject: rejected
-      export: { as: '${ $context + {verdict: .verdict} }' }
-      then: published
+        escalate: { role: business-lead, after: { hours: 24 } }
+        onTimeout: { value: rejected }
+      export: { as: '${ $context + {verdict: .verdict, defaulted: .defaulted, noteRef: .noteRef} }' }
+  - verdictRoute:
+      switch:
+        - approved:
+            when: '$context.verdict == "approved"'
+            then: published
+        - overdue:
+            when: '$context.defaulted == true'
+            then: stuck
+        - rework:
+            when: '$context.round < 3'
+            then: reworkRound
+        - rejected:
+            then: rejected
   - published:
       emit:
         event:
@@ -171,10 +201,51 @@ do:
             subject: '${ $context.documentId }'
             sandboxproject: '${ $context.projectId }'
             sandboxcycle: '${ $context.cycle }'
-            data: '${ {documentId: $context.documentId, recordId: $context.recordId, version: $context.version, designRef: $context.designRef, channel: $context.channel} }'
+            data: '${ {documentId: $context.documentId, recordId: $context.recordId, version: $context.version, designRef: $context.designRef, channel: $context.channel, priority: $context.priority} }'
       then: end
+  - reworkRound:
+      set: '${ $context + {round: ($context.round + 1)} }'
+      export: { as: '${ . }' }
+      then: write
   - rejected:
       set: '${ $context + {outcome: "rejected"} }'
+      export: { as: '${ . }' }
+      then: end
+  - stuck:
+      call: remote
+      with:
+        task: write-timeout-report
+        input: '${ {projectId: $context.projectId, cycle: $context.cycle, documentId: $context.documentId, version: $context.version, round: $context.round} }'
+      export: { as: '${ $context + {reportId: .documentId, reportRef: .reportRef} }' }
+  - registerReport:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.reportId, documentRef: $context.reportRef, kind: "report", ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {reportRecord: {recordId: .recordId, version: .version, sha256: .sha256}} }' }
+  - reportRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":approval-timeout-registered" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.reportRecord.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.reportRecord.recordId, version: $context.reportRecord.version, sha256: $context.reportRecord.sha256, kind: "report", sensitivity: "confidential", ownerRole: "business-rep"} }'
+  - tellBusinessLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "business-lead", projectId: $context.projectId, cycle: $context.cycle} }'
+  - tellTechLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "tech-rep", projectId: $context.projectId, cycle: $context.cycle} }'
+  - timedOut:
+      set: '${ $context + {outcome: "approval-timeout"} }'
       export: { as: '${ . }' }
       then: end
   - doubt:

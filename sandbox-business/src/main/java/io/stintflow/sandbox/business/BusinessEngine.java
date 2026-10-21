@@ -194,7 +194,8 @@ public class BusinessEngine {
                 .policy(policy);
         stack.decisions().forEach(decisions::adapter);
         TaskHandlerRegistry registry = decisions.build().registerAll(new TaskHandlerRegistry())
-                .register("transcribe", new TranscriptionHandler(stack.transcriber(), raw));
+                .register("transcribe", new TranscriptionHandler(stack.transcriber(), raw))
+                .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents));
         if (stack.writer() == null) {
             return registry.register(DesignHandler.ROUTE, DesignHandler.fake(documents));
         }

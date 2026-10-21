@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.8 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Em implementação** (spec aprovada por Kayan em 21/10/2026; 8b decidido por ele: escalar ao business-lead e avisar todos os leads; as demais propostas valem) |
 | Depende de | S.5, S.6 e S.7 (Implementados). Stint `500dfd1` |
 | Bloqueia | S.11 (gate da 3a); a Engenharia (S.9) consome o `design-published` |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |

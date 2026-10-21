@@ -54,6 +54,10 @@ public final class DesignHandler implements TaskHandler {
     public CompletionStage<JsonNode> execute(TaskContext ctx) {
         String documentId = ctx.input().path("projectId").asText() + "-c" + ctx.input().path("cycle").asText()
                 + "-design";
+        int round = ctx.input().path("round").asInt(1);
+        if (round > 1 && ctx.input().hasNonNull("previousRef")) {
+            return revise(ctx, documentId, round);
+        }
         return model.execute(ctx).thenCompose(structured -> {
             DesignWriter.Design design = Json.MAPPER.convertValue(structured, DesignWriter.Design.class);
             byte[] markdown = design.markdown("Design " + documentId).getBytes(StandardCharsets.UTF_8);
@@ -61,6 +65,23 @@ public final class DesignHandler implements TaskHandler {
                 ObjectNode out = Json.obj().put("documentId", documentId).put("designRef", uri.toString());
                 return (JsonNode) out;
             });
+        });
+    }
+
+    /**
+     * SDD S.8, RF4: a rejected design is written again as the next version of the same document — the previous text
+     * with a numbered revision section. The approver's note arrives by pointer ({@code noteRef}) and is not read here
+     * (it is a person's text: reading it is for a writer that has passed the privacy filter over it, a finding of S.8).
+     */
+    private CompletionStage<JsonNode> revise(TaskContext ctx, String documentId, int round) {
+        java.net.URI previous = java.net.URI.create(ctx.input().path("previousRef").asText());
+        boolean noted = ctx.input().hasNonNull("noteRef");
+        return documents.get(previous).thenCompose(bytes -> {
+            String revised = new String(bytes, StandardCharsets.UTF_8) + "\n## Revision " + (round - 1) + "\n- "
+                    + (noted ? "Revised after the approver's note." : "Revised after the rejection.") + "\n";
+            return documents.put(revised.getBytes(StandardCharsets.UTF_8), "design/" + documentId + ".md")
+                    .thenApply(uri -> (JsonNode) Json.obj().put("documentId", documentId).put("designRef",
+                            uri.toString()));
         });
     }
 }

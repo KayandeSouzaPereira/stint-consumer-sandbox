@@ -29,10 +29,12 @@ public final class Mail implements TaskHandler {
     public static final String ROUTE = "send-email";
     /** Synthetic addresses of the roles: MailHog only, never a real mailbox. */
     static final Map<String, String> ADDRESSES = Map.of("business-rep", "business-rep@sandbox.local", "tech-rep",
-            "tech-rep@sandbox.local", "technician", "technician@sandbox.local");
+            "tech-rep@sandbox.local", "technician", "technician@sandbox.local", "business-lead",
+            "business-lead@sandbox.local");
     static final Map<String, String> SUBJECTS = Map.of("design", "Design document", "meeting", "New meeting requested",
             "invite", "Technical refinement invitation", "questions", "Questions from engineering", "dead-letter",
-            "An SDD needs the technician", "cycle-closed", "Cycle closed");
+            "An SDD needs the technician", "cycle-closed", "Cycle closed", "approval-overdue", "Design approval is overdue", "approval-timeout",
+            "Design approval timed out");
 
     private final Mailer mailer;
     private final BlobStore documents;

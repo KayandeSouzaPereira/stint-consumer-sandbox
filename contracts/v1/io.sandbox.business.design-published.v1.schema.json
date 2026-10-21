@@ -30,6 +30,11 @@
       "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$",
       "description": "A pointer: s3://bucket/key or record://<recordId>/<version>"
     },
+    "priority": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
     "channel": {
       "enum": [
         "email",

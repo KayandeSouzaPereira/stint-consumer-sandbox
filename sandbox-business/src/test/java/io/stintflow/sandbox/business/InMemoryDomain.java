@@ -51,10 +51,28 @@ final class InMemoryDomain implements AutoCloseable {
     final MemoryBlobs blobs = new MemoryBlobs();
     final WorkflowEngine engine;
     final WorkflowDefinition definition;
+    /** SDD S.8: the controllable clock and timers of {@link #controlled}; null on a domain that runs on real time. */
+    final java.util.concurrent.atomic.AtomicReference<java.time.Instant> now;
+    final InMemoryTimerService timer;
     private final WorkerPool pool;
 
     InMemoryDomain(String domain, String yaml, Function<BlobStore, TaskHandlerRegistry> handlers)
             throws Exception {
+        this(domain, yaml, handlers, false);
+    }
+
+    /** A domain whose clock only moves when the test says so: {@link #advance} fires the timers that come due. */
+    static InMemoryDomain controlled(String domain, String yaml, Function<BlobStore, TaskHandlerRegistry> handlers)
+            throws Exception {
+        return new InMemoryDomain(domain, yaml, handlers, true);
+    }
+
+    private InMemoryDomain(String domain, String yaml, Function<BlobStore, TaskHandlerRegistry> handlers,
+            boolean controlled) throws Exception {
+        now = controlled ? new java.util.concurrent.atomic.AtomicReference<>(java.time.Instant.parse(
+                "2026-10-21T09:00:00Z")) : null;
+        InstantSource clock = controlled ? () -> now.get() : InstantSource.system();
+        timer = controlled ? new InMemoryTimerService(clock) : new InMemoryTimerService();
         pool = new WorkerPool(new WorkerRuntime(handlers.apply(blobs), blobs, ExecutionTracer.NOOP), 4);
         InMemoryTaskTransport transport = new InMemoryTaskTransport();
         transport.connectWorker(invoke -> {
@@ -75,8 +93,8 @@ final class InMemoryDomain implements AutoCloseable {
             definition = new DslLoader().load(in, yaml, LoadOptions.STRICT);
         }
         registry.register(definition);
-        engine = new WorkflowEngine(registry, transport, state, new InMemoryTimerService(), blobs,
-                new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
+        engine = new WorkflowEngine(registry, transport, state, timer, blobs,
+                new TreeInterpreter(new JqExpressionEvaluator()), clock,
                 new DomainTagPublisher(bus, domain), null, ExecutionTracer.NOOP).auditLog(audit)
                 .correctionLog(corrections);
     }
@@ -110,6 +128,12 @@ final class InMemoryDomain implements AutoCloseable {
             snapshot = snapshot(id);
         }
         return snapshot;
+    }
+
+    /** Moves the controlled clock and fires what came due (no sleep). */
+    void advance(Duration by) {
+        now.set(now.get().plus(by));
+        timer.tick();
     }
 
     InstanceSnapshot snapshot(String id) throws Exception {
