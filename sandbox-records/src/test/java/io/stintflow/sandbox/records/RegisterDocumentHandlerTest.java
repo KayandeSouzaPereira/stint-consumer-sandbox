@@ -56,6 +56,11 @@ class RegisterDocumentHandlerTest {
         }
 
         @Override
+        public synchronized Optional<Entry> get(String recordId, int version) {
+            return entries.stream().filter(e -> e.recordId().equals(recordId) && e.version() == version).findFirst();
+        }
+
+        @Override
         public synchronized boolean putIfAbsent(Entry entry) {
             return entries.stream().noneMatch(e -> e.recordId().equals(entry.recordId())
                     && e.version() == entry.version()) && entries.add(entry);
@@ -69,10 +74,19 @@ class RegisterDocumentHandlerTest {
     JsonNode register(URI ref, String kind) {
         var input = Json.obj().put("documentId", "p1-1-design").put("documentRef", ref.toString()).put("kind", kind)
                 .put("ownerRole", "business-rep").put("sensitivity", "confidential").put("projectId", "p1")
-                .put("cycle", "1");
+                .put("cycle", "1").put("sourceMeetingId", "m-1");
+        return register(input);
+    }
+
+    JsonNode register(com.fasterxml.jackson.databind.node.ObjectNode input) {
         return handler.execute(new TaskContext("/do/7/register", "i-1", "c-1", 1, input,
-                new WorkflowRef("business", "business-design", "1.0.0"), "chn-1", Lineage.NONE))
-                .toCompletableFuture().join();
+                new WorkflowRef("business", "business-design", "1.0.0"), "chn-1",
+                new Lineage("chn-1", "evt-9", null, null))).toCompletableFuture().join();
+    }
+
+    URI doc(String text) {
+        return blobs.put(text.getBytes(StandardCharsets.UTF_8), "d-" + blobs.data.size() + ".md").toCompletableFuture()
+                .join();
     }
 
     @Test
@@ -99,5 +113,69 @@ class RegisterDocumentHandlerTest {
     void an_unknown_kind_is_a_validation_failure() {
         URI v1 = blobs.put("x".getBytes(StandardCharsets.UTF_8), "d1.md").toCompletableFuture().join();
         assertThatThrownBy(() -> register(v1, "poem")).hasMessageContaining("known kind");
+    }
+
+    @Test
+    void an_entry_has_its_origin_its_chain_and_the_version_it_supersedes() {
+        register(doc("v1 text"), "design");
+        JsonNode second = register(doc("v2 text"), "design");
+
+        var v1 = catalog.get("rec-p1-1-design", 1).orElseThrow();
+        var v2 = catalog.get("rec-p1-1-design", 2).orElseThrow();
+        assertThat(v1.supersedes()).isNull();
+        assertThat(v2.supersedes()).isEqualTo(1);
+        assertThat(second.path("supersedes").asInt()).isEqualTo(1);
+        assertThat(v2.sourceMeetingId()).isEqualTo("m-1");
+        assertThat(v2.chainId()).isEqualTo("chn-1");
+        assertThat(v2.causationId()).isEqualTo("evt-9");
+        assertThat(v2.retentionClass()).isEqualTo("records");
+        assertThat(v1.sha256()).isNotEqualTo(v2.sha256());   // the first version did not change
+        assertThat(new String(blobs.data.get(URI.create(v1.storedRef())), StandardCharsets.UTF_8)).isEqualTo("v1 text");
+    }
+
+    @Test
+    void the_last_content_again_is_no_new_version_but_an_older_content_after_a_newer_one_is() {
+        URI a = doc("content A");
+        URI b = doc("content B");
+        register(a, "design");
+        register(b, "design");
+        JsonNode third = register(a, "design");   // A, B, A
+
+        assertThat(third.path("version").asInt()).isEqualTo(3);
+        assertThat(third.path("supersedes").asInt()).isEqualTo(2);
+        assertThat(register(a, "design").path("version").asInt()).isEqualTo(3);   // a redelivery of the last
+        assertThat(catalog.entries).hasSize(3);
+    }
+
+    @Test
+    void a_document_of_a_meeting_names_the_meeting_and_the_new_kinds_are_known() {
+        URI ref = doc("x");
+        var noMeeting = Json.obj().put("documentId", "d").put("documentRef", ref.toString()).put("kind", "design")
+                .put("ownerRole", "business-rep").put("sensitivity", "confidential");
+        assertThatThrownBy(() -> register(noMeeting)).hasMessageContaining("sourceMeetingId");
+        for (String kind : List.of("email", "page", "patch", "dlq-decision")) {
+            var in = Json.obj().put("documentId", "d-" + kind).put("documentRef", ref.toString()).put("kind", kind)
+                    .put("ownerRole", "tech-rep").put("sensitivity", "internal");
+            assertThat(register(in).path("kind").asText()).isEqualTo(kind);
+        }
+        var redacted = Json.obj().put("documentId", "t-1").put("documentRef", ref.toString())
+                .put("kind", "transcript-redacted").put("ownerRole", "business-rep").put("sensitivity", "confidential")
+                .put("sourceMeetingId", "m-1");
+        assertThat(register(redacted).path("kind").asText()).isEqualTo("transcript-redacted");
+    }
+
+    @Test
+    void a_pointer_to_a_restricted_bucket_an_unknown_level_and_an_unknown_role_are_refused() {
+        var raw = Json.obj().put("documentId", "d").put("documentRef", "s3://sandbox-meetings-raw/audio/m-1.wav")
+                .put("kind", "design").put("ownerRole", "business-rep").put("sensitivity", "confidential")
+                .put("sourceMeetingId", "m-1");
+        assertThatThrownBy(() -> register(raw)).hasMessageContaining("restricted bucket");
+        URI ref = doc("x");
+        var level = Json.obj().put("documentId", "d").put("documentRef", ref.toString()).put("kind", "page")
+                .put("ownerRole", "tech-rep").put("sensitivity", "secret");
+        assertThatThrownBy(() -> register(level)).hasMessageContaining("known kind");
+        var role = Json.obj().put("documentId", "d").put("documentRef", ref.toString()).put("kind", "page")
+                .put("ownerRole", "intern").put("sensitivity", "internal");
+        assertThatThrownBy(() -> register(role)).hasMessageContaining("known kind");
     }
 }

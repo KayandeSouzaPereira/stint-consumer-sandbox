@@ -100,7 +100,7 @@ do:
       call: remote
       with:
         task: register-document
-        input: '${ {documentId: $context.documentId, documentRef: $context.designRef, kind: "design", ownerRole: "business-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+        input: '${ {documentId: $context.documentId, documentRef: $context.designRef, kind: "design", ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle} }'
       export: { as: '${ $context + {recordId: .recordId, version: .version, sha256: .sha256} }' }
   - registered:
       emit:

@@ -32,7 +32,12 @@
         "questions",
         "sdd-batch",
         "sdd",
-        "report"
+        "report",
+        "transcript-redacted",
+        "email",
+        "page",
+        "patch",
+        "dlq-decision"
       ]
     },
     "sensitivity": {
@@ -41,6 +46,10 @@
         "confidential",
         "restricted"
       ]
+    },
+    "supersedes": {
+      "type": "integer",
+      "minimum": 1
     },
     "ownerRole": {
       "enum": [

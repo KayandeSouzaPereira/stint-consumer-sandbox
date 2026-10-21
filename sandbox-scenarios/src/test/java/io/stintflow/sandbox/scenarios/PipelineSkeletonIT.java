@@ -103,6 +103,32 @@ class PipelineSkeletonIT extends ScenarioBase {
                 "[p1 c1] Technical refinement invitation", "[p1 c1] Cycle closed");
         assertThat(portal.pages()).hasSize(1);      // p1 publishes on Confluence; p2's channel is e-mail
 
+        // --- the register (S.7): every document of the cycle is in the catalog, on its project's chain ---
+        List<Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue>> catalog = floci.ddb
+                .scan(r -> r.tableName("records-catalog").consistentRead(true)).items();
+        List<String> registeredOnBus = spy.events().stream().filter(e -> e.type().equals(PipelineEvents.DOCUMENT_REGISTERED))
+                .map(PipelineSkeletonIT::subject).distinct().sorted().toList();
+        List<String> inCatalog = catalog.stream().map(i -> i.get("recordId").s()).distinct().sorted().toList();
+        assertThat(inCatalog).as("the catalog holds the documents the bus announced").isEqualTo(registeredOnBus);
+        StringBuilder register = new StringBuilder();
+        for (var item : catalog) {
+            String project = item.get("projectId").s();
+            register.append(String.format("    %-34s v%s %-10s project %s chain %s meeting %s cause %s supersedes %s%n",
+                    item.get("recordId").s(), item.get("version").n(), item.get("kind").s(), project,
+                    item.get("chainId") == null ? "-" : item.get("chainId").s(),
+                    item.get("sourceMeetingId") == null ? "-" : item.get("sourceMeetingId").s(),
+                    item.get("causationId") == null ? "-" : item.get("causationId").s(),
+                    item.get("supersedes") == null ? "-" : item.get("supersedes").n()));
+            assertThat(item.get("chainId")).as(item.get("recordId").s() + " has a chain").isNotNull();
+            assertThat(item.get("chainId").s()).as(item.get("recordId").s() + " is on its project's chain")
+                    .isEqualTo(PipelineEvents.chainIdOf(project));
+            if (List.of("design", "questions").contains(item.get("kind").s())) {
+                assertThat(item.get("sourceMeetingId")).as(item.get("recordId").s() + " names its meeting").isNotNull();
+            }
+        }
+        Scenario.evidence("S.7-CA6.txt", "S.7 CA6: the register after the pipeline's skeleton (" + catalog.size()
+                + " versions, " + inCatalog.size() + " documents; the bus announced the same documents)\n" + register);
+
         // --- the contract of every event of the bus, and the sweep (S.6): logs, bus, e-mails, pages, buckets, tables ---
         List<String> broken = new ArrayList<>();
         for (Spy.Event e : spy.events()) {

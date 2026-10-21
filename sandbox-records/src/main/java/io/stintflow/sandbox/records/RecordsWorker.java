@@ -51,6 +51,8 @@ public class RecordsWorker implements HealthCheck {
     List<String> callers;
     @ConfigProperty(name = "records.catalog-table")
     String catalogTable;
+    @ConfigProperty(name = "records.approvals-table")
+    String approvalsTable;
     @ConfigProperty(name = "records.docs-bucket")
     String docsBucket;
     @ConfigProperty(name = "records.worker.concurrency", defaultValue = "4")
@@ -60,15 +62,20 @@ public class RecordsWorker implements HealthCheck {
 
     void onStart(@Observes StartupEvent event) {
         S3BlobStore copies = new S3BlobStore(s3, docsBucket);
-        TaskHandlerRegistry handlers = new TaskHandlerRegistry().register(RegisterDocumentHandler.ROUTE,
-                new RegisterDocumentHandler(new DynamoDbCatalog(ddb, catalogTable), copies, copies));
+        DynamoDbCatalog catalog = new DynamoDbCatalog(ddb, catalogTable);
+        TaskHandlerRegistry handlers = new TaskHandlerRegistry()
+                .register(RegisterDocumentHandler.ROUTE, new RegisterDocumentHandler(catalog, copies, copies))
+                .register(ApproveRecordHandler.ROUTE,
+                        new ApproveRecordHandler(catalog, new DynamoDbApprovals(ddb, approvalsTable)))
+                .register(ReadRecordHandler.ROUTE, new ReadRecordHandler(catalog));
         WorkerRuntime runtime = new WorkerRuntime(handlers, copies, new OpenTelemetryExecutionTracer(openTelemetry));
         for (String caller : callers) {
             bindings.add(SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + "records-tasks-" + caller)
                     .resultQueueUrl(queueBase + caller + "-results").pool(new WorkerPool(runtime, concurrency))
                     .waitTime(Duration.ofSeconds(5)).build().start());
         }
-        LOG.infof("Records service started: route %s for callers %s", RegisterDocumentHandler.ROUTE, callers);
+        LOG.infof("Records service started: routes %s, %s, %s for callers %s", RegisterDocumentHandler.ROUTE,
+                ApproveRecordHandler.ROUTE, ReadRecordHandler.ROUTE, callers);
     }
 
     void onStop(@Observes ShutdownEvent event) {

@@ -105,6 +105,8 @@ orders_tables() {
 # pipeline domain (3a.4 / 3a.5, schemas from stint-aws DynamoDbAuditLog / DynamoDbCorrectionLog).
 pipeline_tables() {
   ensure_table records-catalog     --attribute-definitions AttributeName=recordId,AttributeType=S AttributeName=version,AttributeType=N     --key-schema AttributeName=recordId,KeyType=HASH AttributeName=version,KeyType=RANGE
+  # SDD S.7, 8c: the approvals of each record version, apart from the catalog so a version stays immutable
+  ensure_table records-approvals   --attribute-definitions AttributeName=recordKey,AttributeType=S AttributeName=reviewId,AttributeType=S     --key-schema AttributeName=recordKey,KeyType=HASH AttributeName=reviewId,KeyType=RANGE
   for d in "${PIPELINE_DOMAINS[@]}"; do
     ensure_table "$d-audit"       --attribute-definitions AttributeName=instanceId,AttributeType=S AttributeName=entry,AttributeType=S       --key-schema AttributeName=instanceId,KeyType=HASH AttributeName=entry,KeyType=RANGE
     ensure_ttl "$d-audit" expiresAt

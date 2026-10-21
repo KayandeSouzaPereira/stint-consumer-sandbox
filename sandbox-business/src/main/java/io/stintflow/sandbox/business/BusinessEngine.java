@@ -79,7 +79,7 @@ public class BusinessEngine {
     private static final Logger LOG = Logger.getLogger(BusinessEngine.class);
     public static final String DOMAIN = "business";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
-    static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records",
+    static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records", "approve-record", "records", "read-record", "records",
             "send-email", "channels", "publish-page", "channels");
 
     @Inject

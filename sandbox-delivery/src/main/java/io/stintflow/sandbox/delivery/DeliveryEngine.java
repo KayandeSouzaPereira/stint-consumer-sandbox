@@ -73,7 +73,7 @@ public class DeliveryEngine {
     private static final Logger LOG = Logger.getLogger(DeliveryEngine.class);
     public static final String DOMAIN = "delivery";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
-    static final Map<String, String> SHARED = Map.of("run-target-tests", "target");
+    static final Map<String, String> SHARED = Map.of("run-target-tests", "target", "approve-record", "records", "read-record", "records");
 
     @Inject
     SqsClient sqs;

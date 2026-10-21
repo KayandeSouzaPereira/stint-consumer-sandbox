@@ -77,7 +77,7 @@ public class EngineeringEngine {
     private static final Logger LOG = Logger.getLogger(EngineeringEngine.class);
     public static final String DOMAIN = "engineering";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
-    static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records",
+    static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records", "approve-record", "records", "read-record", "records",
             "send-email", "channels");
 
     @Inject

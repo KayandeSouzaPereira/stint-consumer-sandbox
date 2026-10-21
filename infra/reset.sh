@@ -76,7 +76,7 @@ existing_queues=" $(aws_ sqs list-queues --query 'QueueUrls[]' --output text | t
 ' ' ') "
 for t in $existing_tables; do
   case "$t" in
-    *-instances|*-waits|*-outbox|*-inbox|*-effects|*-invoices|*-audit|*-corrections|records-catalog) parallel delete_table "$t" ;;
+    *-instances|*-waits|*-outbox|*-inbox|*-effects|*-invoices|*-audit|*-corrections|records-catalog|records-approvals) parallel delete_table "$t" ;;
   esac
 done
 for q in $existing_queues; do parallel purge_queue "$q"; done

@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.7 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Em implementação** (spec aprovada por Kayan em 20/10/2026, sem escolha explícita: valem as propostas 8a a 8f) |
 | Depende de | S.5 e S.6 (Implementados). Stint `500dfd1` |
 | Bloqueia | S.8 a S.10 (os domínios registram o que produzem), S.11 (gate), 3b (ingestão) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |

@@ -1,0 +1,11 @@
+S.7 CA6: the register after the pipeline's skeleton (10 versions, 10 documents; the bus announced the same documents)
+    rec-p1-c1-batch                    v1 sdd-batch  project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 057c410f-00ed-46a6-b6c6-a52e1f58173d supersedes -
+    rec-p1-c1-design                   v1 design     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting p1-c1-business cause 530b42bd-51f0-4d98-8ef3-e2f118d40d4d supersedes -
+    rec-p1-sdd-1                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 1b678146-7b47-4d62-9b41-c9db7bf82019 supersedes -
+    rec-p1-sdd-2                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 6735271f-37a5-4212-9f93-3f7ce21c0e03 supersedes -
+    rec-p2-c1-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-business cause 54660132-3131-48de-ad18-1169b7218bd7 supersedes -
+    rec-p2-c1-questions                v1 questions  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-technical cause b2b30f30-9707-4f6c-808a-5b3ff8fef03f supersedes -
+    rec-p2-c2-batch                    v1 sdd-batch  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 85e9760c-24f5-455d-8242-412407aa7f03 supersedes -
+    rec-p2-c2-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c2-business cause 7cb9ecf4-fbb9-4ba0-aeb0-7012e6b3548c supersedes -
+    rec-p2-sdd-1                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause d7516583-45dd-4587-b6fe-072d402184f2 supersedes -
+    rec-p2-sdd-2                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause f89f615d-4e3a-414d-bf48-3ae317486d35 supersedes -
