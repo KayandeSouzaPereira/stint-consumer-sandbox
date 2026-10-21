@@ -1,0 +1,66 @@
+S.11 RF2f: the model of the personal-data check hangs (3 s timeout)
+  t+   1.7s  started privacy (PRIVACY, pid 529836, :8093) {privacy.check=litjev, privacy.check.litjev.base-uri=http://127.0.0.1:63176, privacy.check.timeout=PT3S}
+  t+   3.2s  started records (RECORDS, pid 530228, :8094) 
+  t+   4.9s  started channels (CHANNELS, pid 530836, :8095) 
+  t+   6.5s  started target (TARGET, pid 531660, :8096) 
+  t+   8.2s  started business (BUSINESS, pid 532316, :8090) 
+  t+  10.2s  started engineering (ENGINEERING, pid 531984, :8091) 
+  t+  13.9s  started delivery (DELIVERY, pid 532720, :8092) 
+  t+  14.4s  recorded p1-c1-business; the personal-data check hangs on 127.0.0.1:63176
+  t+  19.4s  the check was asked 1 time(s); the filter answered in doubt; the business instance ended
+  result: the filter failed closed; the business instance ended (outcome redaction-doubt); the check was tried 1 time(s); nothing was published; no review was opened for a person (finding S11-1)
+  bus, p1 (chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252):
+    io.sandbox.channels.meeting-recorded.v1          subject p1-c1-business         chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=219, sandbox-channels=15, sandbox-delivery=476, sandbox-engineering=266, sandbox-privacy=31, sandbox-records=145, sandbox-target=40}
+  items the sweeper looked at, by kind of store: {bus=1, dynamodb=5, log=49, s3=192, span=1192}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 1
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 0
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 0
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

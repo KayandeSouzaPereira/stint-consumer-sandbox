@@ -177,9 +177,13 @@ class PipelineChaosIT extends PipelineScenario {
                         org.assertj.core.data.Offset.offset(0.0001));
     }
 
-    /** f. The model of the personal-data check hangs: the filter fails closed, the meeting goes to a person. */
+    /**
+     * f. The model of the personal-data check hangs: the filter fails closed (S.6 8b). The branch ends in
+     * {@code redaction-doubt} (S.6: the human review of a doubt belongs to S.8/S.9 and was not built, finding S11-1): the
+     * text goes no further, nothing is published, the privacy process survives, and nothing is left running.
+     */
     @Test
-    void f_the_model_check_hangs_and_the_meeting_goes_to_a_person() throws Exception {
+    void f_the_model_check_hangs_and_the_meeting_stops_at_the_redaction_doubt() throws Exception {
         AtomicInteger connections = new AtomicInteger();
         try (ServerSocket hold = new ServerSocket(0, 50, InetAddress.getLoopbackAddress())) {
             Thread acceptor = Thread.ofVirtual().start(() -> {
@@ -198,20 +202,24 @@ class PipelineChaosIT extends PipelineScenario {
             assertThat(portal.record("p1-c1-business")).isEqualTo(202);
             note("recorded p1-c1-business; the personal-data check hangs on 127.0.0.1:%d", hold.getLocalPort());
 
-            spy.until("a person is asked about the meeting", () -> !openReviews().isEmpty(), CYCLE);
-            note("a review is open for a person; the check was asked %d time(s)", connections.get());
+            App privacyApp = running.get(Module.PRIVACY);
+            spy.until("the filter answered in doubt and the business instance ended", () -> connections.get() >= 1
+                    && privacyApp.lines().stream().anyMatch(l -> l.contains("doubt true"))
+                    && floci.ddb.scan(r -> r.tableName("business-instances").consistentRead(true)).count() >= 1
+                    && leftovers.of("business").nonTerminal().isEmpty(), CYCLE);
+            note("the check was asked %d time(s); the filter answered in doubt; the business instance ended",
+                    connections.get());
             spy.settle(Duration.ofSeconds(5));
 
-            assertThat(connections.get()).as("the model check was tried").isGreaterThanOrEqualTo(1);
             assertThat(running.get(Module.PRIVACY).alive()).as("the privacy process survived the hang").isTrue();
             assertThat(spy.ofType(PipelineEvents.DESIGN_PUBLISHED)).as("nothing went on as if the text were clean")
                     .isEmpty();
-            assertThat(leftovers.of("business").dlqMessages()).isZero();
-            String closing = verify(List.of(PipelineEvents.chainIdOf(P1)), false);
+            assertThat(openReviews()).as("no review opens for the doubt (finding S11-1)").isEmpty();
+            String closing = verify(List.of(PipelineEvents.chainIdOf(P1)), true);
             Scenario.evidence("S.11-CA2-f.txt", "S.11 RF2f: the model of the personal-data check hangs (3 s timeout)\n"
-                    + timeline() + "  result: the filter failed closed; a review is open for a person; the check was"
-                    + " tried " + connections.get() + " time(s); nothing was published\n" + busOf(P1, eventsOf(P1))
-                    + "  reviews open: " + openReviews() + "\n" + closing);
+                    + timeline() + "  result: the filter failed closed; the business instance ended (outcome"
+                    + " redaction-doubt); the check was tried " + connections.get() + " time(s); nothing was published;"
+                    + " no review was opened for a person (finding S11-1)\n" + busOf(P1, eventsOf(P1)) + closing);
             hold.close();
             acceptor.join(2000);
         }
