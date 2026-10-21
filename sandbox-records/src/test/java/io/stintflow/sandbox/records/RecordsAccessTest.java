@@ -145,6 +145,31 @@ class RecordsAccessTest {
                 .toCompletableFuture().join()).hasMessageContaining("no such record");
     }
 
+    /** SDD S.10, 8d: a record lists the domains that may read it besides its owner; the others stay refused. */
+    @Test
+    void a_listed_reader_domain_reads_the_record_and_an_unlisted_one_does_not() {
+        var register = new RegisterDocumentHandler(catalog, blobs, blobs);
+        ObjectNode listed = registration(doc("a design"));
+        listed.putArray("readers").add("engineering").add("delivery");
+        register.execute(task(listed, "business")).toCompletableFuture().join();
+        var read = new ReadRecordHandler(catalog);
+        ObjectNode ask = Json.obj().put("recordId", "rec-p1-1-design");
+
+        assertThat(read.execute(task(ask, "engineering")).toCompletableFuture().join().path("contentRef").asText())
+                .isEqualTo("s3://b/rec-p1-1-design/v1");
+        assertThat(read.execute(task(ask, "delivery")).toCompletableFuture().join().path("recordId").asText())
+                .isEqualTo("rec-p1-1-design");
+        // a record with no list is the owner's alone, and a list may name only the known domains
+        ObjectNode plain = registration(doc("another")).put("documentId", "p1-2-design");
+        register.execute(task(plain, "business")).toCompletableFuture().join();
+        assertThatThrownBy(() -> read.execute(task(Json.obj().put("recordId", "rec-p1-2-design"), "delivery"))
+                .toCompletableFuture().join()).hasMessageContaining("another domain");
+        ObjectNode bad = registration(doc("third")).put("documentId", "p1-3-design");
+        bad.putArray("readers").add("marketing");
+        assertThatThrownBy(() -> register.execute(task(bad, "business")).toCompletableFuture().join())
+                .hasMessageContaining("readers");
+    }
+
     @Test
     void the_event_has_ids_and_pointers_only_and_content_is_refused() {
         var contracts = new PipelineContracts();

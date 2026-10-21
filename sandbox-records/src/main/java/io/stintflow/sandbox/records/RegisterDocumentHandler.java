@@ -40,13 +40,16 @@ public final class RegisterDocumentHandler implements TaskHandler {
     static final Set<String> RESTRICTED_BUCKETS = Set.of("sandbox-meetings-raw");
     static final String DEFAULT_RETENTION = "records";
     static final Set<String> ROLES = Set.of("business-rep", "tech-rep", "technician");
-    static final Set<String> LEVELS = Set.of("internal", "confidential", "restricted");
+    /** The domains a record may list as readers besides its owner (SDD S.10, 8d). */
+    static final Set<String> READER_DOMAINS = Set.of("business", "engineering", "delivery");
+    static final Set<String> LEVELS =Set.of("internal", "confidential", "restricted");
 
     /** The register's catalog: one entry per (record, version). */
     public interface Catalog {
         record Entry(String recordId, int version, String sha256, String kind, String ownerRole, String sensitivity,
                 String storedRef, String projectId, String cycle, String sourceMeetingId, String chainId,
-                String causationId, Integer supersedes, String retentionClass, Double priority) {
+                String causationId, Integer supersedes, String retentionClass, Double priority,
+                java.util.List<String> readers) {
         }
 
         Optional<Entry> latest(String recordId);
@@ -101,6 +104,13 @@ public final class RegisterDocumentHandler implements TaskHandler {
         if (MEETING_KINDS.contains(kind) && (meeting == null || !meeting.matches("[A-Za-z0-9._:-]{1,100}"))) {
             return CompletableFuture.failedFuture(invalid("a " + kind + " needs the sourceMeetingId it came from"));
         }
+        java.util.List<String> readers = new java.util.ArrayList<>();
+        for (JsonNode reader : in.path("readers")) {
+            if (!READER_DOMAINS.contains(reader.asText())) {
+                return CompletableFuture.failedFuture(invalid("readers lists only the domains " + READER_DOMAINS));
+            }
+            readers.add(reader.asText());
+        }
         String retention = in.path("retentionClass").asText(DEFAULT_RETENTION);
         String chainId = ctx.lineage() != null && ctx.lineage().chainId() != null ? ctx.lineage().chainId()
                 : ctx.chainId();
@@ -117,7 +127,7 @@ public final class RegisterDocumentHandler implements TaskHandler {
                 Catalog.Entry entry = new Catalog.Entry(recordId, version, sha, kind, owner, level, stored.toString(),
                         in.path("projectId").asText(null), in.path("cycle").asText(null), meeting, chainId,
                         causationId, latest.map(Catalog.Entry::version).orElse(null), retention,
-                        in.path("priority").isNumber() ? in.path("priority").asDouble() : null);
+                        in.path("priority").isNumber() ? in.path("priority").asDouble() : null, readers);
                 if (!catalog.putIfAbsent(entry)) {
                     Catalog.Entry won = catalog.latest(recordId).orElseThrow();
                     if (!won.sha256().equals(sha)) {

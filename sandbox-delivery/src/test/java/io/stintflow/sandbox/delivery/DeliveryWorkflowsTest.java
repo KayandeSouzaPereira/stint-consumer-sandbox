@@ -40,54 +40,19 @@ class DeliveryWorkflowsTest {
     static final PipelineContracts CONTRACTS = new PipelineContracts();
     static final List<String> YAMLS = List.of("delivery-cycle.yaml", "sdd-delivery.yaml");
 
-    /** The domain's routes; the target's tests stand in: a changeset with the failing mark fails. */
+    /** The domain's routes with the stand-ins of {@link DeliveryFixture}: a changeset with the failing mark fails. */
     static TaskHandlerRegistry handlers(BlobStore blobs, StateStore state) {
-        return DeliveryHandlers.register(new TaskHandlerRegistry(), CORPUS, blobs, state)
-                .register("run-target-tests", ctx -> blobs.get(URI.create(ctx.input().path("changesetRef").asText()))
-                        .thenCompose(bytes -> {
-                            boolean failing = Json.read(bytes).toString().contains(DeliveryHandlers.FAILING);
-                            String key = "runs/" + ctx.input().path("sddId").asText() + "/"
-                                    + ctx.input().path("attempt").asInt() + ".txt";
-                            return blobs.put(("Ran 5 tests\n" + (failing ? "FAILED (failures=1)" : "OK")).getBytes(),
-                                    key).thenApply(uri -> (JsonNode) Json.obj().put("outcome",
-                                            failing ? "failed" : "passed").put("passed", !failing)
-                                            .put("reportRef", uri.toString()));
-                        }));
+        return new DeliveryFixture().handlers(blobs, state);
     }
 
     /** As {@link #handlers}, with an implementer that always fails the SDDs whose id starts with {@code dlq-}. */
     static TaskHandlerRegistry alwaysFailing(BlobStore blobs, StateStore state) {
-        return handlers(blobs, state).register("implement", ctx -> {
-            String sddId = ctx.input().path("sddId").asText();
-            boolean failing = sddId.startsWith("dlq-") || CORPUS.sdd(sddId).map(Corpus.Sdd::failures).orElse(0)
-                    >= ctx.input().path("attempt").asInt();
-            return blobs.put(Json.bytes(DeliveryHandlers.changeset(sddId, failing)), "changesets/" + sddId + "/"
-                    + ctx.input().path("attempt").asInt() + ".json")
-                    .thenApply(uri -> (JsonNode) Json.obj().put("changesetRef", uri.toString()));
-        });
+        return new DeliveryFixture().handlers(blobs, state);
     }
 
     /** Engineering's batch: the manifest in the blob store, and the approved event. */
     static CloudEvent batch(InMemoryDomain d, String project, String cycle, List<String> sddIds) throws Exception {
-        ObjectNode manifest = Json.obj().put("designRecordId", "rec-" + project + "-c" + cycle + "-design")
-                .put("techRecordId", "rec-" + project + "-c" + cycle + "-batch");
-        ArrayNode sdds = manifest.putArray("sdds");
-        for (String id : sddIds) {
-            URI ref = d.blobs.put(("# SDD " + id).getBytes(), "sdd/" + id + ".md").toCompletableFuture().join();
-            sdds.addObject().put("sddId", id).put("sddRef", ref.toString()).put("recordId", "rec-" + id);
-        }
-        URI batchRef = d.blobs.put(Json.bytes(manifest), "sdd/" + project + "-c" + cycle + "-batch.json")
-                .toCompletableFuture().join();
-        ObjectNode data = Json.obj().put("batchId", project + "-c" + cycle + "-batch")
-                .put("batchRef", batchRef.toString());
-        sddIds.forEach(data.putArray("sddIds")::add);
-        data.putArray("recordIds");
-        return CloudEventBuilder.v1().withId(project + ":" + cycle + ":sdd-batch-approved")
-                .withSource(URI.create(PipelineEvents.SOURCE_ENGINEERING)).withType(PipelineEvents.SDD_BATCH_APPROVED)
-                .withSubject(project + "-c" + cycle + "-batch").withData(Json.bytes(data))
-                .withExtension(PipelineEvents.EXT_PROJECT, project).withExtension(PipelineEvents.EXT_CYCLE, cycle)
-                .withExtension(StintEvents.EXT_CHAIN_ID, PipelineEvents.chainIdOf(project))
-                .withExtension(StintEvents.EXT_SENSITIVITY, "confidential").build();
+        return DeliveryFixture.batch(d, project, cycle, sddIds);
     }
 
     static CloudEvent choose(CloudEvent request, String value) {

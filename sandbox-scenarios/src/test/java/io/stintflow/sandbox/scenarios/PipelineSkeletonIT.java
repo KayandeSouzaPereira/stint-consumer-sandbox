@@ -93,7 +93,9 @@ class PipelineSkeletonIT extends ScenarioBase {
         assertThat(count(ofP1, PipelineEvents.SDD_READY)).isEqualTo(2);
         assertThat(count(ofP1, PipelineEvents.SDD_IMPLEMENTED)).isEqualTo(3);
         assertThat(count(ofP1, PipelineEvents.SDD_VALIDATED)).isEqualTo(2);
-        assertThat(count(ofP1, PipelineEvents.DOCUMENT_REGISTERED)).isEqualTo(4);   // design, batch, two SDDs
+        // design, batch, two SDDs (S.7), and the patch and the report of each of the three attempts (S.10, approved
+        // by Kayan: 4 -> 10)
+        assertThat(count(ofP1, PipelineEvents.DOCUMENT_REGISTERED)).isEqualTo(10);
         assertThat(single(ofP1, PipelineEvents.CYCLE_CLOSED).data().path("outcome").asText()).isEqualTo("complete");
         // --- p2: questions, the restart, the second cycle ---
         assertThat(count(ofP2, PipelineEvents.QUESTIONS_SENT)).isEqualTo(1);
@@ -142,7 +144,18 @@ class PipelineSkeletonIT extends ScenarioBase {
                 .get("supersedes").n()).isEqualTo("1");
         assertThat(catalog.stream().filter(i -> i.get("recordId").s().equals("rec-p2-sdd-2")))
                 .as("the SDD that was approved is not written again").hasSize(1);
-        Scenario.evidence("S.9-CA7.txt", "S.9 CA7: p2's SDD p2-sdd-1 was rejected once and rewritten as version 2\n"
+        // SDD S.10, CA7: every attempt's patch and report are in the register, on the project's chain; p1's SDD that
+        // needed two attempts has two of each
+        List<String> p1Patches = catalog.stream().filter(i -> "patch".equals(i.get("kind").s())
+                && "p1".equals(i.get("projectId").s())).map(i -> i.get("recordId").s()).sorted().toList();
+        List<String> p1Reports = catalog.stream().filter(i -> "report".equals(i.get("kind").s())
+                && "p1".equals(i.get("projectId").s())).map(i -> i.get("recordId").s()).sorted().toList();
+        assertThat(p1Patches).containsExactly("rec-p1-sdd-1-a1-patch", "rec-p1-sdd-2-a1-patch", "rec-p1-sdd-2-a2-patch");
+        assertThat(p1Reports).containsExactly("rec-p1-sdd-1-a1-report", "rec-p1-sdd-2-a1-report",
+                "rec-p1-sdd-2-a2-report");
+        Scenario.evidence("S.10-CA7.txt", "S.10 CA7: the patches and reports of p1's attempts are registered\n"
+                + register);
+        Scenario.evidence("S.9-CA7.txt","S.9 CA7: p2's SDD p2-sdd-1 was rejected once and rewritten as version 2\n"
                 + register);
         Scenario.evidence("S.8-CA7.txt", "S.8 CA7: p2's first design was rejected once and rewritten as version 2\n"
                 + register);

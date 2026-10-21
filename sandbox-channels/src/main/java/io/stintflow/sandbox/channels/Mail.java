@@ -34,7 +34,7 @@ public final class Mail implements TaskHandler {
     static final Map<String, String> SUBJECTS = Map.of("design", "Design document", "meeting", "New meeting requested",
             "invite", "Technical refinement invitation", "questions", "Questions from engineering", "dead-letter",
             "An SDD needs the technician", "cycle-closed", "Cycle closed", "approval-overdue", "Design approval is overdue", "approval-timeout",
-            "Design approval timed out");
+            "Design approval timed out", "dlq-summary", "SDDs waiting for the technician");
 
     private final Mailer mailer;
     private final BlobStore documents;

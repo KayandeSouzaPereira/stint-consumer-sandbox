@@ -1,0 +1,42 @@
+# SDD S.10, RF5 and 8e: every day at 09:00 UTC, the SDDs parked in the DLQ (waiting for the technician) are listed in a
+# summary and mailed to the technician (template dlq-summary: the body is the list of ids and attempts, read from the
+# summary's pointer). Nothing parked, nothing written, no e-mail. The occurrence's scheduled instant names the summary,
+# so a repeated occurrence writes the same file and sends the same message. Each occurrence is its own instance.
+document:
+  dsl: '1.0.0'
+  namespace: delivery
+  name: dlq-summary
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ "confidential" }'
+      routes:
+        confidential: [summarize-dlq, send-email]
+        internal: ['*']
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  cron: '0 9 * * *'
+do:
+  - summarize:
+      call: remote
+      with:
+        task: summarize-dlq
+        input:
+          occurredAt: '${ $workflow.input[0].time }'
+      export:
+        as: '${ . }'
+  - anyParked:
+      switch:
+        - some:
+            when: '$context.count > 0'
+            then: notify
+        - none:
+            then: end
+  - notify:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "dlq-summary", toRole: "technician", projectId: "delivery", cycle: "0", documentRef: $context.summaryRef} }'
+      then: end

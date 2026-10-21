@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -16,6 +17,7 @@ import io.stintflow.aws.DynamoDbAuditLog;
 import io.stintflow.aws.DynamoDbCorrectionLog;
 import io.stintflow.aws.DynamoDbStateStore;
 import io.stintflow.aws.EventBridgeEventPublisher;
+import io.stintflow.aws.EventBridgeSchedulerService;
 import io.stintflow.aws.EventBridgeSchedulerTimerService;
 import io.stintflow.aws.S3BlobStore;
 import io.stintflow.aws.S3FactBlobStore;
@@ -27,6 +29,8 @@ import io.stintflow.core.WorkflowDefinition;
 import io.stintflow.core.WorkflowEngine;
 import io.stintflow.core.WorkflowRegistry;
 import io.stintflow.core.expr.JqExpressionEvaluator;
+import io.stintflow.core.schedule.ScheduleReconciler;
+import io.stintflow.core.schedule.ScheduledStart;
 import io.stintflow.core.interpreter.TreeInterpreter;
 import io.stintflow.core.trigger.DomainEventRouter;
 import io.stintflow.core.trigger.ResumeReaction;
@@ -73,7 +77,8 @@ public class DeliveryEngine {
     private static final Logger LOG = Logger.getLogger(DeliveryEngine.class);
     public static final String DOMAIN = "delivery";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
-    static final Map<String, String> SHARED = Map.of("run-target-tests", "target", "approve-record", "records", "read-record", "records");
+    static final Map<String, String> SHARED = Map.of("run-target-tests", "target", "approve-record", "records", "read-record", "records",
+            "register-document", "records", "send-email", "channels");
 
     @Inject
     SqsClient sqs;
@@ -110,6 +115,12 @@ public class DeliveryEngine {
     String timersGroup;
     @ConfigProperty(name = "delivery.scheduler.role-arn")
     String roleArn;
+    @ConfigProperty(name = "delivery.scheduler.schedules-group", defaultValue = "delivery-schedules")
+    String schedulesGroup;
+    @ConfigProperty(name = "delivery.scheduler.sent-timestamp-fallback", defaultValue = "false")
+    boolean sentTimestampFallback;
+    @ConfigProperty(name = "delivery.parked-table", defaultValue = "delivery-parked")
+    String parkedTable;
 
     /** The Delivery's state: the engine's, and what check-sdds reads (in either role). */
     private volatile StateStore state;
@@ -151,6 +162,17 @@ public class DeliveryEngine {
                 .correctionLog(new DynamoDbCorrectionLog(ddb, DOMAIN + "-corrections", Duration.ofDays(400),
                         InstantSource.system()));
         built.outboxRelay().start(Duration.ofSeconds(30));
+        // SDD S.10, RF5: the daily DLQ summary is a cron schedule: reconciled into EventBridge Scheduler (its
+        // occurrences come back on delivery-schedules), as the Billing domain does.
+        EventBridgeSchedulerService schedules = new EventBridgeSchedulerService(scheduler, sqs, schedulesGroup,
+                roleArn, "arn:aws:sqs:us-east-1:000000000000:" + DOMAIN + "-schedules",
+                queueBase + DOMAIN + "-schedules", sentTimestampFallback);
+        try {
+            new ScheduleReconciler(registry, schedules).reconcile().toCompletableFuture().get(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new IllegalStateException("the Delivery's schedules could not be reconciled", e);
+        }
+        schedules.onFire(new ScheduledStart(registry, built));
         TriggerBindings bindings = new TriggerBindings(registry);
         bindings.bindDeclaredSchedules();
         new DomainEventRouter(List.of(new StartReaction(bindings, built), new ResumeReaction(built)))
@@ -164,7 +186,7 @@ public class DeliveryEngine {
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
                 .pool(new WorkerPool(new WorkerRuntime(DeliveryHandlers.register(new TaskHandlerRegistry(), corpus,
-                        new S3BlobStore(s3, documentsBucket), state), blobs, tracer), concurrency))
+                        new S3BlobStore(s3, documentsBucket), state, new DynamoDbParked(ddb, parkedTable)), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
 

@@ -174,7 +174,7 @@ do:
       call: remote
       with:
         task: register-document
-        input: '${ {documentId: $context.batchId, documentRef: $context.batchRef, kind: "sdd-batch", ownerRole: "tech-rep", sensitivity: "confidential", priority: $context.priority, projectId: $context.projectId, cycle: $context.cycle} }'
+        input: '${ {documentId: $context.batchId, documentRef: $context.batchRef, kind: "sdd-batch", readers: ["delivery"], ownerRole: "tech-rep", sensitivity: "confidential", priority: $context.priority, projectId: $context.projectId, cycle: $context.cycle} }'
       export: { as: '${ $context + {batchRecordId: .recordId, last: .} }' }
   - batchRegistered:
       emit:
@@ -201,7 +201,7 @@ do:
       call: remote
       with:
         task: register-document
-        input: '${ $context.regs[$context.next] as $s | {documentId: $s.sddId, documentRef: $s.sddRef, kind: "sdd", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+        input: '${ $context.regs[$context.next] as $s | {documentId: $s.sddId, documentRef: $s.sddRef, kind: "sdd", readers: ["delivery"], ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
       export: { as: '${ $context + {last: .} }' }
   - sddRegistered:
       emit:

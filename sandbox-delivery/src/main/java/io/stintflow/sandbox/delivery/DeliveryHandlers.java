@@ -1,6 +1,7 @@
 package io.stintflow.sandbox.delivery;
 
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,8 +43,55 @@ public final class DeliveryHandlers {
 
     public static TaskHandlerRegistry register(TaskHandlerRegistry registry, Corpus corpus, BlobStore documents,
             StateStore state) {
+        return register(registry, corpus, documents, state, new ParkedSdds.InMemory());
+    }
+
+    public static TaskHandlerRegistry register(TaskHandlerRegistry registry, Corpus corpus, BlobStore documents,
+            StateStore state, ParkedSdds parked) {
         return registry.register("load-batch", loadBatch(documents)).register("implement", implement(corpus, documents))
-                .register("validate", validate()).register("check-sdds", checkSdds(state));
+                .register("validate", validate(documents)).register("check-sdds", checkSdds(state))
+                .register("park-sdd", park(parked)).register("unpark-sdd", unpark(parked))
+                .register("summarize-dlq", summarizeDlq(parked, documents));
+    }
+
+    /** {@code park-sdd}: an SDD went to the DLQ ({@code {projectId, cycle, sddId, attempts}}). */
+    static TaskHandler park(ParkedSdds parked) {
+        return ctx -> {
+            JsonNode in = ctx.input();
+            parked.park(new ParkedSdds.Parked(in.path("projectId").asText(), in.path("cycle").asText(),
+                    in.path("sddId").asText(), in.path("attempts").asInt()));
+            return CompletableFuture.completedFuture(Json.obj().put("parked", true));
+        };
+    }
+
+    /** {@code unpark-sdd}: the technician decided ({@code {projectId, cycle, sddId}}). */
+    static TaskHandler unpark(ParkedSdds parked) {
+        return ctx -> {
+            JsonNode in = ctx.input();
+            parked.unpark(in.path("projectId").asText(), in.path("cycle").asText(), in.path("sddId").asText());
+            return CompletableFuture.completedFuture(Json.obj().put("parked", false));
+        };
+    }
+
+    /**
+     * {@code summarize-dlq} (SDD S.10, RF5): the SDDs waiting for the technician, as a text of ids and counts written
+     * to {@code dlq/summary-<occurrence>.txt}. Input {@code {occurredAt}}; output {@code {count, summaryRef?}}: nothing
+     * is written when nothing waits, so no e-mail follows.
+     */
+    static TaskHandler summarizeDlq(ParkedSdds parked, BlobStore documents) {
+        return ctx -> {
+            List<ParkedSdds.Parked> waiting = parked.all();
+            if (waiting.isEmpty()) {
+                return CompletableFuture.completedFuture(Json.obj().put("count", 0));
+            }
+            StringBuilder text = new StringBuilder("SDDs waiting for the technician: " + waiting.size() + "\n");
+            waiting.forEach(p -> text.append("- ").append(p.projectId()).append(" c").append(p.cycle()).append(' ')
+                    .append(p.sddId()).append(" (").append(p.attempts()).append(" attempts)\n"));
+            String when = ctx.input().path("occurredAt").asText("now").replaceAll("[^A-Za-z0-9-]", "-");
+            return documents.put(text.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    "dlq/summary-" + when + ".txt").thenApply(uri -> (JsonNode) Json.obj().put("count", waiting.size())
+                            .put("summaryRef", uri.toString()));
+        };
     }
 
     /** The definition the SDD instances run (sdd-delivery.yaml): their ids come from the sdd-ready events. */
@@ -98,28 +146,43 @@ public final class DeliveryHandlers {
         });
     }
 
+    /**
+     * The fake implementer: it reads the SDD and cites its requirements and criteria in the changeset (the convention
+     * the validators check), so a script's SDDs validate once the target's tests pass. It ignores the feedback it is
+     * given ({@code feedbackRef}, {@code failedCriteria}, {@code noteRef}): the CI's agent is deterministic.
+     */
     static TaskHandler implement(Corpus corpus, BlobStore documents) {
         return ctx -> {
             String sddId = ctx.input().path("sddId").asText();
             int attempt = ctx.input().path("attempt").asInt();
             int failures = corpus.sdd(sddId).map(Corpus.Sdd::failures).orElse(0);
-            byte[] changeset = Json.bytes(changeset(sddId, attempt <= failures));
-            return documents.put(changeset, "changesets/" + sddId + "/" + attempt + ".json")
+            CompletableFuture<String> sdd = ctx.input().hasNonNull("sddRef")
+                    ? documents.get(pointer(ctx.input().get("sddRef"))).thenApply(b -> new String(b,
+                            java.nio.charset.StandardCharsets.UTF_8)).toCompletableFuture()
+                    : CompletableFuture.completedFuture("");
+            return sdd.thenCompose(text -> documents.put(Json.bytes(changeset(sddId, attempt <= failures,
+                    Validators.criteria(text), Validators.requirements(text))),
+                    "changesets/" + sddId + "/" + attempt + ".json"))
                     .thenApply(uri -> (JsonNode) Json.obj().put("changesetRef", uri.toString()));
         };
     }
 
-    /** A real module and its test for the target project; the failing one asserts a wrong count. */
     static ObjectNode changeset(String sddId, boolean failing) {
+        return changeset(sddId, failing, List.of(), List.of());
+    }
+
+    /** A real module and its test for the target project; the failing one asserts a wrong count. */
+    static ObjectNode changeset(String sddId, boolean failing, List<String> criteria, List<String> requirements) {
         String module = "sdd_" + sddId.replaceAll("[^A-Za-z0-9]", "_");
+        String cites = criteria.stream().map(c -> "# " + c + "\n").collect(java.util.stream.Collectors.joining());
         ObjectNode changeset = Json.obj();
         ArrayNode files = changeset.putArray("files");
         files.addObject().put("path", "catalog/" + module + ".py").put("content",
-                "\"\"\"" + sddId + ".\"\"\"\n\n\ndef by_author(catalog, author):\n"
+                "\"\"\"" + sddId + (requirements.isEmpty() ? "" : ": " + String.join(" ", requirements)) + ".\"\"\"\n\n\ndef by_author(catalog, author):\n"
                         + "    wanted = author.casefold()\n"
                         + "    return [b for b in catalog.all() if b.author.casefold() == wanted]\n");
         files.addObject().put("path", "tests/test_" + module + ".py").put("content",
-                (failing ? FAILING + "\n" : "") + "import unittest\n\nfrom catalog.books import Book, Catalog\n"
+                (failing ? FAILING + "\n" : "") + cites + "import unittest\n\nfrom catalog.books import Book, Catalog\n"
                         + "from catalog." + module + " import by_author\n\n\n"
                         + "class " + Character.toUpperCase(module.charAt(0)) + module.substring(1).replace("_", "")
                         + "Test(unittest.TestCase):\n    def test_by_author(self):\n"
@@ -129,12 +192,44 @@ public final class DeliveryHandlers {
         return changeset;
     }
 
-    static TaskHandler validate() {
+    /**
+     * {@code validate} (SDD S.10, RF2): the three checks of {@link Validators} over the SDD, the changeset, the technical
+     * batch and the design. Input {@code {sddId, attempt, sddRef, changesetRef, techRef?, designRef?, tests}}; output
+     * {@code {validated, reportRef, failedCriteria}}, the report (ids and verdicts) written to
+     * {@code reports/<sddId>/<attempt>.json}.
+     */
+    static TaskHandler validate(BlobStore documents) {
         return ctx -> {
-            JsonNode tests = ctx.input().path("tests");
-            return CompletableFuture.completedFuture(Json.obj().put("validated", tests.path("passed").asBoolean())
-                    .put("reportRef", tests.path("reportRef").asText()));
+            JsonNode in = ctx.input();
+            JsonNode tests = in.path("tests");
+            String sddId = in.path("sddId").asText();
+            int attempt = in.path("attempt").asInt();
+            CompletableFuture<String> sdd = text(documents, in.get("sddRef"));
+            CompletableFuture<String> tech = text(documents, in.get("techRef"));
+            CompletableFuture<String> design = text(documents, in.get("designRef"));
+            CompletableFuture<JsonNode> changeset = documents.get(pointer(in.get("changesetRef")))
+                    .thenApply(Json::read).toCompletableFuture();
+            return CompletableFuture.allOf(sdd, tech, design, changeset).thenCompose(v -> {
+                Validators.Verdict verdict = Validators.run(sddId, sdd.join(), tech.join(), design.join(),
+                        changeset.join(), tests.path("passed").asBoolean());
+                return documents.put(Json.bytes(verdict.toJson(sddId, attempt, tests.path("reportRef").asText(null))),
+                        "reports/" + sddId + "/" + attempt + ".json").thenApply(uri -> {
+                            ObjectNode out = Json.obj().put("validated", verdict.validated()).put("reportRef",
+                                    uri.toString());
+                            verdict.failedCriteria().forEach(out.putArray("failedCriteria")::add);
+                            return (JsonNode) out;
+                        });
+            });
         };
+    }
+
+    /** A document's text by pointer, or null when there is no pointer. */
+    private static CompletableFuture<String> text(BlobStore documents, JsonNode ref) {
+        if (ref == null || ref.isNull() || ref.isMissingNode() || ref.asText("").isBlank() && !ClaimCheck.isPointer(ref)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return documents.get(pointer(ref)).thenApply(b -> new String(b, java.nio.charset.StandardCharsets.UTF_8))
+                .toCompletableFuture();
     }
 
     private static URI pointer(JsonNode node) {

@@ -92,4 +92,33 @@ class NoticesTest {
         assertThat(sent).extracting(io.quarkus.mailer.Mail::getSubject)
                 .containsOnly("[p2 c2] Design approval is overdue");
     }
+    /** SDD S.10, CA5: the daily summary of the DLQ goes to the technician with the listed ids as its body. */
+    @Test
+    void the_dlq_summary_goes_to_the_technician_with_the_list_as_its_body() throws Exception {
+        var documents = new io.stintflow.spi.BlobStore() {
+            @Override
+            public java.util.concurrent.CompletionStage<URI> put(byte[] bytes, String key) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public java.util.concurrent.CompletionStage<byte[]> get(URI ref) {
+                return java.util.concurrent.CompletableFuture.completedFuture(
+                        "SDDs waiting for the technician: 1\n- p9 c1 dlq-sdd (5 attempts)\n".getBytes());
+            }
+
+            @Override
+            public java.util.concurrent.CompletionStage<Void> delete(URI ref) {
+                throw new UnsupportedOperationException();
+            }
+        };
+        String key = new Mail(mailer, documents, "sandbox@sandbox.local").send("dlq-summary", "technician", "delivery",
+                "0", Json.obj().textNode("s3://sandbox-documents/dlq/summary-2026-10-21.txt"), "");
+
+        assertThat(key).isEqualTo("[delivery c0] SDDs waiting for the technician");
+        assertThat(sent).singleElement().satisfies(m -> {
+            assertThat(m.getTo()).containsExactly("technician@sandbox.local");
+            assertThat(m.getText()).contains("p9 c1 dlq-sdd (5 attempts)");
+        });
+    }
 }

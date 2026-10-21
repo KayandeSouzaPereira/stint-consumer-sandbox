@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.10 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Implementado** (CA9, a regressão, adiada por decisão do Kayan para depois da última implementação; aguarda a validação do Kayan) |
 | Depende de | S.5, S.6, S.7 e S.8 (Implementados); S.9 (spec escrita, ainda sem aprovação: esta spec supõe o lote aprovado só com os SDDs aprovados, como o S.9 propõe). Stint `500dfd1` |
 | Bloqueia | S.11 (gate da 3a) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
@@ -125,4 +125,46 @@ Se você não quiser mudar essas asserções, a alternativa é registrar sem pub
 - O resumo diário depende de a consulta de instâncias esperando o Técnico ser possível pelo estado do Stint; se não for, o resumo usa o estado próprio da Entrega (o mesmo que o `check-sdds` já lê), e é anotado.
 
 ## 9. Registro de validação
-(preencher na etapa 2)
+
+**Ambiente.** O do S.5 a S.9 (Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2, Stint `500dfd1` sob `0.1.0-3a-500dfd1`, floci, Docker 28.0.1). O llama.cpp (Qwen3-4B) subiu só para a rodada manual e foi parado em seguida.
+
+**Aprovação.** Kayan aprovou o S.9 e o S.10 em 21/10/2026 (confirmado depois da implementação: "approvado para o S.9 e S.10"). Valem as propostas 8a a 8j e a mudança de asserção do item 6 (`p1` `DOCUMENT_REGISTERED`: 4 → 10, com a lista `readers` no registro). Kayan também decidiu que a regressão (CA9) só roda depois da última implementação da fase, por ser muito demorada.
+
+### 9.1 Critérios de aceite
+| CA | Resultado | Evidência |
+|---|---|---|
+| CA1 | **Verde.** A tentativa 2 recebe o ponteiro do relatório da 1 e os critérios que falharam (`failedCriteria`), e o reenvio recebe a nota (`noteRef`); tudo por ponteiro, nenhum texto no contexto | `DeliveryFeedbackTest` (6) |
+| CA2 | **Verde.** Testes passando sem citar um `CA<n>` reprovam pela cobertura e o relatório diz qual (CA1 não cobre CA10); um `RF<n>` ausente do changeset, um lote técnico sem o id do SDD ou um desenho em branco reprovam pela conformidade; um changeset completo passa | `ValidatorsTest` (7) |
+| CA3 | **Verde.** Um SDD que falha 5 vezes cai na DLQ com o `history` de 5 itens (`attempt`, `patchRef`, `reportRef`), na ordem; o campo é aditivo no contrato (no máximo 50) | `DeliveryWorkflowsTest`, `DeliveryFeedbackTest` |
+| CA4 | **Verde.** O reenvio com nota reabre só aquele SDD (6 tentativas no total, a nota na 6ª) e os outros ficam como estavam; aceitar fecha como `complete` e cancelar como `partial` | `DeliveryWorkflowsTest`, `DeliveryFeedbackTest` |
+| CA5 | **Verde.** O resumo lista os SDDs parados ("SDDs waiting for the technician: N", um item por SDD com as tentativas) e o e-mail `dlq-summary` vai ao Técnico com a lista como corpo; sem parados, nenhum resumo nem e-mail; o workflow tem `schedule: cron: '0 9 * * *'` e o motor o reconcilia no EventBridge Scheduler | `DlqSummaryTest` (3), `NoticesTest`, `PolicyTest` |
+| CA6 | **Verde.** Os três SDDs de um lote têm a implementação em andamento ao mesmo tempo (barreira de 3, sem sleep) | `DeliveryConcurrencyTest` |
+| CA7 | **Verde.** No esqueleto, o `p1` tem os patches `rec-p1-sdd-1-a1-patch`, `rec-p1-sdd-2-a1-patch` e `rec-p1-sdd-2-a2-patch` e os relatórios correspondentes no catálogo, e o `document-registered` de cada um publicado; `DOCUMENT_REGISTERED` do `p1` = 10 | `PipelineSkeletonIT`; `S.10-CA7.txt` |
+| CA8 | **Verde.** A guarda recusa caminho fora da lista, arquivo acima de 64 KiB e segredo literal (a razão nomeia arquivo e regra, não o texto), e a recusa vira desfecho `invalid`, não falha de tarefa; a linha de comando do contêiner não tem rede, `-e`, volume, privilégio, e a imagem é por digest. Com `-Dtarget.docker=true`, o contêiner não abre socket e o ambiente é o da imagem | `ChangesetGuardTest` (13), `DockerIsolationTest` (com Docker) |
+| CA9 | **Pendente por decisão do Kayan.** A regressão (`gate.sh --regression-only`) roda depois da última implementação da fase. Uma execução foi interrompida por falta de memória e não deu resultado | — |
+| 8i | **Medido.** O Qwen3-4B (llama.cpp) implementou dois SDDs sintéticos (`t-year` e `t-authors`) e o contêiner sem rede validou os dois **na primeira tentativa** (2 de 2), com a cobertura de `CA<n>` completa | `S.10-llm.txt` |
+
+**Contagens.** Records, channels e delivery verdes (delivery 21/21); target 30 testes, 1 pulado sem Docker (o `DockerIsolationTest` do contêiner e o `ImplementerLlmTest` rodaram à parte, com os sinalizadores); esqueleto 271,7 s, `SKELETON-DONE 0`.
+
+### 9.2 Ressalvas e desvios
+- **A mudança de asserção foi feita e está aprovada:** `count(ofP1, DOCUMENT_REGISTERED)` de 4 para 10. Nenhuma outra asserção existente mudou.
+- **O resumo lê a lista de parados da própria Entrega** (`ParkedSdds`, tabela `delivery-parked`), não o estado do Stint: o `StateStore` do Stint não lista instâncias. É o caso previsto em 8j; a tabela entrou em `infra/bootstrap.sh` e `infra/reset.sh`.
+- **A conformidade do CI é por rótulos:** cada `RF<n>` do SDD citado no changeset (no docstring do módulo), o id do SDD no lote técnico e o desenho não vazio. Não mede se o código faz o que o RF diz. A conferência por modelo local, citada em 8b, não foi feita (só a medição de 8i).
+- **A cobertura depende de o agente citar `# CA<n>`**, como a spec previa; o agente do CI o faz, o Qwen3-4B o fez nos dois casos.
+- **A lista `readers`** (8d) também resolve o limite do S.9 (a Engenharia não lia o desenho): o desenho é lido por `engineering` e `delivery`, e o lote e os SDDs por `delivery`. Os domínios aceitos são `business`, `engineering` e `delivery`.
+- **O corpo do e-mail do resumo** vem do `documentRef` (o `Mail.send` lê o corpo de lá); o `projectId` do envio é `delivery`, que cabe no padrão exigido.
+- **O cron é do EventBridge Scheduler** (que o floci aceita): a prova no CI é que o workflow declara o agendamento, o motor o reconcilia e o gatilho manual roda o fluxo. O disparo por horário não foi observado.
+- **A rodada manual não lê o feedback pelo workflow:** o harness passa o feedback como texto ao modelo (no sistema ele vai por ponteiro). Como o modelo acertou na primeira tentativa, o ciclo de feedback com o modelo real não foi exercitado.
+
+### 9.3 Achados (nada alterado no Stint)
+| # | Achado | Proposta |
+|---|---|---|
+| S10-1 | O `StateStore` do Stint não lista instâncias; o resumo da DLQ exigiu uma tabela própria da Entrega, que precisa ficar coerente com o estado da instância (entra no `deadLetter`, sai no `unpark`) | Uma consulta de instâncias por estado no Stint evitaria a duplicação; até lá, a lista própria |
+| S10-2 | A conformidade determinística é de rótulos e a cobertura é de citação: ambas são convenções que o agente pode cumprir sem acertar o comportamento (o modelo pode citar `CA1` num teste vazio) | O relatório só garante a convenção e os testes; a verificação de conteúdo é do modelo local (8b) ou do Técnico, e fica para um SDD próprio |
+| S10-3 | O Qwen3-4B acertou 2 de 2 na primeira tentativa em dois SDDs pequenos e sintéticos; a amostra não mede nada sobre SDDs reais | Medir com SDDs reais da Engenharia na 3b antes de qualquer conclusão |
+| S10-4 | A regressão completa é lenta e o `mvn clean install` do gate apaga o `target` (a evidência do esqueleto se perdeu uma vez e foi regerada) | Rodar o gate uma só vez, no fim da fase, e copiar as evidências para `docs/sdd/evidence/` antes dele |
+
+### 9.4 Pendências
+- CA9: a regressão, depois da última implementação da fase (decisão do Kayan).
+- Validado e Mergeado são seus. O push, com o seu pedido.
+- Notion: a página do S.10 e o Log.

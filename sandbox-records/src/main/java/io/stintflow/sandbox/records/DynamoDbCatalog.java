@@ -42,7 +42,8 @@ public final class DynamoDbCatalog implements RegisterDocumentHandler.Catalog {
                 s(i, "ownerRole"), s(i, "sensitivity"), s(i, "storedRef"), s(i, "projectId"), s(i, "cycle"),
                 s(i, "sourceMeetingId"), s(i, "chainId"), s(i, "causationId"),
                 i.get("supersedes") == null ? null : Integer.valueOf(i.get("supersedes").n()),
-                s(i, "retentionClass"), i.get("priority") == null ? null : Double.valueOf(i.get("priority").n()));
+                s(i, "retentionClass"), i.get("priority") == null ? null : Double.valueOf(i.get("priority").n()),
+                i.get("readers") == null ? java.util.List.of() : i.get("readers").ss());
     }
 
     @Override
@@ -68,8 +69,11 @@ public final class DynamoDbCatalog implements RegisterDocumentHandler.Catalog {
         if (e.priority() != null) {
             item.put("priority", AttributeValue.fromN(String.valueOf(e.priority())));
         }
+        if (e.readers() != null && !e.readers().isEmpty()) {
+            item.put("readers", AttributeValue.fromSs(e.readers()));
+        }
         if (e.supersedes() != null) {
-            item.put("supersedes", AttributeValue.fromN(String.valueOf(e.supersedes())));
+            item.put("supersedes",AttributeValue.fromN(String.valueOf(e.supersedes())));
         }
         try {
             ddb.putItem(p -> p.tableName(table).item(item).conditionExpression("attribute_not_exists(recordId)"));

@@ -44,7 +44,8 @@ public final class ReadRecordHandler implements TaskHandler {
             return failed(404, "no such record: " + recordId);
         }
         var e = found.get();
-        if (!DOMAIN_OF_ROLE.get(e.ownerRole()).equals(ctx.definition().namespace())) {
+        String caller = ctx.definition().namespace();
+        if (!DOMAIN_OF_ROLE.get(e.ownerRole()).equals(caller) && (e.readers() == null || !e.readers().contains(caller))) {
             return failed(403, "the record belongs to another domain");
         }
         return CompletableFuture.completedFuture(Json.obj().put("recordId", e.recordId()).put("version", e.version())

@@ -23,6 +23,34 @@
       "type": "string",
       "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$",
       "description": "A pointer: s3://bucket/key or record://<recordId>/<version>"
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "SDD S.10, RF3 (additive): one item per attempt, in order; pointers and the attempt number only",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attempt",
+          "patchRef",
+          "reportRef"
+        ],
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "patchRef": {
+            "type": "string",
+            "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$"
+          },
+          "reportRef": {
+            "type": "string",
+            "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$"
+          }
+        }
+      }
     }
   }
 }

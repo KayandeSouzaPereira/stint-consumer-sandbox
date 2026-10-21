@@ -21,7 +21,9 @@ import io.stintflow.spi.Sensitivity;
 class PolicyTest {
 
     static final Map<String, List<String>> ROUTES = Map.of("delivery-cycle.yaml", List.of("load-batch", "check-sdds"),
-            "sdd-delivery.yaml", List.of("implement", "run-target-tests", "validate"));
+            "sdd-delivery.yaml", List.of("implement", "run-target-tests", "validate", "register-document", "read-record",
+                    "park-sdd", "unpark-sdd"),
+            "dlq-summary.yaml", List.of("summarize-dlq", "send-email"));
 
     static Policy policy(String file) throws Exception {
         try (InputStream in = PolicyTest.class.getClassLoader().getResourceAsStream("stint/workflows/" + file)) {

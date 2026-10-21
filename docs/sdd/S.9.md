@@ -107,7 +107,7 @@ O S.9 dá formato e validador aos SDDs, deixa o `tech-rep` reprovar SDDs individ
 
 **Ambiente.** O do S.5 a S.8 (Temurin 25.0.3, Maven 3.9.15, Quarkus 3.33.2, Stint `500dfd1` sob `0.1.0-3a-500dfd1`, floci). A pilha de modelos (LitJev e llama.cpp) subiu só para as medições de 8e e foi parada em seguida.
 
-**Aprovação.** A spec foi aprovada por Kayan em 21/10/2026 com um "aprovado" dado à pergunta "o que você aprova primeiro, o S.9 ou o S.10?". Li como aprovação das duas specs, valendo as propostas 8a a 8g. Se foi só do S.10, o S.9 ficou implementado sem aprovação própria e é preciso rever.
+**Aprovação.** A spec foi aprovada por Kayan em 21/10/2026 com um "aprovado" dado à pergunta "o que você aprova primeiro, o S.9 ou o S.10?". Li como aprovação das duas specs, valendo as propostas 8a a 8g. Kayan confirmou depois: "approvado para o S.9 e S.10".
 
 ### 8.1 Critérios de aceite
 | CA | Resultado | Evidência |
