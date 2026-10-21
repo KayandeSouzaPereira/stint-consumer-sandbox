@@ -88,8 +88,40 @@ public record BusinessModels(Transcriber transcriber, List<DecisionAdapter> deci
                 .baseUri(URI.create(settings.getOrDefault("whisper.base-uri", "http://127.0.0.1:8001")))
                 .model(settings.getOrDefault("whisper.model", "Systran/faster-distil-whisper-small.en"))
                 .timeout(Duration.ofMinutes(20)).build();
+        DecisionAdapter scaled = new ScoreOnUnitScale(litjev, 3);
         Map<String, String> adapterOf = new HashMap<>();
-        ROUTES.forEach(r -> adapterOf.put(r, litjev.descriptor().id()));
-        return new BusinessModels(whisper, List.of(litjev), adapterOf, llm, "llama.cpp", llmModel);
+        ROUTES.forEach(r -> adapterOf.put(r, scaled.descriptor().id()));
+        return new BusinessModels(whisper, List.of(scaled), adapterOf, llm, "llama.cpp", llmModel);
+    }
+
+    /**
+     * SDD S.8, finding S8-1: a Jev score answers on the index of its levels (0 to n-1: three levels give 0 to 2), not on
+     * 0 to 1 like the key and the {@code priority} of {@code design-published}. This puts it on [0, 1].
+     */
+    static final class ScoreOnUnitScale implements DecisionAdapter {
+        private final DecisionAdapter delegate;
+        private final int levels;
+
+        ScoreOnUnitScale(DecisionAdapter delegate, int levels) {
+            this.delegate = delegate;
+            this.levels = levels;
+        }
+
+        @Override
+        public io.stintflow.worker.decision.AdapterDescriptor descriptor() {
+            return delegate.descriptor();
+        }
+
+        @Override
+        public java.util.concurrent.CompletionStage<Decision> decide(DecisionRequest request,
+                io.stintflow.worker.decision.DecisionTask task) {
+            return delegate.decide(request, task).thenApply(d -> {
+                if (request.kind() != io.stintflow.wire.decision.DecisionKind.SCORE || !d.value().isNumber()) {
+                    return d;
+                }
+                double unit = Math.max(0.0, Math.min(1.0, d.value().asDouble() / (levels - 1)));
+                return new Decision(DoubleNode.valueOf(unit), d.confidence(), d.distribution(), d.model(), d.usage());
+            });
+        }
     }
 }

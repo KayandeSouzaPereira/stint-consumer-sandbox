@@ -83,13 +83,14 @@ class BusinessDecisionsLitJevTest {
             String wantChannel = m.expected().channel() == null ? "meeting" : m.expected().channel();
             boolean inScope = "business-design".equals(m.expected().meetingType());
             boolean c = !inScope || wantChannel.equals(channel.value().asText());
-            boolean p = Math.abs(priority.value().asDouble() - m.expected().priority()) <= 0.2;
+            double unit = Math.max(0.0, Math.min(1.0, priority.value().asDouble() / 2));   // three levels: 0 to 2 (S8-1)
+            boolean p = Math.abs(unit - m.expected().priority()) <= 0.2;
             typeOk += t ? 1 : 0;
             channelOk += c ? 1 : 0;
             priorityOk += p ? 1 : 0;
-            report.append(String.format("  %-16s type %-20s %s  channel %-10s %s  priority %.2f (key %.2f) %s%n", m.id(),
+            report.append(String.format("  %-16s type %-20s %s  channel %-10s %s  priority %.2f = %.2f (key %.2f) %s%n", m.id(),
                     type.value().asText(), t ? "ok " : "NO ", inScope ? channel.value().asText() : "-",
-                    inScope ? (c ? "ok " : "NO ") : "-  ", priority.value().asDouble(), m.expected().priority(),
+                    inScope ? (c ? "ok " : "NO ") : "-  ", priority.value().asDouble(), unit, m.expected().priority(),
                     p ? "ok" : "NO"));
         }
         report.append(String.format("  type %d of %d, channel %d of %d, priority within 0.2: %d of %d%n", typeOk, scripts,
