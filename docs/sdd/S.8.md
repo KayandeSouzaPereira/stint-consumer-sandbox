@@ -44,7 +44,7 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 ## 3. Requisitos
 - **RF1 — Caminho por roteiro** (8a). Para cada um dos sete roteiros de negócio do corpus, o caminho do workflow (tipo, prioridade, canal, artefato e fim) é o do gabarito `expected`, com os modelos falsos.
 - **RF2 — Prioridade** (8e). A prioridade decidida vai para o `design-published` (campo opcional `priority`, aditivo) e para o registro como parte da entrada do `register-document`; nada mais a usa.
-- **RF3 — Escalonamento** (8b). Sem resposta em 48h, a aprovação é escalada ao papel `business-lead` por mais 24h. Sem resposta também dele, o workflow termina com `outcome: approval-timeout`: **nunca** publica e nunca aprova por omissão.
+- **RF3 — Escalonamento e registro do travamento** (8b). Sem resposta em 48h, a aprovação é escalada ao `business-lead` por mais 24h, e **todos os leads** (`business-lead` e `tech-rep`) recebem o aviso `approval-overdue` por e-mail. Se ainda assim ninguém responder, o workflow termina com `outcome: approval-timeout` e o travamento fica **documentado**: um registro do tipo `report` no catálogo (S.7), um aviso `approval-timeout` aos mesmos leads e a entrada de auditoria da revisão. Nunca publica e nunca aprova por omissão.
 - **RF4 — Rejeição com nota** (8c). Uma rejeição reabre o `write-design` com o ponteiro da nota (`noteRef`) e o desenho anterior; o novo texto é registrado sob o mesmo `documentId` (a v2 substitui a v1, S.7), reenviado pelo mesmo canal e aprovado de novo. No máximo três versões; a terceira rejeição termina com `outcome: rejected`.
 - **RF5 — Canal e artefato** (8d). Cada canal produz o artefato certo: Confluence → uma página com a chave do documento; e-mail → uma mensagem `design`; nova reunião → uma mensagem `meeting` e fim sem desenho.
 - **RF6 — Reinício do ciclo** (8f). A resposta às dúvidas da Engenharia é a gravação da reunião do ciclo seguinte; ela inicia uma **nova instância** do Negócio na mesma cadeia do projeto.
@@ -61,7 +61,7 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 | CA | Critério | Evidência |
 |---|---|---|
 | CA1 | Os sete roteiros de negócio terminam no caminho do gabarito (tipo, prioridade dentro de ±0,2, canal, artefato, fim) | `BusinessCorpusTest`, `S.8-CA1.txt` |
-| CA2 | A aprovação sem resposta é lembrada em 40h, escalada em 48h ao `business-lead`, e termina em `approval-timeout` sem `design-published`; a resposta do `business-lead` dentro das 24h a aprova | `BusinessEscalationTest` (relógio controlável, sem sleep) |
+| CA2 | A aprovação sem resposta é lembrada em 40h, escalada em 48h ao `business-lead` com o aviso a todos os leads, e termina em `approval-timeout` sem `design-published`, com o registro `report`, o aviso e a auditoria; a resposta do `business-lead` dentro das 24h a aprova | `BusinessEscalationTest` (relógio controlável, sem sleep) |
 | CA3 | Uma rejeição com nota gera a v2 sob o mesmo `documentId` com `supersedes: 1`, reenvia pelo mesmo canal e, aprovada, publica a v2; três rejeições terminam em `rejected` sem publicar; a nota viaja só por ponteiro | `BusinessReworkTest` |
 | CA4 | Cada canal produz o artefato certo e nenhum outro (MailHog, página, ou mensagem de nova reunião) | `BusinessChannelsTest` |
 | CA5 | A segunda instância do Negócio do `p2` (ciclo 2) tem a mesma cadeia da primeira, outro ciclo, e as duas existem ao mesmo tempo no catálogo | `PipelineSkeletonIT` |
@@ -71,7 +71,7 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 
 ## 6. Plano de tarefas (etapa 2, após aprovação)
 1. `BusinessCorpusTest` para os sete roteiros (RF1). Primeiro, para ver o que falha.
-2. Papel `business-lead` no portal (usuário de teste) e o `escalate` da aprovação.
+2. Papel `business-lead` no portal (usuário de teste), o `escalate` da aprovação e os templates `approval-overdue` e `approval-timeout`.
 3. A estrutura do laço de rejeição no `business-design.yaml`; o `DesignWriter` falso recebe `noteRef` e o desenho anterior.
 4. `priority` no evento e na entrada do registro; id do `document-registered` por versão.
 5. Testes de escalonamento, retrabalho e canais; o `p1` do esqueleto rejeitado uma vez.
@@ -82,8 +82,8 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 ### 8a. Quais roteiros e o que é o "caminho"
 **Proposta:** os sete roteiros de negócio (`p1`, `p2` c1, `p2` c2, `p3`, `p6`, `o1`, `a1`). O caminho é o dos eventos e das chamadas despachadas, não o texto do desenho. Os dois ambíguos (`a1`) vão ao Representante e seguem a resposta do teste.
 
-### 8b. Escalar para quem
-**Proposta:** um novo papel `business-lead` (usuário de teste do portal; um papel a mais, só na revisão). Os papéis existentes não servem: `tech-rep` e `technician` não têm autoridade sobre o desenho. Alternativa: escalar para o `tech-rep`. **Escolha sua.** Termina em `approval-timeout` por `onTimeout: {value: rejected}` com `defaulted: true`, que o workflow distingue de uma rejeição humana (esta reabre o retrabalho, aquela encerra).
+### 8b. Escalar para quem (decidido por você em 21/10/2026)
+**Decisão:** escalar para o novo papel `business-lead` (o Stint escala a revisão a um papel) **e avisar todos os leads** por e-mail: `business-lead` e `tech-rep`. Se travar depois disso, o fim é `approval-timeout` e fica documentado (registro `report`, aviso e auditoria). O `technician` não é lead de desenho e não recebe o aviso; se você quiser incluí-lo, é uma linha. Dois templates novos no `sandbox-channels`: `approval-overdue` e `approval-timeout`. O `onTimeout: {value: rejected}` com `defaulted: true` é o que o workflow distingue de uma rejeição humana (esta reabre o retrabalho, aquela encerra).
 
 ### 8c. Retrabalho
 **Proposta:** até 3 versões (duas reescritas). O `write-design` recebe `documentId` (o mesmo), `previousRef` (a versão anterior) e `noteRef`. O redator falso é determinístico: acrescenta uma seção de revisão numerada ao texto anterior e **não lê a nota**; o redator real a leria. A republicação usa a mesma chave de página (atualiza) ou reenvia o e-mail. O `id` do `document-registered` ganha o sufixo `:v<n>` só a partir da v2, para a v1 manter o id que já existe.
