@@ -1,0 +1,10 @@
+S.9 8e: the local model (Qwen3-4B on llama.cpp) writes one SDD per thing the key lists, from the real Whisper text
+  p1-sdd-1       format ok   covers mentioned 2 of 2
+  p1-sdd-2       format ok   covers mentioned 3 of 3
+  p2-sdd-1       format ok   covers mentioned 2 of 2
+  p2-sdd-2       format ok   covers mentioned 2 of 2
+  p4-sdd-1       format ok   covers mentioned 0 of 1
+  p4-sdd-2       format ok   covers mentioned 1 of 1
+  p4-sdd-3       format ok   covers mentioned 1 of 1
+  p5-sdd-1       format ok   covers mentioned 1 of 1
+  in the process's format: 8 of 8 SDDs; the key's covers mentioned: 12 of 13

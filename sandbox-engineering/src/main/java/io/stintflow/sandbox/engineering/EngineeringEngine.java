@@ -193,6 +193,10 @@ public class EngineeringEngine {
         return decisions.build().registerAll(new TaskHandlerRegistry())
                 .register("transcribe", new TranscriptionHandler(stack.transcriber(), raw))
                 .register("write-sdds", EngineeringWriters.sdds(corpus, documents))
+                .register("finalize-batch", EngineeringWriters.finalizeBatch(corpus, documents))
+                .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents))
+                .register("finalize-batch", EngineeringWriters.finalizeBatch(corpus, documents))
+                .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents))
                 .register("write-questions", EngineeringWriters.questions(corpus, documents));
     }
 

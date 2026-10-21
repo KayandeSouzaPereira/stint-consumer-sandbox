@@ -63,6 +63,7 @@ class PipelineSkeletonIT extends ScenarioBase {
             running.put(m.name(), start(m.name().toLowerCase(), m, Map.of()));
         }
         Portal portal = new Portal(Module.CHANNELS.port());
+        portal.rejectItemOnce("p2-c2-batch", "p2-sdd-1");   // SDD S.9, CA7: p2's second batch loses an SDD once
         portal.rejectFirstApprovalOf("p2-c1-design");   // SDD S.8, CA7: p2's first design is rejected once, then approved
 
         assertThat(portal.record("p1-c1-business")).isEqualTo(202);
@@ -133,6 +134,16 @@ class PipelineSkeletonIT extends ScenarioBase {
                 .containsExactlyInAnyOrder("1", "2");
         assertThat(reworked.stream().filter(i -> i.get("version").n().equals("2")).findFirst().orElseThrow()
                 .get("supersedes").n()).isEqualTo("1");
+        // SDD S.9, CA7: the SDD the technical representative rejected is written again as its second version
+        var sddReworked = catalog.stream().filter(i -> i.get("recordId").s().equals("rec-p2-sdd-1")).toList();
+        assertThat(sddReworked).as("p2's first SDD has two versions").extracting(i -> i.get("version").n())
+                .containsExactlyInAnyOrder("1", "2");
+        assertThat(sddReworked.stream().filter(i -> i.get("version").n().equals("2")).findFirst().orElseThrow()
+                .get("supersedes").n()).isEqualTo("1");
+        assertThat(catalog.stream().filter(i -> i.get("recordId").s().equals("rec-p2-sdd-2")))
+                .as("the SDD that was approved is not written again").hasSize(1);
+        Scenario.evidence("S.9-CA7.txt", "S.9 CA7: p2's SDD p2-sdd-1 was rejected once and rewritten as version 2\n"
+                + register);
         Scenario.evidence("S.8-CA7.txt", "S.8 CA7: p2's first design was rejected once and rewritten as version 2\n"
                 + register);
         Scenario.evidence("S.7-CA6.txt", "S.7 CA6: the register after the pipeline's skeleton (" + catalog.size()

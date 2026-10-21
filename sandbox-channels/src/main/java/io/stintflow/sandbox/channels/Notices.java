@@ -75,18 +75,27 @@ public final class Notices {
 
     /** The leads of the domains that depend on the design (SDD S.8, RF3): told when its approval is escalated. */
     static final java.util.List<String> LEADS = java.util.List.of("business-lead", "tech-rep");
+    /** SDD S.9, RF4: an SDD batch's approval is escalated to the technical lead; the business lead is told as well. */
+    static final java.util.List<String> TECH_LEADS = java.util.List.of("tech-lead", "business-lead");
     private static final java.util.regex.Pattern DESIGN = java.util.regex.Pattern
             .compile("/([a-z0-9-]+)-c(\\d+)-design\\.md$");
+    private static final java.util.regex.Pattern BATCH = java.util.regex.Pattern
+            .compile("/([a-z0-9-]+)-c(\\d+)-batch\\.json$");
 
     private void overdue(JsonNode review) throws Exception {
-        // a review event carries no project or cycle: they are read off the design's pointer (design/<p>-c<n>-design.md)
-        var found = DESIGN.matcher(review.path("materialRef").asText());
-        boolean known = found.find();
+        // a review event carries no project or cycle: they are read off the material's pointer
+        // (design/<p>-c<n>-design.md for a design, sdd/<p>-c<n>-batch.json for a batch of SDDs)
+        String material = review.path("materialRef").asText();
+        var batch = BATCH.matcher(material);
+        boolean ofBatch = batch.find();
+        var found = ofBatch ? batch : DESIGN.matcher(material);
+        boolean known = ofBatch || found.find();
         String project = known ? found.group(1) : "unknown";
         String cycle = known ? found.group(2) : "0";
-        for (String lead : LEADS) {
-            mail.send("approval-overdue", lead, project, cycle, null,
-                    "The approval of a design was not answered in time and was escalated to the business lead.\n");
+        for (String lead : ofBatch ? TECH_LEADS : LEADS) {
+            mail.send("approval-overdue", lead, project, cycle, null, ofBatch
+                    ? "The approval of a batch of SDDs was not answered in time and was escalated to the technical lead.\n"
+                    : "The approval of a design was not answered in time and was escalated to the business lead.\n");
         }
     }
 

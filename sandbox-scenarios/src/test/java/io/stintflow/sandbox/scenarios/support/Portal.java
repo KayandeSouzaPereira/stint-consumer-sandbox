@@ -100,6 +100,13 @@ public final class Portal {
         rejectOnce.add(materialToken);
     }
 
+    /** A review of items whose material names the token gets that item rejected, once (SDD S.9, CA7). */
+    private final java.util.Map<String, String> rejectItemOnce = new java.util.HashMap<>();
+
+    public void rejectItemOnce(String materialToken, String itemId) {
+        rejectItemOnce.put(materialToken, itemId);
+    }
+
     private List<String> answerAsTheKey(Corpus corpus, String[] roles, Void unused) {
         List<String> done = new ArrayList<>();
         for (String role : roles) {
@@ -116,6 +123,19 @@ public final class Portal {
                         rejectOnce.remove(token);
                         body = Spy.JSON.createObjectNode().put("verdict", "rejected").put("noteRef",
                                 "s3://sandbox-documents/notes/" + id.replaceAll("[^A-Za-z0-9._-]", "-") + ".txt");
+                    }
+                }
+                if ("approval".equals(review.path("kind").asText()) && !review.path("items").isEmpty()) {
+                    String token = rejectItemOnce.keySet().stream().filter(material::contains).findFirst().orElse(null);
+                    if (token != null) {
+                        String item = rejectItemOnce.remove(token);
+                        ObjectNode partial = Spy.JSON.createObjectNode();
+                        var items = partial.putArray("items");
+                        review.path("items").forEach(i -> items.addObject().put("id", i.asText())
+                                .put("verdict", i.asText().equals(item) ? "rejected" : "approved"));
+                        partial.put("noteRef", "s3://sandbox-documents/notes/" + id.replaceAll("[^A-Za-z0-9._-]", "-")
+                                + ".txt");
+                        body = partial;
                     }
                 }
                 int status = answer(role, id, body);

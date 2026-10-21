@@ -31,6 +31,11 @@
         "pattern": "^[A-Za-z0-9._:-]{1,128}$"
       }
     },
+    "priority": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
     "recordIds": {
       "type": "array",
       "maxItems": 21,

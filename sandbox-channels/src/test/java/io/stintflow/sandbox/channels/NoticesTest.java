@@ -53,8 +53,11 @@ class NoticesTest {
     }
 
     static CloudEvent request(String id, String role, String escalatedFrom) {
-        ObjectNode data = Json.obj().put("kind", "approval").put("materialRef",
-                "s3://sandbox-documents/design/p1-c1-design.md");
+        return request(id, role, escalatedFrom, "s3://sandbox-documents/design/p1-c1-design.md");
+    }
+
+    static CloudEvent request(String id, String role, String escalatedFrom, String material) {
+        ObjectNode data = Json.obj().put("kind", "approval").put("materialRef", material);
         data.putArray("options");
         data.putArray("items");
         if (escalatedFrom != null) {
@@ -79,5 +82,14 @@ class NoticesTest {
 
         notices.on(request("r-2", "business-lead", "business-rep"));   // the same event again
         assertThat(sent).as("a redelivered escalation tells no one twice").hasSize(2);
+    }
+
+    @Test
+    void an_escalated_batch_of_sdds_tells_the_technical_and_business_leads() throws Exception {
+        notices.on(request("r-3", "tech-lead", "tech-rep", "s3://sandbox-documents/sdd/p2-c2-batch.json"));
+        assertThat(sent).extracting(m -> m.getTo().getFirst()).containsExactlyInAnyOrder(
+                "tech-lead@sandbox.local", "business-lead@sandbox.local");
+        assertThat(sent).extracting(io.quarkus.mailer.Mail::getSubject)
+                .containsOnly("[p2 c2] Design approval is overdue");
     }
 }

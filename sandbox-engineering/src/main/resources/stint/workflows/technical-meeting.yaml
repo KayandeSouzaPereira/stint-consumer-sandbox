@@ -16,7 +16,7 @@ document:
       routes:
         restricted: [transcribe, redactor]
         confidential: [redactor, decide-meeting-type, decide-priority, decide-outcome, decide-blocking, write-sdds,
-                       write-questions, register-document]
+                       finalize-batch, write-timeout-report, write-questions, register-document, send-email]
         internal: ['*']
       retention:
         restricted: { days: 7 }
@@ -161,54 +161,59 @@ do:
             data: '${ {recordId: $context.questionsRecord.recordId, questionsRef: $context.questionsRef, questionCount: $context.questionCount, nextCycle: (($context.cycle | tonumber) + 1)} }'
       then: end
 
-  # --- SDDs: each registered (a loop: no 'for' in Stint), then approved item by item ---
+  # --- SDDs: each registered (a loop: no 'for' in Stint), then approved item by item (S.9: a rejected SDD is written
+  # again, up to 3 rounds; what is still rejected after them is given up and the batch keeps the approved ones;
+  # an approval nobody answers is escalated and then ends documented, never approved by omission) ---
   - writeSdds:
       call: remote
       with:
         task: write-sdds
-        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted} }'
-      export: { as: '${ $context + {batchId: .batchId, batchRef: .batchRef, sdds: .sdds, next: 0, recordIds: []} }' }
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted, round: 1} }'
+      export: { as: '${ $context + {batchId: .batchId, batchRef: .batchRef, sdds: .sdds, regs: .sdds, next: 0, round: 1, gaveUp: [], finalizing: false} }' }
   - registerBatch:
       call: remote
       with:
         task: register-document
-        input: '${ {documentId: $context.batchId, documentRef: $context.batchRef, kind: "sdd-batch", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
-      export: { as: '${ $context + {recordIds: [.recordId], last: .} }' }
+        input: '${ {documentId: $context.batchId, documentRef: $context.batchRef, kind: "sdd-batch", ownerRole: "tech-rep", sensitivity: "confidential", priority: $context.priority, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {batchRecordId: .recordId, last: .} }' }
   - batchRegistered:
       emit:
         event:
           with:
-            id: '${ $context.projectId + ":" + $context.cycle + ":batch-registered" }'
+            id: '${ $context.projectId + ":" + $context.cycle + ":batch-registered" + (if $context.last.version > 1 then ":v" + ($context.last.version | tostring) else "" end) }'
             source: https://sandbox.stintflow.io/engineering
             type: io.sandbox.records.document-registered.v1
             subject: '${ $context.last.recordId }'
             sandboxproject: '${ $context.projectId }'
             sandboxcycle: '${ $context.cycle }'
-            data: '${ $context.last | {recordId, version, sha256, kind: "sdd-batch", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+            data: '${ $context.last | {recordId, version, sha256, kind: "sdd-batch", sensitivity: "confidential", ownerRole: "tech-rep"} + (if .supersedes != null then {supersedes} else {} end) }'
   - nextSdd:
       switch:
         - more:
-            when: '$context.next < ($context.sdds | length)'
+            when: '$context.next < ($context.regs | length)'
             then: registerSdd
+        - emitting:
+            when: '$context.finalizing == true'
+            then: approved
         - done:
             then: approve
   - registerSdd:
       call: remote
       with:
         task: register-document
-        input: '${ $context.sdds[$context.next] as $s | {documentId: $s.sddId, documentRef: $s.sddRef, kind: "sdd", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
-      export: { as: '${ $context + {recordIds: ($context.recordIds + [.recordId]), last: .} }' }
+        input: '${ $context.regs[$context.next] as $s | {documentId: $s.sddId, documentRef: $s.sddRef, kind: "sdd", ownerRole: "tech-rep", sensitivity: "confidential", projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {last: .} }' }
   - sddRegistered:
       emit:
         event:
           with:
-            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-registered:" + $context.sdds[$context.next].sddId }'
+            id: '${ $context.projectId + ":" + $context.cycle + ":sdd-registered:" + $context.regs[$context.next].sddId + (if $context.last.version > 1 then ":v" + ($context.last.version | tostring) else "" end) }'
             source: https://sandbox.stintflow.io/engineering
             type: io.sandbox.records.document-registered.v1
             subject: '${ $context.last.recordId }'
             sandboxproject: '${ $context.projectId }'
             sandboxcycle: '${ $context.cycle }'
-            data: '${ $context.last | {recordId, version, sha256, kind: "sdd", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+            data: '${ $context.last | {recordId, version, sha256, kind: "sdd", sensitivity: "confidential", ownerRole: "tech-rep"} + (if .supersedes != null then {supersedes} else {} end) }'
   - advance:
       set: '${ $context + {next: ($context.next + 1)} }'
       export: { as: '${ . }' }
@@ -219,12 +224,59 @@ do:
         kind: approval
         role: tech-rep
         material: '${ $context.batchRef }'
-        items: '${ [$context.sdds[].sddId] }'
+        items: '${ [$context.regs[].sddId] }'
         deadline: { hours: 48 }
         remind: { hours: 40 }
-      onReject: rejected
-      export: { as: '${ $context + {verdict: .verdict, rejectedItems: .rejectedItems} }' }
-      then: approved
+        escalate: { role: tech-lead, after: { hours: 24 } }
+        onTimeout: { value: rejected }
+      export: { as: '${ $context + {verdict: .verdict, defaulted: .defaulted, rejectedItems: .rejectedItems, noteRef: .noteRef} }' }
+  - verdictRoute:
+      switch:
+        - approved:
+            when: '$context.verdict == "approved"'
+            then: afterApproval
+        - overdue:
+            when: '$context.defaulted == true'
+            then: stuck
+        - rework:
+            when: '$context.round < 3'
+            then: reworkRound
+        - giveUp:
+            then: givenUp
+  - afterApproval:
+      switch:
+        - trimmed:
+            when: '($context.gaveUp | length) > 0'
+            then: finalize
+        - whole:
+            then: approved
+  - reworkRound:
+      set: '${ $context + {round: ($context.round + 1), redo: $context.rejectedItems} }'
+      export: { as: '${ . }' }
+  - rewrite:
+      call: remote
+      with:
+        task: write-sdds
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted, round: $context.round, only: $context.redo, sdds: $context.sdds, noteRef: $context.noteRef} }'
+      export: { as: '${ $context + {batchRef: .batchRef, sdds: .sdds, regs: [.sdds[] | select(.sddId as $i | ($context.redo | index($i)) != null)], next: 0} }' }
+      then: nextSdd
+  - givenUp:
+      set: '${ $context + {gaveUp: $context.rejectedItems, keep: [$context.sdds[].sddId | select(. as $i | ($context.rejectedItems | index($i)) == null)]} }'
+      export: { as: '${ . }' }
+  - anyLeft:
+      switch:
+        - none:
+            when: '($context.keep | length) == 0'
+            then: rejected
+        - some:
+            then: finalize
+  - finalize:
+      call: remote
+      with:
+        task: finalize-batch
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, keep: ([$context.sdds[].sddId | select(. as $i | (($context.gaveUp // []) | index($i)) == null)]), sdds: $context.sdds} }'
+      export: { as: '${ $context + {batchRef: .batchRef, sdds: .sdds, regs: [], next: 0, finalizing: true} }' }
+      then: registerBatch
   - approved:
       emit:
         event:
@@ -235,10 +287,47 @@ do:
             subject: '${ $context.batchId }'
             sandboxproject: '${ $context.projectId }'
             sandboxcycle: '${ $context.cycle }'
-            data: '${ {batchId: $context.batchId, batchRef: $context.batchRef, sddIds: [$context.sdds[].sddId], recordIds: $context.recordIds} }'
+            data: '${ {batchId: $context.batchId, batchRef: $context.batchRef, sddIds: [$context.sdds[].sddId], recordIds: ([$context.batchRecordId] + [$context.sdds[].sddId | "rec-" + .]), priority: $context.priority} }'
       then: end
   - rejected:
       set: '${ $context + {outcome: "rejected"} }'
+      export: { as: '${ . }' }
+      then: end
+  - stuck:
+      call: remote
+      with:
+        task: write-timeout-report
+        input: '${ {projectId: $context.projectId, cycle: $context.cycle, batchId: $context.batchId, count: ($context.sdds | length), round: $context.round} }'
+      export: { as: '${ $context + {reportId: .documentId, reportRef: .reportRef} }' }
+  - registerReport:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.reportId, documentRef: $context.reportRef, kind: "report", ownerRole: "tech-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {reportRecord: {recordId: .recordId, version: .version, sha256: .sha256}} }' }
+  - reportRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":approval-timeout-registered" }'
+            source: https://sandbox.stintflow.io/engineering
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.reportRecord.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.reportRecord.recordId, version: $context.reportRecord.version, sha256: $context.reportRecord.sha256, kind: "report", sensitivity: "confidential", ownerRole: "tech-rep"} }'
+  - tellTechLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "tech-lead", projectId: $context.projectId, cycle: $context.cycle} }'
+  - tellBusinessLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "business-lead", projectId: $context.projectId, cycle: $context.cycle} }'
+  - timedOut:
+      set: '${ $context + {outcome: "approval-timeout"} }'
       export: { as: '${ . }' }
       then: end
   - doubt:

@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.9 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Em implementação** (spec aprovada por Kayan em 21/10/2026, com um "aprovado" sem escolha: valem as propostas 8a a 8g) |
 | Depende de | S.5, S.6, S.7 e S.8 (Implementados). Stint `500dfd1` |
 | Bloqueia | S.10 (a Entrega consome o `sdd-batch-approved`), S.11 (gate da 3a) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
