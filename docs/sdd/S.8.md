@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.8 |
-| Status | **Em implementação** (spec aprovada por Kayan em 21/10/2026; 8b decidido por ele: escalar ao business-lead e avisar todos os leads; as demais propostas valem) |
+| Status | **Implementado** (spec aprovada por Kayan em 21/10/2026; 8b decidido por ele: escalar ao business-lead e avisar todos os leads; as demais propostas valem) |
 | Depende de | S.5, S.6 e S.7 (Implementados). Stint `500dfd1` |
 | Bloqueia | S.11 (gate da 3a); a Engenharia (S.9) consome o `design-published` |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
@@ -118,7 +118,7 @@ O S.8 fecha as lacunas acima sem mudar o Stint: prova o caminho de cada roteiro,
 | CA5 | **Verde.** No esqueleto, o `p2` tem duas instâncias do Negócio (ciclos 1 e 2): dois `design-published` (`p2-c1-design` e `p2-c2-design`), todos os eventos do `p2` na mesma cadeia `chn-3cf066c1…`, e os dois desenhos no catálogo | `PipelineSkeletonIT`, `S.7-CA6.txt` |
 | CA6 | **Verde.** `design-published` aceita `priority` entre 0 e 1 e continua aceitando a forma antiga; recusa 1,4, um texto e um campo de conteúdo | `DesignPublishedContractTest` |
 | CA7 | **Verde, com o desvio de 8.2.** O `p2` é rejeitado uma vez no esqueleto: o catálogo tem `rec-p2-c1-design` v1 e v2, a v2 com `supersedes: 1`; o varredor continua em zero | `PipelineSkeletonIT`; `S.8-CA7.txt` |
-| CA8 | @REGR@ | `gate.sh --regression-only` |
+| CA8 | **Verde.** `gate.sh --regression-only`: build completo, `FlociBillingIT` 5/5, `FlociOrdersIT` 6/6 e `RegressionIT` 3/3 (S.1–S.7), PASSED em 21/10/2026 | `gate.sh --regression-only` |
 | 8g | **Medido.** LitJev (Qwen3.5-2B) sobre os sete transcritos reais já redigidos pelo filtro do S.6: **tipo 6 de 7** (errou o `o1`, o almoço da equipe, que chamou de desenho), **canal 7 de 7** nos de negócio, **prioridade dentro de ±0,2 em 3 de 7** (e 1 de 7 antes do ajuste de escala, S8-1). O ambíguo `a1` acertou o tipo | `S.8-litjev.txt` |
 
 ### 8.2 Ressalvas e desvios
