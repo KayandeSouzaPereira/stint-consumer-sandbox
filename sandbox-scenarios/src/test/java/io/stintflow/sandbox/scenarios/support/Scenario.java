@@ -36,6 +36,22 @@ public final class Scenario {
         return "native".equals(System.getProperty("scenarios.apps", "jvm"));
     }
 
+    /**
+     * SDD S.11, RF6: whether a module runs as a native image. All of them with {@code -Dscenarios.apps=native} (S.4);
+     * or only the listed ones with {@code -Dscenarios.native.modules=sandbox-privacy,sandbox-business}, the rest on the JVM.
+     */
+    public static boolean nativeModule(String moduleDir) {
+        if (nativeApps()) {
+            return true;
+        }
+        for (String listed : System.getProperty("scenarios.native.modules", "").split(",")) {
+            if (listed.strip().equals(moduleDir)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static int orders() {
         return Integer.getInteger("scenarios.orders", 50);
     }
@@ -47,7 +63,7 @@ public final class Scenario {
             Path output = Files.createTempFile("reset", ".txt");
             Process p = new ProcessBuilder(command).directory(root().toFile()).redirectErrorStream(true)
                     .redirectOutput(output.toFile()).start();
-            if (!p.waitFor(5, TimeUnit.MINUTES) || p.exitValue() != 0) {
+            if (!p.waitFor(10, TimeUnit.MINUTES) || p.exitValue() != 0) {
                 throw new AssertionError("infra/reset.sh failed:\n" + Files.readString(output));
             }
             return Files.readString(output);

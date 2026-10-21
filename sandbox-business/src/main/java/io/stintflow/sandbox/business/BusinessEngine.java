@@ -6,6 +6,7 @@ import java.time.InstantSource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -18,6 +19,7 @@ import io.stintflow.aws.DynamoDbAuditLog;
 import io.stintflow.aws.DynamoDbCorrectionLog;
 import io.stintflow.aws.DynamoDbStateStore;
 import io.stintflow.aws.EventBridgeEventPublisher;
+import io.stintflow.sandbox.business.chaos.ChaosPoints;
 import io.stintflow.aws.EventBridgeSchedulerTimerService;
 import io.stintflow.aws.S3BlobStore;
 import io.stintflow.aws.S3FactBlobStore;
@@ -121,6 +123,10 @@ public class BusinessEngine {
     String timersGroup;
     @ConfigProperty(name = "business.scheduler.role-arn")
     String roleArn;
+    @ConfigProperty(name = "business.chaos.halt-before-publish")
+    Optional<String> haltBeforePublish;
+    @ConfigProperty(name = "business.chaos.halt-in-task")
+    Optional<String> haltInTask;
 
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
@@ -152,7 +158,8 @@ public class BusinessEngine {
                 new DynamoDbStateStore(ddb, DOMAIN + "-instances", DOMAIN + "-waits", DOMAIN + "-outbox", 4,
                         DOMAIN + "-inbox"),
                 timers, blobs, new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
-                new DomainTagPublisher(new EventBridgeEventPublisher(eventBridge, domainBus, "default"), DOMAIN),
+                ChaosPoints.publisher(new DomainTagPublisher(new EventBridgeEventPublisher(eventBridge, domainBus,
+                        "default"), DOMAIN), haltBeforePublish, ChaosPoints.HALT),
                 new S3FactBlobStore(s3, factsBucket), tracer)
                 .auditLog(new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
                         InstantSource.system()))
@@ -172,8 +179,9 @@ public class BusinessEngine {
         BusinessModels stack = "local".equals(models) ? BusinessModels.local(settings()) : BusinessModels.fakes(corpus);
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(handlers(stack, new S3BlobStore(s3, rawBucket),
-                        new S3BlobStore(s3, documentsBucket), tracer), blobs, tracer), concurrency))
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(handlers(stack,
+                        new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer),
+                        haltInTask, ChaosPoints.HALT), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
 

@@ -83,7 +83,7 @@ public final class App implements AutoCloseable {
         List<String> command = new ArrayList<>();
         Path root = Scenario.root();
         String container = null;
-        if (Scenario.nativeApps()) {
+        if (Scenario.nativeModule(module.dir)) {
             container = "stint-s4-" + name;
             command.addAll(List.of("docker", "run", "--rm", "--name", container, "--network", NETWORK,
                     "-p", port + ":" + port, nativeImage(module)));

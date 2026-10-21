@@ -5,8 +5,8 @@
 # Needs git, JDK 25 and Maven 3.9+ on the PATH. Idempotent: it reinstalls the same artifacts.
 set -euo pipefail
 
-SHA=500dfd1
-VERSION=0.1.0-3a-500dfd1
+SHA=a52b20a
+VERSION=0.1.0-3a-a52b20a
 DIR="${1:-stint-pinned}"
 
 if [ ! -d "$DIR/.git" ]; then git clone --no-checkout https://github.com/stintflow/stint.git "$DIR"; fi

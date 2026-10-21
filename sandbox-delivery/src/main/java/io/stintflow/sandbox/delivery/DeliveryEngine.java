@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -17,6 +18,7 @@ import io.stintflow.aws.DynamoDbAuditLog;
 import io.stintflow.aws.DynamoDbCorrectionLog;
 import io.stintflow.aws.DynamoDbStateStore;
 import io.stintflow.aws.EventBridgeEventPublisher;
+import io.stintflow.sandbox.delivery.chaos.ChaosPoints;
 import io.stintflow.aws.EventBridgeSchedulerService;
 import io.stintflow.aws.EventBridgeSchedulerTimerService;
 import io.stintflow.aws.S3BlobStore;
@@ -121,6 +123,10 @@ public class DeliveryEngine {
     boolean sentTimestampFallback;
     @ConfigProperty(name = "delivery.parked-table", defaultValue = "delivery-parked")
     String parkedTable;
+    @ConfigProperty(name = "delivery.chaos.halt-before-publish")
+    Optional<String> haltBeforePublish;
+    @ConfigProperty(name = "delivery.chaos.halt-in-task")
+    Optional<String> haltInTask;
 
     /** The Delivery's state: the engine's, and what check-sdds reads (in either role). */
     private volatile StateStore state;
@@ -155,7 +161,8 @@ public class DeliveryEngine {
         WorkflowEngine built = new WorkflowEngine(registry, new RoutingTaskTransport(sqs, queueBase, DOMAIN, SHARED),
                 state,
                 timers, blobs, new TreeInterpreter(new JqExpressionEvaluator()), InstantSource.system(),
-                new DomainTagPublisher(new EventBridgeEventPublisher(eventBridge, domainBus, "default"), DOMAIN),
+                ChaosPoints.publisher(new DomainTagPublisher(new EventBridgeEventPublisher(eventBridge, domainBus,
+                        "default"), DOMAIN), haltBeforePublish, ChaosPoints.HALT),
                 new S3FactBlobStore(s3, factsBucket), tracer)
                 .auditLog(new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
                         InstantSource.system()))
@@ -185,8 +192,10 @@ public class DeliveryEngine {
         Corpus corpus = Corpus.load(Path.of(corpusDir));
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(DeliveryHandlers.register(new TaskHandlerRegistry(), corpus,
-                        new S3BlobStore(s3, documentsBucket), state, new DynamoDbParked(ddb, parkedTable)), blobs, tracer), concurrency))
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(DeliveryHandlers.register(
+                        new TaskHandlerRegistry(), corpus, new S3BlobStore(s3, documentsBucket), state,
+                        new DynamoDbParked(ddb, parkedTable)), haltInTask, ChaosPoints.HALT), blobs, tracer),
+                        concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
 

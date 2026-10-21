@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -22,6 +23,7 @@ import io.stintflow.sandbox.privacy.filter.LitJevPersonalDataCheck;
 import io.stintflow.sandbox.privacy.filter.LlmCheckLayer;
 import io.stintflow.sandbox.privacy.filter.PersonalDataCheck;
 import io.stintflow.spi.BlobStore;
+import io.stintflow.sandbox.privacy.chaos.ChaosPoints;
 import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.WorkerPool;
 import io.stintflow.worker.WorkerRuntime;
@@ -81,6 +83,8 @@ public class PrivacyWorker {
     String litjevBase;
     @ConfigProperty(name = "privacy.check.litjev.model", defaultValue = "Qwen/Qwen3.5-2B")
     String litjevModel;
+    @ConfigProperty(name = "privacy.chaos.halt-in-task")
+    Optional<String> haltInTask;
     @ConfigProperty(name = "privacy.check.timeout", defaultValue = "PT30S")
     Duration checkTimeout;
 
@@ -94,8 +98,8 @@ public class PrivacyWorker {
             case "off" -> null;
             default -> new CorpusKeyCheck(corpus);
         };
-        WorkerRuntime runtime = new WorkerRuntime(handlers(corpus, blobs, check,
-                "litjev".equals(checkKind) ? litjevThreshold : threshold), blobs,
+        WorkerRuntime runtime = new WorkerRuntime(ChaosPoints.registry(handlers(corpus, blobs, check,
+                "litjev".equals(checkKind) ? litjevThreshold : threshold), haltInTask, ChaosPoints.HALT), blobs,
                 new OpenTelemetryExecutionTracer(openTelemetry));
         for (String caller : callers) {
             bindings.add(SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + "privacy-tasks-" + caller)

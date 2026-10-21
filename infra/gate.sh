@@ -3,7 +3,14 @@
 #
 #   bash infra/gate.sh                      regression (RF1) once, then chaos, load and observability (RF2, RF3, RF5)
 #   bash infra/gate.sh --regression-only --repeat 3     CA2: the regression three times in a row
+#   bash infra/gate.sh --regression-only --skeleton 3   SDD S.11 CA1: the 3a regression (portal roles, PII sweep) once and
+#                                           the pipeline skeleton three times in a row (default 3; 0 skips it)
 #   bash infra/gate.sh --orders 100         the load scenario with N orders (default 50)
+#   bash infra/gate.sh --native3a           SDD S.11 RF6 (8e): the 3a domains as native images, one at a time (privacy, business,
+#                                           records, channels); a build that fails is a finding, not a stop; p1's cycle
+#                                           then runs with the ones that built as images and the rest on the JVM
+#   bash infra/gate.sh --projects 6         SDD S.11: the 3a chaos and load (PipelineChaosIT, PipelineLoadIT) with M
+#                                           simultaneous projects (default 6); also run by the default invocation
 #   bash infra/gate.sh --only ChaosIT       one scenario class (or a JUnit -Dtest pattern)
 #   bash infra/gate.sh --native             RF4 only: both domains built as native images (in a container) and the
 #                                           happy path run on them as containers (Docker needs ~8 GB of memory)
@@ -21,17 +28,23 @@ export AWS_DEFAULT_REGION=us-east-1
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MVN="${MVN:-mvn}"
 REPEAT=1
+SKELETON=3
 ORDERS=50
+PROJECTS=6
 REGRESSION_ONLY=false
 NATIVE=false
+NATIVE3A=false
 ONLY=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repeat) REPEAT="$2"; shift 2 ;;
+    --skeleton) SKELETON="$2"; shift 2 ;;
     --orders) ORDERS="$2"; shift 2 ;;
+    --projects) PROJECTS="$2"; shift 2 ;;
     --regression-only) REGRESSION_ONLY=true; shift ;;
     --only) ONLY="$2"; shift 2 ;;
     --native) NATIVE=true; shift ;;
+    --native3a) NATIVE3A=true; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -93,6 +106,30 @@ DOCKERFILE
   log "PASSED. Evidence and logs: $OUT"
   exit 0
 fi
+if [ "$NATIVE3A" = true ]; then
+  built=""
+  for m in sandbox-privacy sandbox-business sandbox-records sandbox-channels; do
+    log "native build of $m (log $OUT/native-build-$m.log)"
+    ctx="$ROOT/$m/target/native-image-ctx"
+    if "$MVN" package -Dnative -Dquarkus.native.remote-container-build=true -DskipTests -pl "$m" -am         > "$OUT/native-build-$m.log" 2>&1       && rm -rf "$ctx" && mkdir -p "$ctx" && cp "$m"/target/*-runner "$ctx/application"       && printf 'FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+WORKDIR /work
+COPY --chmod=755 application /work/application
+ENTRYPOINT ["./application"]
+' > "$ctx/Dockerfile"       && docker build -q -t "stint-s4/$m:native" "$ctx" >> "$OUT/native-build-$m.log" 2>&1; then
+      built="$built,$m"
+      log "native OK: $m"
+    else
+      log "native FAILED: $m (a finding; see $OUT/native-build-$m.log)"
+    fi
+  done
+  if [ -n "$built" ]; then
+    bash infra/reset.sh > "$OUT/reset-native3a.log" 2>&1
+    mvn_ native3a verify -Pscenarios -pl sandbox-scenarios -Dtest=PipelineNativeIT -Dscenarios.native.modules="${built#,}"
+    cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+  fi
+  log "DONE. Native images that built: ${built#,}. Evidence and logs: $OUT"
+  exit 0
+fi
 mvn_ build clean install
 
 if [ -z "$ONLY" ]; then
@@ -106,6 +143,20 @@ if [ -z "$ONLY" ]; then
     stop_billing
     mvn_ "regression-$run" verify -Pscenarios -pl sandbox-scenarios -Dtest=RegressionIT -Dscenarios.run="$run"
   done
+  # SDD S.11, RF1: the 3a regression (S.5 to S.10). The portal roles and the sweeper's positive control once, the
+  # pipeline skeleton as many times as asked; each run on a fresh floci. The evidence is copied after each stage, before
+  # anything else can clean the target directory (S.10 finding S10-4).
+  if [ "$SKELETON" -gt 0 ]; then
+    bash infra/reset.sh > "$OUT/reset-3a.log" 2>&1
+    mvn_ regression-3a verify -Pscenarios -pl sandbox-scenarios -Dtest='PortalRolesIT,PiiSweepIT'
+    cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+    for run in $(seq 1 "$SKELETON"); do
+      log "=== pipeline skeleton run $run of $SKELETON ==="
+      bash infra/reset.sh > "$OUT/reset-skeleton-$run.log" 2>&1
+      mvn_ "skeleton-$run" verify -Pscenarios -pl sandbox-scenarios -Dtest=PipelineSkeletonIT
+      cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+    done
+  fi
 fi
 
 if [ -n "$ONLY" ]; then
@@ -113,6 +164,13 @@ if [ -n "$ONLY" ]; then
 elif [ "$REGRESSION_ONLY" = false ]; then
   mvn_ "scenarios" verify -Pscenarios -pl sandbox-scenarios -Dtest='ChaosIT,LoadIT,ObservabilityIT' \
     -Dscenarios.orders="$ORDERS"
+  cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+  # SDD S.11, RF2 to RF5: the 3a pipeline under kills, then under M simultaneous projects (each on a fresh floci)
+  for scenario in PipelineChaosIT PipelineLoadIT; do
+    bash infra/reset.sh > "$OUT/reset-$scenario.log" 2>&1
+    mvn_ "$scenario" verify -Pscenarios -pl sandbox-scenarios -Dtest="$scenario" -Dscenarios.projects="$PROJECTS"
+    cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true
+  done
 fi
 
 cp sandbox-scenarios/target/scenarios/*.txt "$OUT/" 2>/dev/null || true

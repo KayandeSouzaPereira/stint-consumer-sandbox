@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | ID | S.11 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
-| Depende de | S.5 a S.10 (Implementados). Stint `500dfd1` (`phase-3a/ai-decision-workers`, SDDs 3a.1–3a.7) |
+| Status | **Em implementação** (spec aprovada por Kayan em 21/10/2026, com as propostas 8a–8j; decisão do SHA em 8k) |
+| Depende de | S.5 a S.10 (Implementados em `500dfd1`). Stint `a52b20a` (`phase-3a/ai-decision-workers`, SDDs 3a.1–3a.11), fixado por 8k |
 | Bloqueia | O PR de fase da 3a e o início da 3b (S.12) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
 | Commits analisados | sandbox `8483c4c` · Stint `500dfd1` |
@@ -41,7 +41,7 @@ O Stint em `500dfd1` cobre o S.11 sem mudança. O que falta é (1) ligar os cen�
 **Objetivo.** Rodar o pipeline da 3a sob falha, carga e escrutínio de privacidade; medir os modelos reais; entregar um relatório que ligue cada SDD 3a.1–3a.7 do Stint a um cenário que o prova e que consolide os achados.
 
 ## 3. Requisitos
-- **RF0 — Ponto de partida.** Conferir que o Stint `500dfd1` continua no remoto e fixado no README, e que `S.1–S.10` estão Implementados. Se o Stint da 3a tiver um SHA novo, PARAR e perguntar.
+- **RF0 — Ponto de partida.** Conferir que `S.1–S.10` estão Implementados e subir o Stint para o `a52b20a` (8k): reinstalar sob `0.1.0-3a-a52b20a`, atualizar `pom.xml`, `infra/install-stint.sh` e README, e rodar a regressão antes de qualquer cenário novo. Se uma asserção existente tiver de mudar por causa do Stint novo, PARAR e pedir.
 - **RF1 — Regressão da 3a num comando.** `gate.sh --regression-only` passa a cobrir S.1–S.10: `FlociBillingIT`, `FlociOrdersIT`, `RegressionIT`, `PipelineSkeletonIT`, `PortalRolesIT` e `PiiSweepIT`. Este critério fecha também o CA9 do S.10, adiado por decisão do Kayan para o fim da fase.
 - **RF2 — Caos nos domínios da 3a**, com os papéis separados pelas flags de engine e worker:
   - a) o worker de privacidade morto no meio da redação de uma transcrição;
@@ -122,6 +122,11 @@ Nenhuma prevista. Os cenários novos são classes novas (`PipelineChaosIT`, `Pip
 - O 2B do LitJev erra a maior parte das decisões (S6-2, S8-2, S9-1): a taxa de revisão humana na rodada manual será alta, e isso é o dado.
 - O Whisper `distil-small.en` corta o final das falas (S6-1): o recall do filtro sobre áudio real será menor que sobre o texto.
 - A carga pode mostrar um gargalo no portal ou no registro (um processo cada); é observação.
+
+### 8k. O SHA do Stint (decidido pelo Kayan em 21/10/2026: opção 2)
+Na análise o sandbox estava em `500dfd1`, e a branch `phase-3a/ai-decision-workers` do Stint já estava em `a52b20a` (SDDs 3a.8 a 3a.11: `for` concorrente com junção e cascata de cancelamento; endereço de resposta e transporte de roteamento; reabrir a espera consumida no mesmo save; cancelamento de fora). As branches `phase-3b/knowledge-base` e `phase-3c/domain-bridge` contêm esses commits, então os S.12 a S.15 não podem ficar no `500dfd1`.
+**Decisão:** subir agora, antes do gate, para que ele valide o que vai a PR e os S.12–S.15 herdem um sandbox já validado. O gate da 3a passa a valer para o `a52b20a`.
+**Consequências:** a regressão S.1–S.10 roda primeiro no SHA novo; os artefatos que o sandbox copia do Stint (esquemas das tabelas e filas, o esquema do `meeting-recorded`, o servidor do Whisper) não mudaram entre os dois SHAs (conferido por `git diff`). Os workarounds dos achados do S.5 que o Stint corrigiu (`stintreplyto`, cancelamento externo, reabertura da espera) **não** são removidos aqui: entram como achados com estado "corrigido no Stint, ainda não usado" no relatório, e a remoção é um SDD próprio.
 
 ## 9. Registro de validação
 (preencher na etapa 2)

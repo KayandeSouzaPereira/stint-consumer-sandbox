@@ -72,6 +72,8 @@
         <!-- The scenarios start and kill processes: they only run with -Pscenarios (infra/gate.sh). -->
         <scenarios.skip>true</scenarios.skip>
         <scenarios.orders>50</scenarios.orders>
+        <scenarios.projects>6</scenarios.projects>
+        <scenarios.native.modules></scenarios.native.modules>
         <scenarios.apps>jvm</scenarios.apps>
     </properties>
 
@@ -96,6 +98,8 @@
                         <scenarios.root>${project.basedir}/..</scenarios.root>
                         <scenarios.out>${project.build.directory}/scenarios</scenarios.out>
                         <scenarios.orders>${scenarios.orders}</scenarios.orders>
+                        <scenarios.projects>${scenarios.projects}</scenarios.projects>
+                        <scenarios.native.modules>${scenarios.native.modules}</scenarios.native.modules>
                         <scenarios.apps>${scenarios.apps}</scenarios.apps>
                     </systemPropertyVariables>
                 </configuration>
