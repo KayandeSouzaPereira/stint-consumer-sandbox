@@ -96,7 +96,7 @@ class PipelineLoadIT extends PipelineScenario {
             chains.add(PipelineEvents.chainIdOf(project));
             bus.append(busOf(project, events));
             Instant first = events.stream().filter(e -> e.type().equals(PipelineEvents.MEETING_RECORDED))
-                    .map(Spy.Event::time).min(Instant::compareTo).orElseThrow();
+                    .map(Spy.Event::seenAt).min(Instant::compareTo).orElseThrow();
             stage(stages, "recorded -> design published", first, last(events, PipelineEvents.DESIGN_PUBLISHED, false));
             stage(stages, "recorded -> batch approved", first, last(events, PipelineEvents.SDD_BATCH_APPROVED, false));
             stage(stages, "recorded -> last SDD validated", first, last(events, PipelineEvents.SDD_VALIDATED, true));
@@ -118,7 +118,7 @@ class PipelineLoadIT extends PipelineScenario {
     }
 
     private static Instant last(List<Spy.Event> events, String type, boolean latest) {
-        var times = events.stream().filter(e -> e.type().equals(type)).map(Spy.Event::time).toList();
+        var times = events.stream().filter(e -> e.type().equals(type)).map(Spy.Event::seenAt).toList();
         return latest ? times.stream().max(Instant::compareTo).orElseThrow()
                 : times.stream().min(Instant::compareTo).orElseThrow();
     }

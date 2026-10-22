@@ -1,0 +1,232 @@
+S.11 RF4: 6 simultaneous projects, each a full cycle of two SDDs
+  t+   1.6s  started privacy (PRIVACY, pid 538688, :8093) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   3.3s  started records (RECORDS, pid 538976, :8094) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   5.0s  started channels (CHANNELS, pid 539272, :8095) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   6.8s  started target (TARGET, pid 539572, :8096) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   8.5s  started business (BUSINESS, pid 538704, :8090) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+  10.6s  started engineering (ENGINEERING, pid 539040, :8091) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+  12.7s  started delivery (DELIVERY, pid 539952, :8092) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+  13.3s  6 projects released together: [l1, l2, l3, l4, l5, l6]
+  t+  16.3s  answered business-rep approval evt-449e4379-620d-39a6-850d-048bacaf2a70:/do/15/approve:1
+  t+  16.3s  answered business-rep approval evt-ac3d8dc8-a99a-3ea2-aae3-8a38139a38fe:/do/15/approve:1
+  t+  16.3s  answered business-rep approval evt-4aee4d3e-82b2-3bd9-a70b-3e9893280bf6:/do/15/approve:1
+  t+  16.4s  answered business-rep approval evt-d72c86e4-1802-34d1-a6ec-73cdeffd7131:/do/15/approve:1
+  t+  16.4s  answered business-rep approval evt-14fbbbed-ca43-30bc-8d6c-5e1262b4cfdb:/do/15/approve:1
+  t+  16.5s  answered business-rep approval evt-785bcf4e-c79a-320a-8e3d-e055455997f7:/do/15/approve:1
+  t+  19.5s  answered tech-rep approval evt-13837d9c-f944-3d49-9ae0-514e7788aa72:/do/20/approve:1
+  t+  19.6s  answered tech-rep approval evt-c45868b7-08e2-3130-b4ef-7fb43baa1552:/do/20/approve:1
+  t+  19.8s  answered tech-rep approval evt-363489ee-08b2-356f-8ae3-8b2a79941ff3:/do/20/approve:1
+  t+  19.9s  answered tech-rep approval evt-1191e0b6-ccc7-39ff-9b16-cfd64201de56:/do/20/approve:1
+  t+  20.0s  answered tech-rep approval evt-3f08ac95-f1ee-3f49-8d99-b09711708186:/do/20/approve:1
+  t+  20.0s  answered tech-rep approval evt-b799e277-8ad5-381f-a842-d42aac34a05d:/do/20/approve:1
+  t+  25.6s  l1 cycle 1 closed
+  t+  25.6s  l2 cycle 1 closed
+  t+  25.6s  l3 cycle 1 closed
+  t+  25.7s  l4 cycle 1 closed
+  t+  25.7s  l5 cycle 1 closed
+  t+  25.7s  l6 cycle 1 closed
+  reviews answered through the portal: 12
+  result: 6 chains, 6 cycles closed, the counts of an undisturbed cycle in each, nothing left over
+  stage times across the 6 projects (observation only, seconds from the project's first recording):
+    recorded -> design published       p50    3,0   p95    3,2   max    3,2
+    recorded -> batch approved         p50    6,4   p95    6,7   max    6,7
+    recorded -> last SDD validated     p50   11,8   p95   12,0   max   12,0
+    recorded -> cycle closed           p50   12,1   p95   12,2   max   12,2
+  whole run: 28,3 s from the release
+  bus, l1 (chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca):
+    io.sandbox.channels.meeting-recorded.v1          subject l1-c1-business         chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-c1-design       chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.business.design-published.v1          subject l1-c1-design           chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.engineering.refinement-requested.v1   subject l1-c1-design           chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.channels.meeting-recorded.v1          subject l1-c1-technical        chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-c1-batch        chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-1           chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-2           chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l1-c1-batch            chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-ready.v1                 subject l1-sdd-1               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-ready.v1                 subject l1-sdd-2               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-1-a1-patch  chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-implemented.v1           subject l1-sdd-1               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-2-a1-patch  chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-implemented.v1           subject l1-sdd-2               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-1-a1-report chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-validated.v1             subject l1-sdd-1               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-2-a1-report chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-2-a2-patch  chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-implemented.v1           subject l1-sdd-2               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.records.document-registered.v1        subject rec-l1-sdd-2-a2-report chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.sdd-validated.v1             subject l1-sdd-2               chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+    io.sandbox.delivery.cycle-closed.v1              subject l1                     chain chn-7c6cb785-45a7-31d6-ada9-9433f88d05ca
+  bus, l2 (chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94):
+    io.sandbox.channels.meeting-recorded.v1          subject l2-c1-business         chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-c1-design       chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.business.design-published.v1          subject l2-c1-design           chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.engineering.refinement-requested.v1   subject l2-c1-design           chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.channels.meeting-recorded.v1          subject l2-c1-technical        chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-c1-batch        chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-1           chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-2           chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l2-c1-batch            chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-ready.v1                 subject l2-sdd-1               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-ready.v1                 subject l2-sdd-2               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-1-a1-patch  chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-implemented.v1           subject l2-sdd-1               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-2-a1-patch  chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-implemented.v1           subject l2-sdd-2               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-1-a1-report chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-validated.v1             subject l2-sdd-1               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-2-a1-report chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-2-a2-patch  chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-implemented.v1           subject l2-sdd-2               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.records.document-registered.v1        subject rec-l2-sdd-2-a2-report chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.sdd-validated.v1             subject l2-sdd-2               chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+    io.sandbox.delivery.cycle-closed.v1              subject l2                     chain chn-4ec24f85-5b16-3923-9c89-84d1fbf84c94
+  bus, l3 (chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc):
+    io.sandbox.channels.meeting-recorded.v1          subject l3-c1-business         chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-c1-design       chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.business.design-published.v1          subject l3-c1-design           chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.engineering.refinement-requested.v1   subject l3-c1-design           chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.channels.meeting-recorded.v1          subject l3-c1-technical        chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-c1-batch        chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-1           chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-2           chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l3-c1-batch            chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-ready.v1                 subject l3-sdd-1               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-ready.v1                 subject l3-sdd-2               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-1-a1-patch  chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-implemented.v1           subject l3-sdd-1               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-2-a1-patch  chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-implemented.v1           subject l3-sdd-2               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-1-a1-report chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-validated.v1             subject l3-sdd-1               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-2-a1-report chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-2-a2-patch  chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-implemented.v1           subject l3-sdd-2               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.records.document-registered.v1        subject rec-l3-sdd-2-a2-report chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.sdd-validated.v1             subject l3-sdd-2               chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+    io.sandbox.delivery.cycle-closed.v1              subject l3                     chain chn-b2da8b7a-bd90-3791-b539-7f33a7fabecc
+  bus, l4 (chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6):
+    io.sandbox.channels.meeting-recorded.v1          subject l4-c1-business         chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-c1-design       chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.business.design-published.v1          subject l4-c1-design           chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.engineering.refinement-requested.v1   subject l4-c1-design           chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.channels.meeting-recorded.v1          subject l4-c1-technical        chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-c1-batch        chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-1           chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-2           chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l4-c1-batch            chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-ready.v1                 subject l4-sdd-1               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-ready.v1                 subject l4-sdd-2               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-1-a1-patch  chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-implemented.v1           subject l4-sdd-1               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-2-a1-patch  chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-implemented.v1           subject l4-sdd-2               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-1-a1-report chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-validated.v1             subject l4-sdd-1               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-2-a1-report chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-2-a2-patch  chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-implemented.v1           subject l4-sdd-2               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.records.document-registered.v1        subject rec-l4-sdd-2-a2-report chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.sdd-validated.v1             subject l4-sdd-2               chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+    io.sandbox.delivery.cycle-closed.v1              subject l4                     chain chn-6b7c36a1-262f-341b-bf45-65c3248a76f6
+  bus, l5 (chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0):
+    io.sandbox.channels.meeting-recorded.v1          subject l5-c1-business         chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-c1-design       chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.business.design-published.v1          subject l5-c1-design           chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.engineering.refinement-requested.v1   subject l5-c1-design           chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.channels.meeting-recorded.v1          subject l5-c1-technical        chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-c1-batch        chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-1           chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-2           chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l5-c1-batch            chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-ready.v1                 subject l5-sdd-1               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-ready.v1                 subject l5-sdd-2               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-1-a1-patch  chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-implemented.v1           subject l5-sdd-1               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-2-a1-patch  chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-implemented.v1           subject l5-sdd-2               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-1-a1-report chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-validated.v1             subject l5-sdd-1               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-2-a1-report chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-2-a2-patch  chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-implemented.v1           subject l5-sdd-2               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.records.document-registered.v1        subject rec-l5-sdd-2-a2-report chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.sdd-validated.v1             subject l5-sdd-2               chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+    io.sandbox.delivery.cycle-closed.v1              subject l5                     chain chn-3bdd40ed-3e30-3255-a533-79f4ad826ec0
+  bus, l6 (chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99):
+    io.sandbox.channels.meeting-recorded.v1          subject l6-c1-business         chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-c1-design       chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.business.design-published.v1          subject l6-c1-design           chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.engineering.refinement-requested.v1   subject l6-c1-design           chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.channels.meeting-recorded.v1          subject l6-c1-technical        chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-c1-batch        chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-1           chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-2           chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.engineering.sdd-batch-approved.v1     subject l6-c1-batch            chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-ready.v1                 subject l6-sdd-1               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-ready.v1                 subject l6-sdd-2               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-1-a1-patch  chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-implemented.v1           subject l6-sdd-1               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-2-a1-patch  chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-implemented.v1           subject l6-sdd-2               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-2-a1-report chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-1-a1-report chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-validated.v1             subject l6-sdd-1               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-2-a2-patch  chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-implemented.v1           subject l6-sdd-2               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.records.document-registered.v1        subject rec-l6-sdd-2-a2-report chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.sdd-validated.v1             subject l6-sdd-2               chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+    io.sandbox.delivery.cycle-closed.v1              subject l6                     chain chn-44c5ae5f-9a35-31d8-b544-902862acdd99
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=180, sandbox-channels=12, sandbox-delivery=456, sandbox-engineering=228, sandbox-privacy=24, sandbox-records=168, sandbox-target=36}
+  items the sweeper looked at, by kind of store: {bus=162, confluence=6, dynamodb=468, log=206, mailhog=18, s3=395, span=1104}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                12   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 42
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                12   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 54
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 114
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
