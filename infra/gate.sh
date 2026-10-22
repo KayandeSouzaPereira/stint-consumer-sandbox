@@ -111,9 +111,10 @@ if [ "$NATIVE3A" = true ]; then
   for m in sandbox-privacy sandbox-business sandbox-records sandbox-channels; do
     log "native build of $m (log $OUT/native-build-$m.log)"
     ctx="$ROOT/$m/target/native-image-ctx"
-    if "$MVN" package -Dnative -Dquarkus.native.remote-container-build=true -DskipTests -pl "$m" -am         > "$OUT/native-build-$m.log" 2>&1       && rm -rf "$ctx" && mkdir -p "$ctx" && cp "$m"/target/*-runner "$ctx/application"       && printf 'FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+    if "$MVN" package -Dnative -Dquarkus.native.remote-container-build=true -DskipTests -pl "$m" -am         > "$OUT/native-build-$m.log" 2>&1       && rm -rf "$ctx" && mkdir -p "$ctx/corpus" && cp "$m"/target/*-runner "$ctx/application"       && cp -r corpus/meetings corpus/transcripts corpus/manifest.json corpus/pii-forms.json "$ctx/corpus/"       && printf 'FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
 WORKDIR /work
 COPY --chmod=755 application /work/application
+COPY corpus /work/corpus
 ENTRYPOINT ["./application"]
 ' > "$ctx/Dockerfile"       && docker build -q -t "stint-s4/$m:native" "$ctx" >> "$OUT/native-build-$m.log" 2>&1; then
       built="$built,$m"
