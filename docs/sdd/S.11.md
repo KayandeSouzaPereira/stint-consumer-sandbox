@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.11 |
-| Status | **Em implementação** (spec aprovada por Kayan em 21/10/2026, com as propostas 8a–8j; decisão do SHA em 8k) |
+| Status | **Implementado** (aguarda a validação do Kayan; spec aprovada por Kayan em 21/10/2026, com as propostas 8a–8j; decisão do SHA em 8k) |
 | Depende de | S.5 a S.10 (Implementados em `500dfd1`). Stint `a52b20a` (`phase-3a/ai-decision-workers`, SDDs 3a.1–3a.11), fixado por 8k |
 | Bloqueia | O PR de fase da 3a e o início da 3b (S.12) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |

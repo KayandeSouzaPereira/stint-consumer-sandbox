@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.10 |
-| Status | **Implementado** (CA9, a regressão, adiada por decisão do Kayan para depois da última implementação; aguarda a validação do Kayan) |
+| Status | **Implementado** (CA9 fechado pelo S.11; aguarda a validação do Kayan) |
 | Depende de | S.5, S.6, S.7 e S.8 (Implementados); S.9 (spec escrita, ainda sem aprovação: esta spec supõe o lote aprovado só com os SDDs aprovados, como o S.9 propõe). Stint `500dfd1` |
 | Bloqueia | S.11 (gate da 3a) |
 | Branch | `phase-3a-validation` (os PRs da fase são empilhados) |
