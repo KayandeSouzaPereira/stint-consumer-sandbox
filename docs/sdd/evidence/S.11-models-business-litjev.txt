@@ -1,0 +1,9 @@
+S.8 8g: the local LitJev (Qwen3.5-2B) over the seven business scripts, as Whisper wrote them and the S.6 filter redacted them
+  a1-c1-business   type business-design      ok   channel confluence ok   priority 1,54 = 0,77 (key 0,40) NO
+  o1-c1-business   type business-design      NO   channel -          -    priority 1,64 = 0,82 (key 0,00) NO
+  p1-c1-business   type business-design      ok   channel confluence ok   priority 1,83 = 0,91 (key 0,80) ok
+  p2-c1-business   type business-design      ok   channel email      ok   priority 1,71 = 0,85 (key 0,50) NO
+  p2-c2-business   type business-design      ok   channel email      ok   priority 1,91 = 0,96 (key 0,50) NO
+  p3-c1-business   type business-design      ok   channel meeting    ok   priority 0,28 = 0,14 (key 0,20) ok
+  p6-c1-business   type business-design      ok   channel email      ok   priority 1,04 = 0,52 (key 0,50) ok
+  type 6 of 7, channel 7 of 7, priority within 0.2: 3 of 7

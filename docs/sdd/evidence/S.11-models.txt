@@ -1,0 +1,17 @@
+S.11 RF7 (CA7): the local models over the corpus, 22/10/2026 (Stint a52b20a). Whisper distil-small.en (CPU), LitJev Qwen3.5-2B fp16 (GPU), llama.cpp Qwen3-4B Q4 (CPU), the target's container with no network. Synthetic data only; observation, no threshold.
+
+Decisions by LitJev against the corpus key (the texts as Whisper wrote them, redacted by the S.6 filter) - S.11-models-business-litjev.txt, S.11-models-engineering-litjev.txt
+  business meeting type 6 of 7, channel 7 of 7, priority within 0.2 of the key 3 of 7
+  technical meeting type 5 of 7, outcome (SDDs or questions) 3 of 7, blocking question 5 of 7
+  human-review rate: the choices answered with uncertain=true go to the representative; the model is confident in its errors (S6-2, S8-2, S9-1)
+
+SDDs written by llama.cpp (one per id and title) - S.11-models-sdd-writer.txt
+  in the process's format 8 of 8; the key's covers mentioned 12 of 13
+
+Implementation by llama.cpp, tests run in the container with no network - S.5/S.10 report, S.10-llm.txt
+  2 SDDs, validated at the first attempt 2 of 2 (DLQ rate 0 of 2; a sample too small to say anything about real SDDs)
+
+One business meeting end to end with real audio - S.11-models-end-to-end.txt
+  recorded -> design-published 35 s (Whisper + redaction + three LitJev decisions of 0.5 to 1.5 s + design writer + one approval)
+  GPU memory 7933 of 8192 MiB with LitJev loaded (nvidia-smi)
+  the Whisper transcript cut or garbled the planted data: name written form gone (scanner finds it), email written form gone (scanner does NOT find it in this form, S6-1)
