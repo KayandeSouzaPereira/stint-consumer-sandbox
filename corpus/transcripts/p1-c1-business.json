@@ -1,0 +1,41 @@
+{
+  "meetingId": "p1-c1-business",
+  "audioSha256": "87a86feb883842dc5c3fa12f894db25ccc049558859d3e1ef8f04bbe313dc8a5",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 38.71,
+  "repeatable": true,
+  "text": "Thanks for joining. This is the design meeting for the book catalog. I am synth PI 2011 Rivera product owner. Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers. Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason. Please put the design document on confluence so the whole team can comment. at.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 6.0,
+      "text": " Thanks for joining. This is the design meeting for the book catalog. I am synth PI 2011"
+    },
+    {
+      "start": 6.0,
+      "end": 8.0,
+      "text": " Rivera product owner."
+    },
+    {
+      "start": 8.0,
+      "end": 15.0,
+      "text": " Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers."
+    },
+    {
+      "start": 15.0,
+      "end": 23.0,
+      "text": " Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason."
+    },
+    {
+      "start": 23.0,
+      "end": 29.0,
+      "text": " Please put the design document on confluence so the whole team can comment."
+    },
+    {
+      "start": 29.0,
+      "end": 58.0,
+      "text": " at."
+    }
+  ]
+}

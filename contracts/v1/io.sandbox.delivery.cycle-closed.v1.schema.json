@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/io.sandbox.delivery.cycle-closed.v1.schema.json",
+  "title": "io.sandbox.delivery.cycle-closed.v1 — data (SDD S.5, 8b)",
+  "description": "A cycle's delivery ended: complete, partial (some cancelled) or stalled (the coordinator's safety net). Ids, pointers, enums and counts only: never any text of a meeting, document or person. Additive changes only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "outcome",
+    "validated",
+    "accepted",
+    "cancelled",
+    "pending"
+  ],
+  "properties": {
+    "outcome": {
+      "enum": [
+        "complete",
+        "partial",
+        "stalled"
+      ]
+    },
+    "validated": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cancelled": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pending": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      }
+    }
+  }
+}

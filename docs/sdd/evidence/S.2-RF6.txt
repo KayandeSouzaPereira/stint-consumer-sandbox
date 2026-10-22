@@ -1,0 +1,11 @@
+SDD S.2, RF6: JSON logs with stint.chainId/stint.instanceId; spans linked to the triggering event.
+
+Worker JSON log lines (one per handler), from the final floci run:
+{"message": "Rendered invoice inv-2416d159ae25823a to s3://sandbox-facts/billing/invoices/inv-2416d159ae25823a.html (attempt 1)", "mdc": {"stint.instanceId": "evt-b2663956-aff1-3fb0-9a6c-0c1fdbecf4e9", "spanId": "53730354ca2fbe80", "stint.causationId": "8fa1cc2e-7220-4b74-9d90-77ef4306bdb3", "stint.workflow": "billing:issue-invoice:1.0.0", "traceId": "8f5ce56306878132a66daa161d80850d", "stint.chainId": "chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f", "stint.correlationId": "8fa1cc2e-7220-4b74-9d90-77ef4306bdb3", "stint.taskId": "/do/3/render", "stint.attempt": "1"}}
+{"message": "Recorded invoice inv-2416d159ae25823a issued at 2026-10-10T23:59:00.449Z", "mdc": {"stint.instanceId": "evt-b2663956-aff1-3fb0-9a6c-0c1fdbecf4e9", "spanId": "66b53024862ce65a", "stint.causationId": "c762cf43-63c2-49e4-a0b1-621c8bb3ea24", "stint.workflow": "billing:issue-invoice:1.0.0", "traceId": "8f5ce56306878132a66daa161d80850d", "stint.chainId": "chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f", "stint.correlationId": "c762cf43-63c2-49e4-a0b1-621c8bb3ea24", "stint.taskId": "/do/4/record", "stint.attempt": "1"}}
+
+slow- render after the fix (5 s delay on the worker thread, log keeps Stint's context):
+{"timestamp": "2026-10-10T20:25:12.2432675-03:00", "message": "Rendered invoice inv-6b9ae31cf7945dd2 to s3://sandbox-facts/billing/invoices/inv-6b9ae31cf7945dd2.html (attempt 1)", "stint.chainId": "chn-slow-mdc-1", "stint.instanceId": "evt-3f702b8d-8eb9-3914-a1ed-50fcbd6c99c8"}
+
+Span link: see S.2-CA6.txt (stint.activation of billing:issue-invoice FOLLOWS_FROM the request's traceparent span,
+in Jaeger, service sandbox-billing).

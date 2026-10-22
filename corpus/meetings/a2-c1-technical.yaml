@@ -1,0 +1,34 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: a2-c1-technical
+project: a2
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_bella
+- id: s2
+  voice: bm_george
+script:
+- speaker: s1
+  text: Technical meeting about search speed. I am SYNTH-PII-2111 Rivera.
+- speaker: s2
+  text: We could add an index, or a cache, or both. I am not sure what business really needs.
+- speaker: s1
+  text: We didn't decide anything. Let's ask business what response time they expect.
+expected:
+  meetingType: technical-refinement
+  outcome: questions
+  blockingQuestion: true
+  priority: 0.5
+  review: true
+  questions:
+  - What response time does business expect for search?
+pii:
+- marker: SYNTH-PII-2111
+  kind: name
+  written: SYNTH-PII-2111 Rivera
+  spoken:
+  - synth p i i two one one one rivera
+  - Sinthe P I I 2111 Rivera

@@ -1,0 +1,25 @@
+S.5 CA7: one corpus meeting in real audio, on the local model stack
+  meeting p1-c1-business (business-design, key channel confluence)
+  stack: Whisper distil-small.en (CPU, :8001), LitJev Qwen3.5-2B fp16 (GPU, :8000), llama.cpp Qwen3-4B Q4 (CPU, :8080)
+  total, recorded -> design-published: 35 s; reviews answered: 1
+  GPU memory (nvidia-smi): baseline 7933 MiB, peak seen 7933 MiB of 8192
+  steps (Business log, UTC):
+    10:38:28.186 /do/2/redact  
+    10:38:29.741 usage  adapter=litjev, provider=litjev, model=Qwen/Qwen3.5-2B, calls=1, inputTokens=0, outputTokens=0, latencyMs=1528, estimatedCost=null
+    10:38:29.771 /do/3/meetingType  {"kind":"choice","value":"business-design","confidence":0.9970474594177463,"uncertain":false,}
+    10:38:30.307 usage  adapter=litjev, provider=litjev, model=Qwen/Qwen3.5-2B, calls=1, inputTokens=0, outputTokens=0, latencyMs=515, estimatedCost=null
+    10:38:30.334 /do/5/priority  {"kind":"score","value":0.9113845848300807,"confidence":0.8656651054997054,"uncertain":false,}
+    10:38:54.451 usage  adapter=litjev, provider=litjev, model=Qwen/Qwen3.5-2B, calls=1, inputTokens=0, outputTokens=0, latencyMs=532, estimatedCost=null
+    10:38:54.493 /do/10/channel  {"kind":"choice","value":"confluence","confidence":0.9032646819964761,"uncertain":false,}
+  events: [io.sandbox.channels.meeting-recorded.v1, io.sandbox.records.document-registered.v1, io.stintflow.review.requested.v1, io.stintflow.review.completed.v1, io.sandbox.business.design-published.v1]
+  t+   1.7s  started privacy (PRIVACY, pid 104008, :8093) 
+  t+   3.5s  started records (RECORDS, pid 368424, :8094) 
+  t+   5.6s  started channels (CHANNELS, pid 152952, :8095) {channels.recorder.auto=false, channels.recorder.audio=corpus}
+  t+   8.8s  started business (BUSINESS, pid 216452, :8090) {business.models=local}
+  t+   9.7s  recorded p1-c1-business (real audio)
+  t+  44.8s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
+  transcript retention/raw-transcript/transcripts/evt-2604cc20-78ba-397f-bf15-84ea9d10512a/8a8eae42-6760-4df5-9e2f-10eeab7b5bc5.json (6 segments):
+    SYNTH-PII-2011 (name), written form is gone; scanner finds it: true
+    SYNTH-PII-2012 (email), written form is gone; scanner finds it: false
+    transcript text, as written by Whisper:
+      Thanks for joining. This is the design meeting for the book catalog. I am synth PI 2011 Rivera product owner. Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers. Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason. Please put the design document on confluence so the whole team can comment. at.

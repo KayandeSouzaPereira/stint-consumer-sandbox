@@ -1,0 +1,49 @@
+SDD S.4, CA4: LoadIT (N = 50)
+Command: bash infra/gate.sh --only 'ChaosIT,LoadIT,ObservabilityIT' (gate-out/20261011-154845, PASSED 16:11:35:
+ChaosIT 5/5, LoadIT 1/1, ObservabilityIT 1/1). Sandbox phase-2-validation at 33d4942; Stint b1f4579; every app a JVM
+process (java -jar quarkus-run.jar) started by the scenario; floci + MailHog + Jaeger from docker-compose.yml.
+
+S.4 RF3: load, N = 50 simultaneous orders
+  t+   1.4s  started load-orders (ORDERS, pid 255748, :8081) 
+  t+   3.4s  started load-billing (BILLING, pid 242604, :8082) 
+  t+   4.0s  50 POST /orders released together by a barrier (5 fail503-, 5 slow-)
+  t+  34.7s  50 order-confirmed on the spy
+  t+  34.7s  50 confirmation e-mails in MailHog
+  counts: 50 invoices in billing-invoices (50 distinct ids), 50 invoice-issued, 50 order-confirmed, 50 confirmation e-mails, 50 distinct chains
+  every e-mail carries its own order's invoice, byte for byte the object its invoice-issued cites
+  latency POST -> order-confirmed (observation only, no target): p50 28.3 s, p95 31.1 s, max 31.2 s
+  the same without the fail503-/slow- orders: p50 28.2 s, p95 29.0 s
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [orders]
+    waits                 0   dynamodb scan --table-name orders-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name orders-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name orders-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name orders-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    orders-tasks               visible 0, in flight 0, delayed 0
+    orders-results             visible 0, in flight 0, delayed 0
+    orders-timers              visible 0, in flight 0, delayed 100
+    orders-domain-events       visible 0, in flight 0, delayed 0
+    orders-tasks-dlq           visible 0, in flight 0, delayed 0
+    orders-results-dlq         visible 0, in flight 0, delayed 0
+    orders-timers-dlq          visible 0, in flight 0, delayed 0
+    orders-schedules-dlq       visible 0, in flight 0, delayed 0
+    orders-domain-events-dlq   visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name orders-timers []
+  [billing]
+    waits                 0   dynamodb scan --table-name billing-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name billing-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name billing-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name billing-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    billing-tasks              visible 0, in flight 0, delayed 0
+    billing-results            visible 0, in flight 0, delayed 0
+    billing-timers             visible 0, in flight 0, delayed 114
+    billing-domain-events      visible 0, in flight 0, delayed 0
+    billing-tasks-dlq          visible 0, in flight 0, delayed 0
+    billing-results-dlq        visible 0, in flight 0, delayed 0
+    billing-timers-dlq         visible 0, in flight 0, delayed 0
+    billing-schedules-dlq      visible 0, in flight 0, delayed 0
+    billing-domain-events-dlq  visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name billing-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

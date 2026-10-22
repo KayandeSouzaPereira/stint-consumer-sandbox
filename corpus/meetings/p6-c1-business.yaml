@@ -1,0 +1,37 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p6-c1-business
+project: p6
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_bella
+- id: s2
+  voice: bm_george
+script:
+- speaker: s1
+  text: Design meeting for book recommendations. I am SYNTH-PII-2141 Rivera.
+- speaker: s2
+  text: Recommend books by the same author a reader liked. Keep it simple in this first version.
+- speaker: s1
+  text: Send the design by e-mail to the reading club. Medium priority. Reach me at +55 11 98142-4142 (SYNTH-PII-2142).
+expected:
+  meetingType: business-design
+  channel: email
+  priority: 0.5
+  review: false
+pii:
+- marker: SYNTH-PII-2141
+  kind: name
+  written: SYNTH-PII-2141 Rivera
+  spoken:
+  - synth p i i two one four one rivera
+  - Sinthe P I I 2141 Rivera
+- marker: SYNTH-PII-2142
+  kind: phone
+  written: +55 11 98142-4142
+  spoken:
+  - plus five five one one nine eight one four two four one four two
+  - plus 5511 98142 4142

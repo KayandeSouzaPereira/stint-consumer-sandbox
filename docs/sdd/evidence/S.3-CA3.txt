@@ -1,0 +1,60 @@
+SDD S.3, CA3 (manual scenario, S.3 8g): counterpart down -> delay notice after T1; long listen armed on the
+Scheduler; counterpart back -> late invoice confirms; long timer cancelled; its simulated late fire is ignored.
+Sandbox at 0380a84 (jars); Stint d455dc0; floci, MailHog. Order o-ca3-011043.
+
+== 1. counterpart health (8082): HTTP 000 (000 = down)
+== 2. POST /orders at 2026-10-11T01:10:47Z
+{"orderId":"o-ca3-011043","instanceId":"evt-906b8625-6888-3981-a7e7-78e8c121dfaf","status":"received"}  HTTP 202
+GET: {"orderId":"o-ca3-011043","instanceId":"evt-906b8625-6888-3981-a7e7-78e8c121dfaf","status":"received"}
+== 3. waiting for the delay notice (orders.invoice.timeout = PT2M)
+MailHog 2026-10-11T01:12:47.411824424Z | Order o-ca3-011043: invoicing is delayed
+GET at 2026-10-11T01:12:48Z: {"orderId":"o-ca3-011043","instanceId":"evt-906b8625-6888-3981-a7e7-78e8c121dfaf","status":"invoice-delayed"}
+== 4. the late-invoice listen's one-time schedule (orders.late-invoice.timeout = PT24H)
+{
+    "Name": "timer-ccd97863-3a9a-4141-a698-27b06716e12b",
+    "Expression": "at(2026-10-12T01:13:00)",
+    "ActionAfterCompletion": "DELETE",
+    "Input": "{\"timerId\":\"timer:ccd97863-3a9a-4141-a698-27b06716e12b\",\"workflowInstanceId\":\"evt-906b8625-6888-3981-a7e7-78e8c121dfaf\"}",
+    "Target": "arn:aws:sqs:us-east-1:000000000000:orders-timers"
+}
+== 5. orders-waits of evt-906b8625-6888-3981-a7e7-78e8c121dfaf
+[
+    {
+        "waitKey": "event:io.sandbox.billing.invoice-issued.v1:7c9f519c7ca9eabe:786f569929714d049a235c026272bdc7",
+        "position": "/do/7/awaitLate"
+    },
+    {
+        "waitKey": "event:io.sandbox.billing.invoice-rejected.v1:7c9f519c7ca9eabe:786f569929714d049a235c026272bdc7",
+        "position": "/do/7/awaitLate"
+    },
+    {
+        "waitKey": "timer:ccd97863-3a9a-4141-a698-27b06716e12b",
+        "position": "/do/7/awaitLate"
+    }
+]
+== 6. the request waits in billing-domain-events
+{
+    "ApproximateNumberOfMessages": "1"
+}
+
+== 7. counterpart started at 2026-10-11T01:13:10Z
+GET at 2026-10-11T01:13:15Z: {"orderId":"o-ca3-011043","instanceId":"evt-906b8625-6888-3981-a7e7-78e8c121dfaf","status":"confirmed","invoiceId":"inv-bc65823ec51b8019"}
+MailHog 2026-10-11T01:13:13.597121897Z | Order o-ca3-011043 confirmed: invoice inv-bc65823ec51b8019 | ['attachment; filename="invoice-inv-bc65823ec51b8019.html"']
+== 8. orders-timers schedules now: (empty = cancelled)
+   orders-waits of evt-906b8625-6888-3981-a7e7-78e8c121dfaf: 0 wait(s)
+
+== 9 (redone). simulated late fire of the cancelled long timer (timer:ccd97863-3a9a-4141-a698-27b06716e12b) at 2026-10-11T01:14:27Z
+b91b335f-d7bb-4615-8ec4-f981582ed90a
+poller failures during this fire: 0
+instance: COMPLETED	5
+e-mails to o-ca3-011043@example.com: 2
+== 10. the order's events in the spy
+2026-10-11T01:10:47.9928321Z io.sandbox.orders.order-placed.v1 chainid=chn-55388648-9f1a-394e-ba6c-d90d5073a93b causationid=None
+2026-10-11T01:10:48.0612129Z io.sandbox.billing.invoice-requested.v1 chainid=chn-55388648-9f1a-394e-ba6c-d90d5073a93b causationid=o-ca3-011043
+2026-10-11T01:13:13.3339401Z io.sandbox.billing.invoice-issued.v1 chainid=chn-55388648-9f1a-394e-ba6c-d90d5073a93b causationid=444adab4-3965-4e90-b2cb-0578a6481ab1
+2026-10-11T01:13:13.6165872Z io.sandbox.orders.order-confirmed.v1 chainid=chn-55388648-9f1a-394e-ba6c-d90d5073a93b causationid=a35061a0-daa7-40b0-a3bf-43e3bb07260d
+4 event(s) of o-ca3-011043
+
+Notes: a first run (order o-ca3-010451) showed the same behavior; its spy events were lost to a script bug.
+A first late-fire attempt here was sent with an empty timerId by mistake (a script error); the poller rejects it
+(empty DynamoDB key) and it ends in orders-timers-dlq. Not a Stint finding: malformed input injected by hand.

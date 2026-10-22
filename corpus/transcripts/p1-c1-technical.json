@@ -1,0 +1,41 @@
+{
+  "meetingId": "p1-c1-technical",
+  "audioSha256": "a867751d8b51fa1e517105fee0929f7321559a8a3dedbe46eb36d58fdd91212a",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 43.81,
+  "repeatable": true,
+  "text": "technical refinement for the catalog design. I am synth PI 2021 Rivera. I read the design, two pieces of work, search by author and ISBN validation. Search by author, a function that takes an author name and returns the matching books, case insensitive. ISBN validation. Check the length and the check digit of ISBN 13. and.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 6.0,
+      "text": " technical refinement for the catalog design. I am synth PI 2021 Rivera."
+    },
+    {
+      "start": 6.0,
+      "end": 13.0,
+      "text": " I read the design, two pieces of work, search by author and ISBN validation."
+    },
+    {
+      "start": 13.0,
+      "end": 20.0,
+      "text": " Search by author, a function that takes an author name and returns the matching books, case insensitive."
+    },
+    {
+      "start": 20.0,
+      "end": 26.0,
+      "text": " ISBN validation. Check the length and the check digit of ISBN 13."
+    },
+    {
+      "start": 26.0,
+      "end": 52.0,
+      "text": " and"
+    },
+    {
+      "start": 52.0,
+      "end": 55.0,
+      "text": "."
+    }
+  ]
+}

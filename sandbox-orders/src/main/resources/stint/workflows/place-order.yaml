@@ -1,0 +1,165 @@
+# SDD S.3, RF2: an order, from the request to its confirmation, rejection or delay.
+# Started by schedule.on (Stint SDD 2.4) on order-placed.v1, which POST /orders publishes with the orderId as its id
+# (S.3 8a/8b): the same order always maps to the same instance (Stint SDD 2.1). The input is [that event], and the
+# instance inherits its chain (Stint SDD 2.5). Everything else is the contract's invoice events, matched by orderId.
+# The two listen timeouts below are defaults: OrdersEngine replaces them with orders.invoice.timeout and
+# orders.late-invoice.timeout before loading (S.3 8f).
+document:
+  dsl: '1.0.0'
+  namespace: orders
+  name: place-order
+  version: '1.0.0'
+schedule:
+  on:
+    one:
+      with:
+        type: io.sandbox.orders.order-placed.v1
+do:
+  - order:
+      set: '${ $workflow.input[0].data + {status: "requested"} }'
+      export:
+        as: '${ . }'
+
+  # The order's shape only: whether it can be invoiced is not Orders' call.
+  - validate:
+      switch:
+        - invalid:
+            when: '$context | (.orderId | type) != "string" or .orderId == "" or (.customerId | type) != "string" or .customerId == "" or (.recipient | type) != "string" or .recipient == "" or (.currency | type) != "string" or .currency == "" or (.amount | type) != "number" or ((.items | type) != "null" and (.items | type) != "array")'
+            then: invalid
+        - valid:
+            then: request
+
+  - invalid:
+      set: '${ $context + {status: "invalid"} }'
+      export:
+        as: '${ . }'
+      then: end
+
+  # Stint SDD 2.3: the wait of the listen below is saved with this request, so even an instant answer finds it.
+  - request:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/orders
+            type: io.sandbox.billing.invoice-requested.v1
+            data: '${ $context | {orderId, customerId, amount, currency} + (if .items == null then {} else {items} end) }'
+
+  - await:
+      try:
+        - reply:
+            listen:
+              to:
+                any:
+                  - with:
+                      type: io.sandbox.billing.invoice-issued.v1
+                    correlate:
+                      order:
+                        from: '${ .data.orderId }'
+                        expect: '${ $context.orderId }'
+                  - with:
+                      type: io.sandbox.billing.invoice-rejected.v1
+                    correlate:
+                      order:
+                        from: '${ .data.orderId }'
+                        expect: '${ $context.orderId }'
+              read: envelope
+            timeout:
+              after: PT2M
+            export:
+              as: '${ $context + {reply: .[0]} }'
+      catch:
+        errors:
+          with:
+            type: https://serverlessworkflow.io/spec/1.0.0/errors/timeout
+        then: delayed
+
+  - decide:
+      switch:
+        - issued:
+            when: '$context.reply.type == "io.sandbox.billing.invoice-issued.v1"'
+            then: confirm
+        - rejected:
+            then: reject
+
+  # S.3 8c: no answer in time. The customer is told, and the order keeps waiting for a late answer.
+  - delayed:
+      call: remote
+      with:
+        task: send-delay-notice
+        input:
+          order: '${ $context | {orderId, recipient, amount, currency} }'
+      export:
+        as: '${ $context + {status: "invoice-delayed"} }'
+
+  - awaitLate:
+      try:
+        - lateReply:
+            listen:
+              to:
+                any:
+                  - with:
+                      type: io.sandbox.billing.invoice-issued.v1
+                    correlate:
+                      order:
+                        from: '${ .data.orderId }'
+                        expect: '${ $context.orderId }'
+                  - with:
+                      type: io.sandbox.billing.invoice-rejected.v1
+                    correlate:
+                      order:
+                        from: '${ .data.orderId }'
+                        expect: '${ $context.orderId }'
+              read: envelope
+            timeout:
+              after: PT24H
+            export:
+              as: '${ $context + {reply: .[0]} }'
+      catch:
+        errors:
+          with:
+            type: https://serverlessworkflow.io/spec/1.0.0/errors/timeout
+        then: missing
+
+  - decideLate:
+      switch:
+        - issued:
+            when: '$context.reply.type == "io.sandbox.billing.invoice-issued.v1"'
+            then: confirm
+        - rejected:
+            then: reject
+
+  - confirm:
+      call: remote
+      with:
+        task: send-confirmation
+        input:
+          order: '${ $context | {orderId, recipient, amount, currency} }'
+          invoice: '${ $context.reply.data }'
+      export:
+        as: '${ $context + {status: "confirmed", invoiceId: $context.reply.data.invoiceId, confirmedAt: .sentAt} }'
+
+  - confirmed:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/orders
+            type: io.sandbox.orders.order-confirmed.v1
+            data: '${ $context | {orderId, invoiceId, confirmedAt} }'
+      then: end
+
+  - reject:
+      call: remote
+      with:
+        task: send-rejection
+        input:
+          order: '${ $context | {orderId, recipient, amount, currency} }'
+          reason: '${ $context.reply.data.reason }'
+      export:
+        as: '${ $context + {status: "rejected", reason: $context.reply.data.reason} }'
+      then: end
+
+  - missing:
+      set: '${ $context + {status: "invoice-missing"} }'
+      export:
+        as: '${ . }'
+      then: end

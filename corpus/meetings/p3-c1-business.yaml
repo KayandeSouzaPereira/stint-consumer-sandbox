@@ -1,0 +1,37 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p3-c1-business
+project: p3
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: bf_emma
+- id: s2
+  voice: am_michael
+script:
+- speaker: s1
+  text: We need to talk about reading lists, but half of the team is missing today. I am SYNTH-PII-2071 Rivera.
+- speaker: s2
+  text: Then let's not publish anything yet. Schedule a new meeting with everyone next week.
+- speaker: s1
+  text: Agreed, a new meeting. Low priority for now. Invites go to SYNTH-PII-2072@example.com.
+expected:
+  meetingType: business-design
+  channel: meeting
+  priority: 0.2
+  review: false
+pii:
+- marker: SYNTH-PII-2071
+  kind: name
+  written: SYNTH-PII-2071 Rivera
+  spoken:
+  - synth p i i two zero seven one rivera
+  - Sinthe P I I 2071 Rivera
+- marker: SYNTH-PII-2072
+  kind: email
+  written: SYNTH-PII-2072@example.com
+  spoken:
+  - synth p i i two zero seven two at example dot com
+  - Sinthe-P-I-I-2-0-7-2 at Example. Calm.

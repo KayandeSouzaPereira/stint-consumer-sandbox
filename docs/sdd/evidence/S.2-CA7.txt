@@ -1,0 +1,18 @@
+SDD S.2, CA7: Billing's isolation test and the enforcer are green.
+Sandbox at 988b1fc; command: mvn verify -pl sandbox-billing
+
+[INFO] --- enforcer:3.5.0:enforce (sovereign-domain) @ sandbox-billing ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.388 s -- in io.stintflow.sandbox.billing.BillingIndependenceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.219 s -- in io.stintflow.sandbox.billing.BillingSummaryWorkflowTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.202 s -- in io.stintflow.sandbox.billing.IssueInvoiceWorkflowTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+stint-inmemory is in test scope only:
+[INFO] \- io.github.stintflow:stint-inmemory:jar:0.1.0-SNAPSHOT:test
+and the packaged app has no stint-inmemory (sandbox-billing/target/quarkus-app/lib/main: 8 Stint jars, all AWS/core).
+
+The isolation test discriminates: with '# talks to sandbox-orders' appended to application.properties it failed with
+  [src\main\resources\application.properties must not mention orders]
+(file restored right after; not committed).

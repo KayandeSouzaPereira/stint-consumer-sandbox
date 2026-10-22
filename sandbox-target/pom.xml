@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.stintflow.sandbox</groupId>
+        <artifactId>stint-consumer-sandbox-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- SDD S.5, 8f: the target project (target-project/, a small Python catalog with stdlib tests) and its runner, the only process that talks to Docker. Task 'run-target-tests' (queue target-tasks-delivery): validates a changeset, applies it to a copy of the project and runs the tests in a container with no network, no secrets, a read-only root and CPU, memory, pids and time limits. In CI the runner is fake (no Docker). -->
+    <artifactId>sandbox-target</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.stintflow.sandbox</groupId>
+            <artifactId>sandbox-contracts</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-bundle-aws</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-aws-worker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-inmemory</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <target.tests.excluded>docker</target.tests.excluded>
+        <target.tests.groups></target.tests.groups>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                    <excludedGroups>${target.tests.excluded}</excludedGroups>
+                    <groups>${target.tests.groups}</groups>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <sandbox.root>${project.basedir}/..</sandbox.root>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- SDD S.5, CA1 (8c): no other sandbox module but the contracts; Stint's in-memory connectors only in
+                 tests. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sovereign-domain</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>io.stintflow.sandbox</exclude>
+                                        <exclude>io.github.stintflow:stint-inmemory:*:*:compile</exclude>
+                                        <exclude>io.github.stintflow:stint-inmemory:*:*:runtime</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>io.stintflow.sandbox:sandbox-contracts</include>
+                                    </includes>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- SDD S.5, 8f: TargetIsolationIT, with Docker and the pinned image. -->
+        <profile>
+            <id>target</id>
+            <properties>
+                <target.tests.excluded></target.tests.excluded>
+                <target.tests.groups>docker</target.tests.groups>
+            </properties>
+        </profile>
+    </profiles>
+</project>

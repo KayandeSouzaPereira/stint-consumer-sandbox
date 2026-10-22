@@ -4,12 +4,28 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Independent consumer project: does NOT inherit stint-parent on purpose. This proves Stint
-         works as a plain published dependency, with no reliance on reactor-only resolution. -->
+    <!-- SDD S.1: the sandbox is a multi-module consumer of Stint. It still does NOT inherit stint-parent: Stint is
+         consumed only through its published (locally installed) artifacts, pinned to one SHA (see README). -->
     <groupId>io.stintflow.sandbox</groupId>
-    <artifactId>stint-consumer-sandbox</artifactId>
+    <artifactId>stint-consumer-sandbox-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>sandbox-reports</module>
+        <module>sandbox-orders</module>
+        <module>sandbox-billing</module>
+        <!-- SDD S.5: the meeting pipeline. Domains talk only through contracts (events and schemas). -->
+        <module>sandbox-contracts</module>
+        <module>sandbox-privacy</module>
+        <module>sandbox-records</module>
+        <module>sandbox-channels</module>
+        <module>sandbox-target</module>
+        <module>sandbox-business</module>
+        <module>sandbox-engineering</module>
+        <module>sandbox-delivery</module>
+        <module>sandbox-scenarios</module>
+    </modules>
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
@@ -17,7 +33,14 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.33.2</quarkus.platform.version>
-        <stint.version>0.1.0-SNAPSHOT</stint.version>
+        <!-- Stint at SHA a52b20a (phase-3a/ai-decision-workers, SDDs 3a.1–3a.11; S.5 RF1, raised from 500dfd1 by S.11), installed under its own version so that a
+             later install of Stint's working tree (other phases) in ~/.m2 cannot change what the sandbox runs (README). -->
+        <stint.version>0.1.0-3a-a52b20a</stint.version>
+        <assertj.version>3.26.3</assertj.version>
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <exec-plugin.version>3.2.0</exec-plugin.version>
+        <enforcer-plugin.version>3.5.0</enforcer-plugin.version>
+        <surefire-plugin.version>3.2.5</surefire-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -36,137 +59,173 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- Stint, consumed as a plain external library -->
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-inmemory</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-aws</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-bundle-aws</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-sdk</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-dsl</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-otel</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <!-- SDD S.5: Phase 3a workers (3a.2-3a.7) -->
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-aws-worker</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-decision</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-decision-jev</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-langchain4j</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-redaction</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-transcription</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-publishing</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.stintflow.sandbox</groupId>
+                <artifactId>sandbox-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-langchain4j-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
-    <dependencies>
-        <!-- Stint, consumed as a plain external library -->
-        <dependency>
-            <groupId>io.github.stintflow</groupId>
-            <artifactId>stint-inmemory</artifactId>
-            <version>${stint.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.stintflow</groupId>
-            <artifactId>stint-aws</artifactId>
-            <version>${stint.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.stintflow</groupId>
-            <artifactId>stint-worker-sdk</artifactId>
-            <version>${stint.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.stintflow</groupId>
-            <artifactId>stint-dsl</artifactId>
-            <version>${stint.version}</version>
-        </dependency>
-
-        <!-- Quarkus wiring -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-arc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest-jackson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-mailer</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.amazonservices</groupId>
-            <artifactId>quarkus-amazon-s3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>url-connection-client</artifactId>
-        </dependency>
-
-        <!-- tests -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>3.26.3</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-            </plugin>
-            <plugin>
-                <groupId>${quarkus.platform.group-id}</groupId>
-                <artifactId>quarkus-maven-plugin</artifactId>
-                <version>${quarkus.platform.version}</version>
-                <extensions>true</extensions>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                            <goal>generate-code</goal>
-                            <goal>generate-code-tests</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- SDD 1.4-style manifest generation for DslLoader.loadClasspath, replicated here
-                 because this is a fresh consumer project, not one of Stint's own example modules. -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.2.0</version>
-                <executions>
-                    <execution>
-                        <id>generate-workflow-manifest</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <includeProjectDependencies>false</includeProjectDependencies>
-                            <includePluginDependencies>true</includePluginDependencies>
-                            <mainClass>io.stintflow.dsl.build.WorkflowManifestGenerator</mainClass>
-                            <arguments>
-                                <argument>${project.basedir}/src/main/resources/stint/workflows</argument>
-                                <argument>${project.build.outputDirectory}/stint/workflows/index.txt</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>io.github.stintflow</groupId>
-                        <artifactId>stint-dsl</artifactId>
-                        <version>${stint.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>${quarkus.platform.group-id}</groupId>
+                    <artifactId>quarkus-maven-plugin</artifactId>
+                    <version>${quarkus.platform.version}</version>
+                    <extensions>true</extensions>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>build</goal>
+                                <goal>generate-code</goal>
+                                <goal>generate-code-tests</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- SDD 1.4-style workflow manifest for DslLoader.loadClasspath, the same in every module. -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>${exec-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>generate-workflow-manifest</id>
+                            <phase>generate-resources</phase>
+                            <goals>
+                                <goal>java</goal>
+                            </goals>
+                            <configuration>
+                                <includeProjectDependencies>false</includeProjectDependencies>
+                                <includePluginDependencies>true</includePluginDependencies>
+                                <mainClass>io.stintflow.dsl.build.WorkflowManifestGenerator</mainClass>
+                                <arguments>
+                                    <argument>${project.basedir}/src/main/resources/stint/workflows</argument>
+                                    <argument>${project.build.outputDirectory}/stint/workflows/index.txt</argument>
+                                </arguments>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <dependencies>
+                        <dependency>
+                            <groupId>io.github.stintflow</groupId>
+                            <artifactId>stint-dsl</artifactId>
+                            <version>${stint.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${enforcer-plugin.version}</version>
+                </plugin>
+                <!-- SDD S.5, RF7 (as Stint's 3a.2 CA4): a test JVM resolves only the names in infra/test-hosts
+                     (localhost), so no test reaches a real model provider, even by mistake. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>-Djdk.net.hosts.file=${maven.multiModuleProjectDirectory}/infra/test-hosts</argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>-Djdk.net.hosts.file=${maven.multiModuleProjectDirectory}/infra/test-hosts</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <profiles>

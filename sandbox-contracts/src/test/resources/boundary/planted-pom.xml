@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SDD S.5, CA1: a planted pom of a domain that depends on another domain. BoundaryTest must report the edge. -->
+<project>
+    <artifactId>sandbox-engineering</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>io.stintflow.sandbox</groupId>
+            <artifactId>sandbox-contracts</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.stintflow.sandbox</groupId>
+            <artifactId>sandbox-business</artifactId>
+        </dependency>
+    </dependencies>
+</project>

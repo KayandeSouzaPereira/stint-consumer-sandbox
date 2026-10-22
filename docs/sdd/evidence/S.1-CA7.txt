@@ -1,0 +1,30 @@
+== README step 1: install Stint at the pinned SHA
+d455dc0 sdd-2.8: document the standard error types and the temporary legacy aliases
+installed: stint-architecture-tests stint-aws stint-bundle-aws stint-bundle-local stint-core stint-dsl stint-example-archive-report stint-example-aws-smoke stint-example-build-report stint-example-send-report stint-inmemory stint-it stint-otel stint-parent stint-spi stint-wire stint-worker-sdk 
+== README step 2: docker compose up -d
+ Container stint-consumer-sandbox-floci-1  Started
+ Container stint-consumer-sandbox-mailhog-1  Started
+ Container stint-consumer-sandbox-jaeger-1  Started
+== README step 3: bootstrap (fresh floci)
+      1 Bootstrapping
+      1 Done.
+     40 created
+      3 ensured
+== README step 4: mvn package -DskipTests
+sandbox-billing/target/quarkus-app/quarkus-run.jar
+sandbox-orders/target/quarkus-app/quarkus-run.jar
+sandbox-reports/target/quarkus-app/quarkus-run.jar
+== README step 4: health
+:8081 {"status":"UP","checks":[{"name":"orders-engine","status":"UP","data":{"engine":"started","worker":"running","connectors":"aws"}}]}
+:8082 {"status":"UP","checks":[{"name":"billing-engine","status":"UP","data":{"engine":"started","worker":"running","connectors":"aws"}}]}
+== README step 5: Phase 1 regression (CA2)
+/reports rows=25 messageId=5616c5e8-b3ba-4b25-89b1-d6d4ddc6ddcb
+/reports/secondary rows=25 urgency=URGENT
+MailHog total 2
+- URGENT: Monthly sales report ['attachment; filename="final.csv"']
+- Monthly sales report ['attachment; filename="final.csv"']
+== README step 5: domain routing (CA4)
+FailedEntryCount=0
+spy: {"specversion":"1.0","id":"test-1","source":"https://sandbox.stintflow.io/orders","type":"io.sandbox.billing.invoice-req
+orders-domain-events: None
+billing consumed: Domain event test-1 (io.sandbox.billing.invoice-requested.v1) from https://sandbox.stintflow.io/orders matched no binding or wait; dropped

@@ -1,0 +1,13 @@
+SDD S.3, CA6: the same invoice-issued (same source and id) delivered twice -> one confirmation e-mail.
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca6_the_same_invoice_delivered_twice_mails_one_confirmation -- OK
+
+CA6 order o-ca6-9d2a14e5-d232-4c66-876d-75808723ab8a: invoice-issued 5d589b67-bc76-3938-91ad-0c538c0b8ea3 delivered twice; second kept in orders-inbox (event:io.sandbox.billing.invoice-issued.v1:7c9f519c7ca9eabe:5af1e05945822aae0e612392aa69a306); 1 mail
+
+The duplicate is proven handled: it found no wait and was kept in orders-inbox (Stint SDD 2.3 early-event inbox),
+where it expires. In memory: PlaceOrderWorkflowTest.the_same_invoice_delivered_twice_mails_one_confirmation and
+a_redelivered_mail_task_does_not_send_again_and_keeps_its_first_instant (the RF4 marker).

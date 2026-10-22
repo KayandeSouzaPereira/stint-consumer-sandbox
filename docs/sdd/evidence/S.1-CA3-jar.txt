@@ -1,0 +1,18 @@
+== orders jar: /q/health/ready
+UP {'engine': 'started', 'worker': 'running', 'connectors': 'aws'}
+== orders jar: JSON log lines
+INFO io.stintflow.sandbox.orders.OrdersEngine | Orders engine started with 0 workflow definition(s)
+INFO io.stintflow.sandbox.orders.OrdersEngine | Orders domain started: engine=true worker=true, over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource
+== orders: inmemory classes loaded?
+0
+== orders dev span
+{"traceparent":"00-56e4c84873f060ad1959be7c0a7c4c63-4d4bab9e54555564-01"}
+== billing jar: /q/health/ready
+UP {'engine': 'started', 'worker': 'running', 'connectors': 'aws'}
+== billing jar: JSON log lines
+INFO io.stintflow.sandbox.billing.BillingEngine | Billing engine started with 0 workflow definition(s)
+INFO io.stintflow.sandbox.billing.BillingEngine | Billing domain started: engine=true worker=true, over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource
+== billing: inmemory classes loaded?
+0
+== billing dev span
+{"traceparent":"00-74575be71fb0c1d6ba9c85cf52acd81f-248882ac5623cbd7-01"}

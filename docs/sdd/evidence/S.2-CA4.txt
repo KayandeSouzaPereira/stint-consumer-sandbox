@@ -1,0 +1,12 @@
+SDD S.2, CA4: an invalid request (amount 0) -> invoice-rejected (S.2 8b) in the spy, no invoice recorded.
+Sandbox phase-2-validation at 988b1fc (retry delay 2 s); Stint d455dc0; floci + MailHog on localhost.
+Command: mvn verify -Pfloci -pl sandbox-billing (FlociBillingIT, the whole app started by @QuarkusTest).
+
+Test: FlociBillingIT.ca4_an_invalid_request_is_rejected_without_an_invoice -- OK
+
+CA4 order o-ca4-a9a3bd72-d5e7-4881-b7ec-347d3ebbfa5d -> invoice-rejected id=c236b5cd-077c-324f-8d8d-81272c2b4e63 causationid=req-9c0e475a-8734-49d2-a6df-3fa06ac68d31 data={"orderId":"o-ca4-a9a3bd72-d5e7-4881-b7ec-347d3ebbfa5d","reason":"invalid-amount"}
+
+Also asserted: source https://sandbox.stintflow.io/billing, causationid = the request id (no task ran),
+billing-invoices has no item for the order's invoiceId. Rule invoice-rejected-to-orders -> orders-domain-events
+comes from infra/bootstrap.sh. In memory: IssueInvoiceWorkflowTest.invalid_requests_are_rejected_with_their_reason_
+and_no_invoice (amount 0, negative, missing currency, empty currency).

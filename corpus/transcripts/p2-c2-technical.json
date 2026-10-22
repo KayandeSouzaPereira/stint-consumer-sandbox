@@ -1,0 +1,41 @@
+{
+  "meetingId": "p2-c2-technical",
+  "audioSha256": "76b9fcc1a66381274cc8a5e3e742f8eed0fddeb844c185198dab12b710cec041",
+  "model": "Systran/faster-distil-whisper-small.en",
+  "language": "en",
+  "durationSeconds": 15.88,
+  "repeatable": true,
+  "text": "refinement of the updated loans design. I am Sinthepi 2016 Rivera. Now it is clear. Two pieces, borrowing with the limit of three and blocking after a late return. No blocking questions left. Two SDD.",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.76,
+      "text": " refinement of the updated loans design."
+    },
+    {
+      "start": 2.76,
+      "end": 6.28,
+      "text": " I am Sinthepi 2016 Rivera."
+    },
+    {
+      "start": 6.28,
+      "end": 7.6,
+      "text": " Now it is clear."
+    },
+    {
+      "start": 7.6,
+      "end": 12.48,
+      "text": " Two pieces, borrowing with the limit of three and blocking after a late return."
+    },
+    {
+      "start": 12.48,
+      "end": 14.28,
+      "text": " No blocking questions left."
+    },
+    {
+      "start": 14.28,
+      "end": 15.04,
+      "text": " Two SDD."
+    }
+  ]
+}

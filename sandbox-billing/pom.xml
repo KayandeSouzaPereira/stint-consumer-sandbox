@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.stintflow.sandbox</groupId>
+        <artifactId>stint-consumer-sandbox-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- SDD S.1: the Billing domain (port 8082), with its own engine over Stint's AWS connectors. -->
+    <artifactId>sandbox-billing</artifactId>
+
+    <dependencies>
+        <!-- Stint: core + AWS connectors + JSON logging (bundle), YAML contracts, worker runtime, tracing -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-bundle-aws</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-dsl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-worker-sdk</artifactId>
+        </dependency>
+        <!-- SDD S.5, RF9: the SQS worker binding with a WorkerPool (Stint 3a.7) -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-aws-worker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-otel</artifactId>
+        </dependency>
+
+        <!-- Quarkus wiring -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <!-- SDD S.2, 8e: the summary e-mail over SMTP (MailHog); the same extension sandbox-reports uses -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-mailer</artifactId>
+        </dependency>
+
+        <!-- Tests. stint-inmemory only in test scope (CA8): the enforcer below bans it from compile/runtime. -->
+        <dependency>
+            <groupId>io.github.stintflow</groupId>
+            <artifactId>stint-inmemory</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <billing.tests.excluded>floci</billing.tests.excluded>
+        <billing.tests.groups></billing.tests.groups>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <!-- Unit tests by default; the floci tests (tag "floci") only with -Pfloci. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                    <excludedGroups>${billing.tests.excluded}</excludedGroups>
+                    <groups>${billing.tests.groups}</groups>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- SDD S.1, RF7: Billing never depends on Orders, nor on Stint's in-memory connectors at runtime.
+                 The two domains share only contracts/events.md. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sovereign-domain</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>io.stintflow.sandbox:sandbox-orders</exclude>
+                                        <exclude>io.github.stintflow:stint-inmemory:*:*:compile</exclude>
+                                        <exclude>io.github.stintflow:stint-inmemory:*:*:runtime</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- SDD S.2, CA1-CA5: the floci tests. Need docker compose up, infra/bootstrap.sh, and no other
+             sandbox-billing running (it would consume the same queues). -->
+        <profile>
+            <id>floci</id>
+            <properties>
+                <billing.tests.excluded></billing.tests.excluded>
+                <billing.tests.groups>floci</billing.tests.groups>
+            </properties>
+        </profile>
+    </profiles>
+</project>

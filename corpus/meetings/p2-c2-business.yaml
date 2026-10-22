@@ -1,0 +1,37 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p2-c2-business
+project: p2
+cycle: 2
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_bella
+- id: s2
+  voice: bm_george
+script:
+- speaker: s1
+  text: Follow-up on the loans design, with the answers engineering asked for. I am SYNTH-PII-2051 Rivera.
+- speaker: s2
+  text: The limit is three books per member. A late return blocks new loans until the book is back.
+- speaker: s1
+  text: Update the design and send it by e-mail again. Reach me at SYNTH-PII-2052@example.com.
+expected:
+  meetingType: business-design
+  channel: email
+  priority: 0.5
+  review: false
+pii:
+- marker: SYNTH-PII-2051
+  kind: name
+  written: SYNTH-PII-2051 Rivera
+  spoken:
+  - synth p i i two zero five one rivera
+  - Sinthe P I I 2051 Rivera
+- marker: SYNTH-PII-2052
+  kind: email
+  written: SYNTH-PII-2052@example.com
+  spoken:
+  - synth p i i two zero five two at example dot com
+  - Sinthe-P-I-I-2-0-5-2 at Example. Calm.

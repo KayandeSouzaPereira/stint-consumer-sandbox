@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/io.sandbox.records.document-registered.v1.schema.json",
+  "title": "io.sandbox.records.document-registered.v1 — data (SDD S.5, 8b)",
+  "description": "A document was registered (catalog id, version and hash); published by the workflow that registered it. Ids, pointers, enums and counts only: never any text of a meeting, document or person. Additive changes only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "recordId",
+    "version",
+    "sha256",
+    "kind",
+    "sensitivity",
+    "ownerRole"
+  ],
+  "properties": {
+    "recordId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "kind": {
+      "enum": [
+        "design",
+        "questions",
+        "sdd-batch",
+        "sdd",
+        "report",
+        "transcript-redacted",
+        "email",
+        "page",
+        "patch",
+        "dlq-decision"
+      ]
+    },
+    "sensitivity": {
+      "enum": [
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "supersedes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ownerRole": {
+      "enum": [
+        "business-rep",
+        "tech-rep",
+        "technician"
+      ]
+    }
+  }
+}

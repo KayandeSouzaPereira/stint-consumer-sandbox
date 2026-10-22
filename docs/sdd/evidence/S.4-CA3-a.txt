@@ -1,0 +1,53 @@
+SDD S.4, CA3-a: ChaosIT.a_…
+Command: bash infra/gate.sh --only 'ChaosIT,LoadIT,ObservabilityIT' (gate-out/20261011-154845, PASSED 16:11:35:
+ChaosIT 5/5, LoadIT 1/1, ObservabilityIT 1/1). Sandbox phase-2-validation at 33d4942; Stint b1f4579; every app a JVM
+process (java -jar quarkus-run.jar) started by the scenario; floci + MailHog + Jaeger from docker-compose.yml.
+
+S.4 RF2a: Billing worker killed inside render-invoice (after the document was written, before the result was sent)
+  t+   1.5s  started a-orders (ORDERS, pid 253836, :8081) 
+  t+   3.4s  started a-billing-engine (BILLING, pid 252840, :8082) {billing.worker.enabled=false}
+  t+   4.6s  started a-billing-worker-1 (BILLING, pid 251844, :8085) {billing.engine.enabled=false, quarkus.http.port=8085, billing.chaos.halt-in-task=render-invoice}
+  t+   5.0s  POST /orders chaos-a-642a3111
+  t+   5.8s  worker 1: Rendered invoice inv-cb3b23e1b04ff506 to s3://sandbox-facts/billing/invoices/inv-cb3b23e1b04ff506.html (attempt 1)
+  t+   5.8s  worker 1 halted, exit 137: CHAOS halt at task render-invoice of instance evt-ba5c7456-6d32-338e-895c-b9e1b997b0cc attempt 1, after its effect, before its result
+  t+   5.8s  billing-tasks right after the halt: visible 1, in flight 1 (the unacknowledged render)
+  t+   7.0s  started a-billing-worker-2 (BILLING, pid 243924, :8085) {billing.engine.enabled=false, quarkus.http.port=8085}
+  t+  36.3s  worker 2 (task redelivered after the visibility timeout): Rendered invoice inv-cb3b23e1b04ff506 to s3://sandbox-facts/billing/invoices/inv-cb3b23e1b04ff506.html (attempt 1)
+  t+  36.7s  order confirmed
+  result: 1 invoice-issued (inv-cb3b23e1b04ff506), 1 record in billing-invoices, 1 order-confirmed; the same invoice rendered twice (idempotent by orderId)
+  MailHog:
+    chaos-a-642a3111@example.com | Order chaos-a-642a3111 confirmed: invoice inv-cb3b23e1b04ff506 | [invoice-inv-cb3b23e1b04ff506.html (343 bytes)]
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [orders]
+    waits                 0   dynamodb scan --table-name orders-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name orders-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name orders-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name orders-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    orders-tasks               visible 0, in flight 0, delayed 0
+    orders-results             visible 0, in flight 0, delayed 0
+    orders-timers              visible 0, in flight 0, delayed 2
+    orders-domain-events       visible 0, in flight 0, delayed 0
+    orders-tasks-dlq           visible 0, in flight 0, delayed 0
+    orders-results-dlq         visible 0, in flight 0, delayed 0
+    orders-timers-dlq          visible 0, in flight 0, delayed 0
+    orders-schedules-dlq       visible 0, in flight 0, delayed 0
+    orders-domain-events-dlq   visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name orders-timers []
+  [billing]
+    waits                 0   dynamodb scan --table-name billing-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name billing-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name billing-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name billing-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    billing-tasks              visible 0, in flight 0, delayed 0
+    billing-results            visible 0, in flight 0, delayed 0
+    billing-timers             visible 0, in flight 0, delayed 6
+    billing-domain-events      visible 0, in flight 0, delayed 0
+    billing-tasks-dlq          visible 0, in flight 0, delayed 0
+    billing-results-dlq        visible 0, in flight 0, delayed 0
+    billing-timers-dlq         visible 0, in flight 0, delayed 0
+    billing-schedules-dlq      visible 0, in flight 0, delayed 0
+    billing-domain-events-dlq  visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name billing-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

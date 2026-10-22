@@ -1,0 +1,219 @@
+SDD S.4, CA1 (RF0): the sandbox on the fixed Stint, its workarounds removed, every YAML loading in STRICT.
+
+1) The SHA is on the remote (git ls-remote origin, Stint, 11/10/2026, after the push Kayan authorized):
+b1f45790ce54b3ed2e305f1da50c7e630d8f7298	refs/heads/phase-2/federated-orchestration
+   Installed from C:\dev\CDO at b1f4579, clean tree: mvn install -DskipTests
+
+2) Pinned SHA and removed workarounds (git diff, sandbox):
+   diff --git a/README.md b/README.md
+   index 04a08ce..9f0989d 100644
+   --- a/README.md
+   +++ b/README.md
+   @@ -16,7 +16,7 @@ and chaos scenarios are S.4. The specs live in [`docs/sdd`](docs/sdd).
+    
+    ## Stint version
+    
+   -The sandbox is pinned to **Stint `d455dc0`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.8).
+   +The sandbox is pinned to **Stint `b1f4579`** (branch `phase-2/federated-orchestration`, Phase 2 with SDDs 2.1–2.9).
+    
+    ## Prerequisites
+    
+   @@ -32,7 +32,7 @@ Stint isn't published to a remote repository yet (`0.1.0-SNAPSHOT`), so install
+    ```bash
+    git clone https://github.com/stintflow/stint.git
+    cd stint
+   -git checkout d455dc0
+   +git checkout b1f4579
+    mvn install -DskipTests
+    ```
+    
+   diff --git a/infra/bootstrap.sh b/infra/bootstrap.sh
+   index b9bd9bc..a4742bb 100644
+   --- a/infra/bootstrap.sh
+   +++ b/infra/bootstrap.sh
+   @@ -2,7 +2,7 @@
+    # SDD S.1, RF5: creates every AWS resource the sandbox needs on floci. Idempotent: run it as often as you like,
+    # nothing is duplicated and nothing that exists is changed.
+    #
+   -# Schemas and settings are copied from Stint (branch phase-2/federated-orchestration, SHA d455dc0):
+   +# Schemas and settings are copied from Stint (branch phase-2/federated-orchestration, SHA b1f4579):
+    #   - DynamoDB tables: stint-it/.../DynamoDbTestTables.java and docs/connectors.md (outbox, inbox)
+    #   - SQS: docs/connectors.md "SQS setup" (redrive maxReceiveCount 5, visibility 30 s, retention 4 d; DLQ 14 d)
+    #   - EventBridge -> SQS with InputPath $.detail: docs/connectors.md; catch-all pattern from FlociEmitIT
+   diff --git a/pom.xml b/pom.xml
+   index b0bbaa0..e0d0f6a 100644
+   --- a/pom.xml
+   +++ b/pom.xml
+   @@ -23,7 +23,7 @@
+            <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+            <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+            <quarkus.platform.version>3.33.2</quarkus.platform.version>
+   -        <!-- Stint branch phase-2/federated-orchestration at SHA d455dc0, installed with mvn install (README). -->
+   +        <!-- Stint branch phase-2/federated-orchestration at SHA b1f4579, installed with mvn install (README). -->
+            <stint.version>0.1.0-SNAPSHOT</stint.version>
+            <assertj.version>3.26.3</assertj.version>
+            <compiler-plugin.version>3.13.0</compiler-plugin.version>
+   diff --git a/sandbox-billing/src/main/resources/stint/workflows/issue-invoice.yaml b/sandbox-billing/src/main/resources/stint/workflows/issue-invoice.yaml
+   index 4e36b1b..e4858bd 100644
+   --- a/sandbox-billing/src/main/resources/stint/workflows/issue-invoice.yaml
+   +++ b/sandbox-billing/src/main/resources/stint/workflows/issue-invoice.yaml
+   @@ -38,16 +38,14 @@ do:
+    
+      # RF1: a 503 from the renderer is transient: exponential retry, at most 3 attempts in all. Exhausted, the
+      # instance fails (S.2 8g); anything else is not caught and fails it too.
+   -  # S.2 8h (finding at Stint d455dc0): a remote call inside a try is dispatched with the try's own input and its
+   -  # with.input is ignored, so the renderer's input is shaped here, by the try's DSL 1.0 input.from.
+      - render:
+   -      input:
+   -        from: '${ {request: $context} }'
+          try:
+            - render-invoice:
+                call: remote
+                with:
+                  task: render-invoice    # routing key -> CloudEvent subject -> selects the worker
+   +              input:
+   +                request: '${ $context }'
+                export:
+                  as: '${ $context + {invoiceId, invoiceDocument, renderAttempt} }'
+          catch:
+   @@ -55,11 +53,9 @@ do:
+              with:
+                type: https://serverlessworkflow.io/spec/1.0.0/errors/communication
+                status: 503
+   -        # S.2 8i (finding at Stint d455dc0): with a 1 s delay the SQS timer can fire before the retry wait is
+   -        # saved and be lost; 2 s leaves about a second for the save (it narrows the race, it does not close it).
+            retry:
+              delay:
+   -            seconds: 2
+   +            seconds: 1
+              backoff:
+                exponential: {}
+              limit:
+   diff --git a/sandbox-orders/src/main/java/io/stintflow/sandbox/orders/OrderDefinitions.java b/sandbox-orders/src/main/java/io/stintflow/sandbox/orders/OrderDefinitions.java
+   index e1bc895..a609cca 100644
+   --- a/sandbox-orders/src/main/java/io/stintflow/sandbox/orders/OrderDefinitions.java
+   +++ b/sandbox-orders/src/main/java/io/stintflow/sandbox/orders/OrderDefinitions.java
+   @@ -24,9 +24,6 @@ import io.stintflow.dsl.LoadOptions;
+    public final class OrderDefinitions {
+    
+        public static final String RESOURCE = "stint/workflows/place-order.yaml";
+   -    /** S.2 8i: a shorter SQS timer can fire before its wait is saved and be lost. */
+   -    public static final Duration MIN_TIMEOUT = Duration.ofSeconds(2);
+   -
+        private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
+    
+        private OrderDefinitions() {
+   @@ -34,9 +31,9 @@ public final class OrderDefinitions {
+    
+        public static WorkflowDefinition placeOrder(Duration invoiceTimeout, Duration lateInvoiceTimeout) {
+            for (Duration timeout : List.of(invoiceTimeout, lateInvoiceTimeout)) {
+   -            if (timeout.compareTo(MIN_TIMEOUT) < 0) {
+   -                throw new IllegalArgumentException("A listen timeout of " + timeout + " is under " + MIN_TIMEOUT
+   -                        + " (S.2 8i: a shorter SQS timer can be lost)");
+   +            // S.4 8a: Stint 2.9 redelivers a timer that fires before its wait is saved, so any positive timeout works.
+   +            if (timeout.isNegative() || timeout.isZero()) {
+   +                throw new IllegalArgumentException("A listen timeout must be positive, not " + timeout);
+                }
+            }
+            JsonNode tree;
+   diff --git a/sandbox-orders/src/main/resources/stint/workflows/place-order.yaml b/sandbox-orders/src/main/resources/stint/workflows/place-order.yaml
+   index d33d9af..1b175e8 100644
+   --- a/sandbox-orders/src/main/resources/stint/workflows/place-order.yaml
+   +++ b/sandbox-orders/src/main/resources/stint/workflows/place-order.yaml
+   @@ -3,7 +3,7 @@
+    # (S.3 8a/8b): the same order always maps to the same instance (Stint SDD 2.1). The input is [that event], and the
+    # instance inherits its chain (Stint SDD 2.5). Everything else is the contract's invoice events, matched by orderId.
+    # The two listen timeouts below are defaults: OrdersEngine replaces them with orders.invoice.timeout and
+   -# orders.late-invoice.timeout before loading (S.3 8f). None may be under 2 s (S.2 8i).
+   +# orders.late-invoice.timeout before loading (S.3 8f).
+    document:
+      dsl: '1.0.0'
+      namespace: orders
+
+3) Every workflow YAML in STRICT (DslLoader.load(..., LoadOptions.STRICT), Stint b1f4579):
+   STRICT OK  WorkflowRef[namespace=billing, name=billing-summary, version=1.0.0]  <- sandbox-billing/src/main/resources/stint/workflows/billing-summary.yaml
+   STRICT OK  WorkflowRef[namespace=billing, name=issue-invoice, version=1.0.0]  <- sandbox-billing/src/main/resources/stint/workflows/issue-invoice.yaml
+   STRICT OK  WorkflowRef[namespace=orders, name=place-order, version=1.0.0]  <- sandbox-orders/src/main/resources/stint/workflows/place-order.yaml
+   STRICT OK  WorkflowRef[namespace=sandbox, name=query-report-email-secondary, version=1.0.0]  <- sandbox-reports/src/main/resources/stint/workflows/query-report-email-secondary.yaml
+   STRICT OK  WorkflowRef[namespace=sandbox, name=query-report-email, version=1.0.0]  <- sandbox-reports/src/main/resources/stint/workflows/query-report-email.yaml
+   5 definition(s) loaded in STRICT
+
+4) Unit tests on the in-memory engine (mvn clean install):
+   Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.396 s -- in io.stintflow.sandbox.orders.OrdersIndependenceTest
+   Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.460 s -- in io.stintflow.sandbox.orders.PlaceOrderWorkflowTest
+   Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.416 s -- in io.stintflow.sandbox.billing.BillingIndependenceTest
+   Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.212 s -- in io.stintflow.sandbox.billing.BillingSummaryWorkflowTest
+   Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.207 s -- in io.stintflow.sandbox.billing.IssueInvoiceWorkflowTest
+   PlaceOrderWorkflowTest.only_positive_listen_timeouts_are_accepted_at_load replaces
+   listen_timeouts_under_two_seconds_are_refused_at_load (the 2 s floor of S.2 8i, removed by S.4 8a).
+
+5) S.2 CA3 with the original 1 s retry and with.input inside try (mvn verify -Pfloci -pl sandbox-billing):
+   Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 398.7 s -- in io.stintflow.sandbox.billing.floci.FlociBillingIT
+   BUILD SUCCESS
+   "message":"Task render-invoice attempt 1 of instance evt-723f6325-878b-3cdd-871b-1a93d0574d7a failed: type=https://serverlessworkflow.io/spec/1.0.0/errors/communication status=503 detail=Injected fault: renderer unavailable (attempt 1)"
+   "message":"Task render-invoice attempt 2 of instance evt-723f6325-878b-3cdd-871b-1a93d0574d7a failed: type=https://serverlessworkflow.io/spec/1.0.0/errors/communication status=503 detail=Injected fault: renderer unavailable (attempt 2)"
+   "message":"Rendered invoice inv-e217714992b343e7 to s3://sandbox-facts/billing/invoices/inv-e217714992b343e7.html (attempt 3)"
+   Timer fires without their wait, by decision (Stint 2.9):
+       226 decision=obsolete
+   All 'obsolete' fires are task-timeout timers (age ~5 min) of instances already COMPLETED: SQS timers cannot
+   be cancelled, Stint acks them with INFO (2.9, CA4). No 'early' fire and no stranded instance.
+
+6) floci before any S.4 reset (8e): the leftovers recorded by S.2/S.3:
+   == S3 buckets
+   sandbox-billing-blobs
+   sandbox-facts
+   sandbox-orders-blobs
+   stint-sandbox-reports
+   == DynamoDB tables
+   billing-effects
+   billing-inbox
+   billing-instances
+   billing-invoices
+   billing-outbox
+   billing-waits
+   orders-effects
+   orders-inbox
+   orders-instances
+   orders-outbox
+   orders-waits
+   == SQS queues
+   billing-domain-events
+   billing-domain-events-dlq
+   billing-results
+   billing-results-dlq
+   billing-schedules
+   billing-schedules-dlq
+   billing-tasks
+   billing-tasks-dlq
+   billing-timers
+   billing-timers-dlq
+   orders-domain-events
+   orders-domain-events-dlq
+   orders-results
+   orders-results-dlq
+   orders-schedules
+   orders-schedules-dlq
+   orders-tasks
+   orders-tasks-dlq
+   orders-timers
+   orders-timers-dlq
+   sandbox-spy
+   == EventBridge buses
+   default
+   sandbox-domain
+   == Rules on sandbox-domain
+   invoice-requested-to-billing -> billing-domain-events
+   spy-all -> sandbox-spy
+   invoice-rejected-to-orders -> orders-domain-events
+   invoice-issued-to-orders -> orders-domain-events
+   order-placed-to-orders -> orders-domain-events
+   == Scheduler groups
+   billing-schedules
+   billing-timers
+   default
+   orders-schedules
+   orders-timers
+   orders non-terminal:
+   0 []
+   billing non-terminal:
+   1 [('evt-e4f1a7a1-6e92-366f-a9a3-2002c27d2f9c', 'WAITING')]

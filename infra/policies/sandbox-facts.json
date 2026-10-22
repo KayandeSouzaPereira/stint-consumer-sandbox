@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BillingWritesItsDocumentsAndFacts",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::000000000000:role/sandbox-billing" },
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": ["arn:aws:s3:::sandbox-facts/billing/*", "arn:aws:s3:::sandbox-facts/facts/billing/*"]
+    },
+    {
+      "Sid": "OrdersWritesItsDocumentsAndFacts",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::000000000000:role/sandbox-orders" },
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": ["arn:aws:s3:::sandbox-facts/orders/*", "arn:aws:s3:::sandbox-facts/facts/orders/*"]
+    },
+    {
+      "Sid": "OrdersReadsInvoiceDocuments",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::000000000000:role/sandbox-orders" },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::sandbox-facts/billing/invoices/*"
+    },
+    {
+      "Sid": "EveryDomainReadsPublishedFacts",
+      "Effect": "Allow",
+      "Principal": { "AWS": ["arn:aws:iam::000000000000:role/sandbox-billing", "arn:aws:iam::000000000000:role/sandbox-orders"] },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::sandbox-facts/facts/*"
+    }
+  ]
+}

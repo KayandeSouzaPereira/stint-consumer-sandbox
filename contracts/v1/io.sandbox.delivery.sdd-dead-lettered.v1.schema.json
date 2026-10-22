@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sandbox.stintflow.io/contracts/v1/io.sandbox.delivery.sdd-dead-lettered.v1.schema.json",
+  "title": "io.sandbox.delivery.sdd-dead-lettered.v1 — data (SDD S.5, 8b)",
+  "description": "An SDD used up its attempts; the technician decides (resend, accept or cancel) through the portal. Ids, pointers, enums and counts only: never any text of a meeting, document or person. Additive changes only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sddId",
+    "attempts",
+    "lastReportRef"
+  ],
+  "properties": {
+    "sddId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lastReportRef": {
+      "type": "string",
+      "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$",
+      "description": "A pointer: s3://bucket/key or record://<recordId>/<version>"
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "SDD S.10, RF3 (additive): one item per attempt, in order; pointers and the attempt number only",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attempt",
+          "patchRef",
+          "reportRef"
+        ],
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "patchRef": {
+            "type": "string",
+            "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$"
+          },
+          "reportRef": {
+            "type": "string",
+            "pattern": "^(s3|record)://[A-Za-z0-9._/:-]{1,512}$"
+          }
+        }
+      }
+    }
+  }
+}

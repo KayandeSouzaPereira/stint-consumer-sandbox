@@ -1,0 +1,38 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: a1-c1-business
+project: a1
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: bf_emma
+- id: s2
+  voice: am_michael
+script:
+- speaker: s1
+  text: I am SYNTH-PII-2101 Rivera. We should talk about the database indexes and the API, but also about what the readers
+    want.
+- speaker: s2
+  text: It's not clear if this is a design meeting or a technical one. Maybe both.
+- speaker: s1
+  text: Let's write something on Confluence and see. Questions to SYNTH-PII-2102@example.com.
+expected:
+  meetingType: business-design
+  channel: confluence
+  priority: 0.4
+  review: true
+pii:
+- marker: SYNTH-PII-2101
+  kind: name
+  written: SYNTH-PII-2101 Rivera
+  spoken:
+  - synth p i i two one zero one rivera
+  - Sinthe P I I 2101 Rivera
+- marker: SYNTH-PII-2102
+  kind: email
+  written: SYNTH-PII-2102@example.com
+  spoken:
+  - synth p i i two one zero two at example dot com
+  - Sinthe-P-I-I-2-1-0-2 at Example. Calm.

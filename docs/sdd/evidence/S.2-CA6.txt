@@ -1,0 +1,50 @@
+SDD S.2, CA6: Billing down, 3 requests wait in billing-domain-events; when it comes back they are all invoiced.
+Sandbox at 5a2d881 + the slow-render change; Stint d455dc0; floci on localhost:4566.
+
+== 1. Billing down (nothing listening on 8082); 3 requests published at 2026-10-10T23:23:09Z
+put-events: 0 failed
+published o-ca6-232309-1 
+published slow-o-ca6-232309-2 
+published o-ca6-232309-3 traceparent 00-256b514ca7b84824a09b73456069f5bc-b6860fcb34de45a2-01
+TRACE_ID 256b514ca7b84824a09b73456069f5bc
+
+== 2. billing-domain-events while Billing is down
+{
+    "Attributes": {
+        "ApproximateNumberOfMessages": "3",
+        "ApproximateNumberOfMessagesNotVisible": "0"
+    }
+}
+
+== 3. java -jar sandbox-billing/target/quarkus-app/quarkus-run.jar (JSON log, excerpt)
+2026-10-10T20:23:18.3286762-03:00 Billing engine started with 2 workflow definition(s) | stint.chainId=- stint.instanceId=-
+2026-10-10T20:23:18.3351046-03:00 Billing domain started: engine=true worker=true, over DynamoDbStateStore, SqsTaskTransport, DelayRoutingTimerService, EventBridgeEventPublisher, SqsDomainEventSource | stint.chainId=- stint.instanceId=-
+2026-10-10T20:23:18.5808528-03:00 Rendered invoice inv-e417e286a0272116 to s3://sandbox-facts/billing/invoices/inv-e417e286a0272116.html (attempt 1) | stint.chainId=chn-o-ca6-232309-1 stint.instanceId=evt-3d153d98-d51d-34cd-b874-e9e7a481bbba
+2026-10-10T20:23:23.6100912-03:00 Rendered invoice inv-17979bf8ea26b85c to s3://sandbox-facts/billing/invoices/inv-17979bf8ea26b85c.html (attempt 1) | stint.chainId=- stint.instanceId=-
+2026-10-10T20:23:23.6481437-03:00 Rendered invoice inv-0d0652c2cb001394 to s3://sandbox-facts/billing/invoices/inv-0d0652c2cb001394.html (attempt 1) | stint.chainId=chn-o-ca6-232309-3 stint.instanceId=evt-41f2e455-b685-3bd7-970e-5a56968cc731
+2026-10-10T20:23:23.7476362-03:00 Recorded invoice inv-e417e286a0272116 issued at 2026-10-10T23:23:23.742Z | stint.chainId=chn-o-ca6-232309-1 stint.instanceId=evt-3d153d98-d51d-34cd-b874-e9e7a481bbba
+2026-10-10T20:23:23.7684147-03:00 Recorded invoice inv-17979bf8ea26b85c issued at 2026-10-10T23:23:23.762Z | stint.chainId=chn-slow-o-ca6-232309-2 stint.instanceId=evt-df8dc9c8-a952-3625-8573-da05b3f8a475
+2026-10-10T20:23:23.8183617-03:00 Recorded invoice inv-0d0652c2cb001394 issued at 2026-10-10T23:23:23.813Z | stint.chainId=chn-o-ca6-232309-3 stint.instanceId=evt-41f2e455-b685-3bd7-970e-5a56968cc731
+
+== 4. sandbox-spy: invoice-issued of this run
+2026-10-10T23:23:23.7811815Z invoice-issued o-ca6-232309-1 invoiceId=inv-e417e286a0272116 chainid=chn-o-ca6-232309-1 issuedAt=2026-10-10T23:23:23.742Z
+2026-10-10T23:23:23.9303268Z invoice-issued o-ca6-232309-3 invoiceId=inv-0d0652c2cb001394 chainid=chn-o-ca6-232309-3 issuedAt=2026-10-10T23:23:23.813Z
+2026-10-10T23:23:23.8777264Z invoice-issued slow-o-ca6-232309-2 invoiceId=inv-17979bf8ea26b85c chainid=chn-slow-o-ca6-232309-2 issuedAt=2026-10-10T23:23:23.762Z
+3 of 3 invoices issued
+
+== 5. billing-domain-events afterwards (23:23:34Z)
+{
+    "Attributes": {
+        "ApproximateNumberOfMessages": "0",
+        "ApproximateNumberOfMessagesNotVisible": "0"
+    }
+}
+
+== RF4 slow-: the slow-o-ca6 render ran 5 s after the first one (billing.fault.slow-delay=5s); the single worker
+   thread held the third request meanwhile. That render line has no stint.* fields: it ran on a delayed executor,
+   outside Stint's log context. Fixed by blocking the worker thread instead; see S.2-RF6.txt for the rerun.
+
+== RF6 tracing: request 3 carried traceparent 00-256b514ca7b84824a09b73456069f5bc-b6860fcb34de45a2-01
+Jaeger /api/traces?service=sandbox-billing: the activation span links to it (a new trace, linked to the event):
+ span stint.activation trace 56486428441c4da9807abe08f2adabbe -> FOLLOWS_FROM 256b514ca7b84824a09b73456069f5bc b6860fcb34de45a2
+ tags {"stint.causationId": "req-o-ca6-232309-3", "stint.chainId": "chn-o-ca6-232309-3", "stint.instanceId": "evt-41f2e455-b685-3bd7-970e-5a56968cc731", "stint.workflow": "billing:issue-invoice:1.0.0"}

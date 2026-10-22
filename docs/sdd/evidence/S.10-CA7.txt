@@ -1,0 +1,23 @@
+S.10 CA7: the patches and reports of p1's attempts are registered
+    rec-p1-c1-batch                    v1 sdd-batch  project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 6e20e5bf-f1df-491c-b7df-9c8a36856ec3 supersedes -
+    rec-p1-c1-design                   v1 design     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting p1-c1-business cause bb0a04f0-5f34-4553-9cbc-1af2acdc67f2 supersedes -
+    rec-p1-sdd-1                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 244d898d-9e20-4ab8-b7f5-514ad6057844 supersedes -
+    rec-p1-sdd-1-a1-patch              v1 patch      project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause d8515773-f20e-472c-a0a8-55a1df0bd26e supersedes -
+    rec-p1-sdd-1-a1-report             v1 report     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause c84263b7-6ebe-4dc8-a362-05701373e0c3 supersedes -
+    rec-p1-sdd-2                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause ad065cf0-0ffb-4658-8870-6d82515a31ac supersedes -
+    rec-p1-sdd-2-a1-patch              v1 patch      project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 7bf7f713-15ed-4361-a6fc-5b3683f30d23 supersedes -
+    rec-p1-sdd-2-a1-report             v1 report     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause d6942009-004b-4d0f-8f77-e6c1240fff38 supersedes -
+    rec-p1-sdd-2-a2-patch              v1 patch      project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 4136ef50-18e6-422c-896f-3f88c340866b supersedes -
+    rec-p1-sdd-2-a2-report             v1 report     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 302e6d80-529f-431d-8099-31dcf1361792 supersedes -
+    rec-p2-c1-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-business cause f57d7cb5-797f-45e0-b4fe-34ee66f3a7dd supersedes -
+    rec-p2-c1-design                   v2 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-business cause 693fa5e2-2d5e-44f5-8e00-ac17df82b6d2 supersedes 1
+    rec-p2-c1-questions                v1 questions  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-technical cause 0ea8c3cd-51e2-4f90-a2bc-76b844f2c206 supersedes -
+    rec-p2-c2-batch                    v1 sdd-batch  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause bacc9fb2-d3e3-47b1-ac78-db46684dfb18 supersedes -
+    rec-p2-c2-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c2-business cause f82e6645-6e46-41f2-9a8c-a56df518cbac supersedes -
+    rec-p2-sdd-1                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 272a5061-03e5-44a4-ae86-5f1f53ccb85e supersedes -
+    rec-p2-sdd-1                       v2 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 750c3244-ec6a-4124-96dc-b7ee22f86e87 supersedes 1
+    rec-p2-sdd-1-a1-patch              v1 patch      project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause ecd37e15-827b-4cba-afcf-89356366cc54 supersedes -
+    rec-p2-sdd-1-a1-report             v1 report     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause c3e0aea6-ce95-4f08-8d41-fa920f80f047 supersedes -
+    rec-p2-sdd-2                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 73194e2a-3fc0-4a6d-811f-ee4d92c47aae supersedes -
+    rec-p2-sdd-2-a1-patch              v1 patch      project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 872ef6a6-ccc9-40a8-86d9-0a5677e140a3 supersedes -
+    rec-p2-sdd-2-a1-report             v1 report     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 828c1a3f-946c-4e35-a8f7-75026fad501b supersedes -

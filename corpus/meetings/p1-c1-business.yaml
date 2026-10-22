@@ -1,0 +1,41 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p1-c1-business
+project: p1
+cycle: 1
+stage: business
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: bf_emma
+- id: s2
+  voice: am_michael
+script:
+- speaker: s1
+  text: Thanks for joining. This is the design meeting for the book catalog. I am SYNTH-PII-2011 Rivera, product owner.
+- speaker: s2
+  text: Hi. We want readers to find books by author, and we want the catalog to reject bad ISBN numbers.
+- speaker: s1
+  text: Agreed. Search by author must ignore upper and lower case. Invalid ISBN entries must be refused with a clear reason.
+- speaker: s2
+  text: Please put the design document on Confluence so the whole team can comment. Send questions to SYNTH-PII-2012@example.com.
+- speaker: s1
+  text: Priority is high, we want it this quarter. Let's close the design now.
+expected:
+  meetingType: business-design
+  channel: confluence
+  priority: 0.8
+  review: false
+pii:
+- marker: SYNTH-PII-2011
+  kind: name
+  written: SYNTH-PII-2011 Rivera
+  spoken:
+  - synth p i i two zero one one rivera
+  - Sinthe P I I 2011 Rivera
+- marker: SYNTH-PII-2012
+  kind: email
+  written: SYNTH-PII-2012@example.com
+  spoken:
+  - synth p i i two zero one two at example dot com
+  - Sinthe-P-I-I-2-0-1-2 at Example. Calm.

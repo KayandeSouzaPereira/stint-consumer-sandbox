@@ -1,0 +1,98 @@
+===== bootstrap run 2 (idempotency)
+Bootstrapping sandbox resources on http://localhost:4566
+exists    s3://stint-sandbox-reports
+exists    s3://sandbox-facts
+exists    s3://sandbox-orders-blobs
+exists    dynamodb:orders-instances
+exists    dynamodb:orders-waits
+exists    dynamodb:orders-outbox
+exists    dynamodb:orders-inbox
+exists    ttl:orders-inbox.expiresAt
+exists    sqs:orders-tasks-dlq
+exists    sqs:orders-tasks
+exists    sqs:orders-results-dlq
+exists    sqs:orders-results
+exists    sqs:orders-timers-dlq
+exists    sqs:orders-timers
+exists    sqs:orders-schedules-dlq
+exists    sqs:orders-schedules
+exists    sqs:orders-domain-events-dlq
+exists    sqs:orders-domain-events
+exists    scheduler:orders-schedules
+exists    scheduler:orders-timers
+exists    s3://sandbox-billing-blobs
+exists    dynamodb:billing-instances
+exists    dynamodb:billing-waits
+exists    dynamodb:billing-outbox
+exists    dynamodb:billing-inbox
+exists    ttl:billing-inbox.expiresAt
+exists    sqs:billing-tasks-dlq
+exists    sqs:billing-tasks
+exists    sqs:billing-results-dlq
+exists    sqs:billing-results
+exists    sqs:billing-timers-dlq
+exists    sqs:billing-timers
+exists    sqs:billing-schedules-dlq
+exists    sqs:billing-schedules
+exists    sqs:billing-domain-events-dlq
+exists    sqs:billing-domain-events
+exists    scheduler:billing-schedules
+exists    scheduler:billing-timers
+exists    sqs:sandbox-spy
+exists    events:sandbox-domain
+ensured   rule:invoice-requested-to-billing -> sqs:billing-domain-events
+ensured   rule:invoice-issued-to-orders -> sqs:orders-domain-events
+ensured   rule:spy-all -> sqs:sandbox-spy
+Done.
+===== bootstrap run 3
+created count: 0
+===== listing
+== S3 buckets
+sandbox-billing-blobs
+sandbox-facts
+sandbox-orders-blobs
+stint-sandbox-reports
+== DynamoDB tables
+billing-inbox
+billing-instances
+billing-outbox
+billing-waits
+orders-inbox
+orders-instances
+orders-outbox
+orders-waits
+== SQS queues
+billing-domain-events
+billing-domain-events-dlq
+billing-results
+billing-results-dlq
+billing-schedules
+billing-schedules-dlq
+billing-tasks
+billing-tasks-dlq
+billing-timers
+billing-timers-dlq
+orders-domain-events
+orders-domain-events-dlq
+orders-results
+orders-results-dlq
+orders-schedules
+orders-schedules-dlq
+orders-tasks
+orders-tasks-dlq
+orders-timers
+orders-timers-dlq
+sandbox-spy
+== EventBridge buses
+default
+sandbox-domain
+== Rules on sandbox-domain
+invoice-requested-to-billing -> billing-domain-events
+spy-all -> sandbox-spy
+invoice-issued-to-orders -> orders-domain-events
+== Scheduler groups
+billing-schedules
+billing-timers
+default
+orders-schedules
+orders-timers

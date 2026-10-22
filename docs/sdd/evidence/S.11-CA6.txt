@@ -1,0 +1,25 @@
+S.11 RF6 (CA6, 8e): native builds of the 3a domains (infra/gate.sh --native3a, Stint a52b20a, Quarkus 3.33.2, Mandrel in a container, 21/10/2026)
+[gate 21:01:20] Stint pinned: Stint `a52b20a`; sandbox ede74ba
+[gate 21:01:20] native build of sandbox-privacy (log native-build-sandbox-privacy.log)
+[gate 21:06:16] native OK: sandbox-privacy
+[gate 21:06:17] native build of sandbox-business (log native-build-sandbox-business.log)
+[gate 21:07:23] native FAILED: sandbox-business (a finding; see native-build-sandbox-business.log)
+[gate 21:07:23] native build of sandbox-records (log native-build-sandbox-records.log)
+[gate 21:09:40] native OK: sandbox-records
+[gate 21:09:40] native build of sandbox-channels (log native-build-sandbox-channels.log)
+[gate 21:11:55] native OK: sandbox-channels
+[gate 21:16:02] mvn verify -Pscenarios -pl sandbox-scenarios -Dtest=PipelineNativeIT -Dscenarios.native.modules=sandbox-privacy,sandbox-records,sandbox-channels (log native3a.log)
+[gate 21:20:15] FAILED: native3a
+
+sandbox-business, why the build failed (first lines of its log):
+Fatal error: com.oracle.graal.pointsto.constraints.UnsupportedFeatureException: Detected an instance of Random/SplittableRandom class in the image heap. Instances created during image generation have cached seed values and don't behave as expected. If these objects should not be stored in the image heap, you can use 
+
+Runs of p1's cycle with native images (the others on the JVM), each with the counts of an undisturbed cycle, the bus inside
+the v1 contract, no planted marker found (bus, spans, process logs, stores) and nothing left over:
+  sandbox-privacy                       native, started in 0.054 s  -> S.11-CA6-privacy.txt
+  sandbox-records + sandbox-channels    native, records in 0.197 s  -> S.11-CA6-records-channels.txt
+The first attempts stopped at start (finding S11-2): the corpus reader of sandbox-contracts builds its records with Jackson
+by reflection, and the contracts module may not depend on Quarkus. Fixed in the services that read the corpus
+(privacy and channels) with a NativeReflection class (@RegisterForReflection). Records does not read the corpus.
+sandbox-business: not built (finding S11-3, the Random instance of the build above); not run natively.
+sandbox-engineering, sandbox-delivery, sandbox-target: not tried (8e: the JVM; target calls Docker).

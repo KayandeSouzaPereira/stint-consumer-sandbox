@@ -1,0 +1,30 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: o2-c1-technical
+project: o2
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: bf_emma
+- id: s2
+  voice: am_michael
+script:
+- speaker: s1
+  text: I am SYNTH-PII-2131 Rivera. This call is about the payroll system, not the library.
+- speaker: s2
+  text: Then it belongs to another project. Let's end it here.
+expected:
+  meetingType: out-of-scope
+  outcome: questions
+  blockingQuestion: false
+  priority: 0.0
+  review: false
+pii:
+- marker: SYNTH-PII-2131
+  kind: name
+  written: SYNTH-PII-2131 Rivera
+  spoken:
+  - synth p i i two one three one rivera
+  - Sinthe P I I 2131 Rivera

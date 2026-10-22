@@ -1,0 +1,59 @@
+SDD S.4, CA5 after 8i was fixed in Stint (SDD 2.10): the same RF4 run, without the sandbox workaround.
+Command: bash infra/gate.sh --native (gate-out/20261012-071731, PASSED 07:27:28 on 12/10/2026: NativeIT 1/1, 161.2 s).
+Sandbox phase-2-validation at 1f24ceb plus the 8i workaround removal (quarkus.native.auto-service-loader-registration
+deleted from sandbox-orders and sandbox-billing); Stint 9be0898 (main, merge of PR #3, SDDs 2.1-2.10); Docker Desktop
+(Hyper-V) with 10 GB. Build and images as in S.4-CA5.txt. Stint in ~/.m2 was installed from af677d7, whose tree is
+identical to 9be0898 (f3c1068).
+
+The build still runs without GraalVM's ServiceLoader feature, and Quarkus does not register service providers:
+  4 -H:-UseServiceLoaderFeature (in the native-image command lines of the build log)
+  - io.quarkus.runtime.graal.SkipConsoleServiceProvidersFeature: Skip unsupported console service providers when quarkus.native.auto-service-loader-registration is false
+So the jq builtin functions come from stint-core's own metadata (META-INF/native-image/io.stintflow/stint-core).
+  9,3s (8,8% of total time) in 1066 GCs | Peak RSS: 4,36GB | CPU load: 8,81
+  Finished generating 'sandbox-orders-1.0.0-SNAPSHOT-runner' in 1m 44s.
+  8,7s (8,5% of total time) in 967 GCs | Peak RSS: 4,37GB | CPU load: 8,88
+  Finished generating 'sandbox-billing-1.0.0-SNAPSHOT-runner' in 1m 41s.
+
+S.4 RF4: S.3 CA1's happy path on both native images
+  t+   0.4s  started native-orders (ORDERS, pid 28936, :8081) 
+  t+   0.8s  started native-billing (BILLING, pid 311248, :8082) 
+  t+   0.9s  sandbox-orders: sandbox-orders 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.076s. Listening on: http://0.0.0.0:8081
+  t+   0.9s  sandbox-billing: sandbox-billing 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.082s. Listening on: http://0.0.0.0:8082
+  t+   4.2s  order native-b3d79eaf confirmed
+  spy, one chain chn-1777ba04-7530-3be3-a081-9850c44beee4: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]
+  MailHog:
+    native-b3d79eaf@example.com | Order native-b3d79eaf confirmed: invoice inv-9702b640469b04f6 | [invoice-inv-9702b640469b04f6.html (342 bytes)]
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [orders]
+    waits                 0   dynamodb scan --table-name orders-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name orders-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name orders-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name orders-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    orders-tasks               visible 0, in flight 0, delayed 0
+    orders-results             visible 0, in flight 0, delayed 0
+    orders-timers              visible 0, in flight 0, delayed 2
+    orders-domain-events       visible 0, in flight 0, delayed 0
+    orders-tasks-dlq           visible 0, in flight 0, delayed 0
+    orders-results-dlq         visible 0, in flight 0, delayed 0
+    orders-timers-dlq          visible 0, in flight 0, delayed 0
+    orders-schedules-dlq       visible 0, in flight 0, delayed 0
+    orders-domain-events-dlq   visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name orders-timers []
+  [billing]
+    waits                 0   dynamodb scan --table-name billing-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name billing-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name billing-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name billing-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    billing-tasks              visible 0, in flight 0, delayed 0
+    billing-results            visible 0, in flight 0, delayed 0
+    billing-timers             visible 0, in flight 0, delayed 6
+    billing-domain-events      visible 0, in flight 0, delayed 0
+    billing-tasks-dlq          visible 0, in flight 0, delayed 0
+    billing-results-dlq        visible 0, in flight 0, delayed 0
+    billing-timers-dlq         visible 0, in flight 0, delayed 0
+    billing-schedules-dlq      visible 0, in flight 0, delayed 0
+    billing-domain-events-dlq  visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name billing-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

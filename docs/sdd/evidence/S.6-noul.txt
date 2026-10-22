@@ -1,0 +1,18 @@
+S.6 8f: the noul of the local LitJev (Qwen3.5-2B) over the 14 real transcripts
+  likelihood that personal data is left, before the layers (raw) and after them (redacted);
+  the threshold of the fourth layer is 0.50
+  a1-c1-business   raw 0,558   redacted 0,520   <- the filter would put this in doubt
+  a2-c1-technical  raw 0,370   redacted 0,446
+  o1-c1-business   raw 0,469   redacted 0,709   <- the filter would put this in doubt
+  o2-c1-technical  raw 0,473   redacted 0,352
+  p1-c1-business   raw 0,370   redacted 0,294
+  p1-c1-technical  raw 0,352   redacted 0,359
+  p2-c1-business   raw 0,793   redacted 0,734   <- the filter would put this in doubt
+  p2-c1-technical  raw 0,531   redacted 0,527   <- the filter would put this in doubt
+  p2-c2-business   raw 0,662   redacted 0,686   <- the filter would put this in doubt
+  p2-c2-technical  raw 0,516   redacted 0,492
+  p3-c1-business   raw 0,570   redacted 0,539   <- the filter would put this in doubt
+  p4-c1-technical  raw 0,815   redacted 0,558   <- the filter would put this in doubt
+  p5-c1-technical  raw 0,578   redacted 0,655   <- the filter would put this in doubt
+  p6-c1-business   raw 0,434   redacted 0,430
+  at or above 0.50: raw 8 of 14, redacted 8 of 14; slowest call 1,88 s

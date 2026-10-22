@@ -1,0 +1,13 @@
+S.9 CA7: p2's SDD p2-sdd-1 was rejected once and rewritten as version 2
+    rec-p1-c1-batch                    v1 sdd-batch  project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 76191441-736e-4b25-9ef3-c2e5983b1347 supersedes -
+    rec-p1-c1-design                   v1 design     project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting p1-c1-business cause aaa4e729-358e-42b4-995e-0127ec80bee3 supersedes -
+    rec-p1-sdd-1                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause c0e0cfb3-978d-42e3-bcb2-3d739e053ee9 supersedes -
+    rec-p1-sdd-2                       v1 sdd        project p1 chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252 meeting - cause 422c4e51-7166-463b-969c-8e5a7a027e4a supersedes -
+    rec-p2-c1-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-business cause e6398da7-b4f3-4969-8502-5e84534ddc3e supersedes -
+    rec-p2-c1-design                   v2 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-business cause ba9b3863-ec19-4db2-8cbf-812ce4ad01e4 supersedes 1
+    rec-p2-c1-questions                v1 questions  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c1-technical cause d14525f3-172a-4ee6-a1c1-e7e91f95c371 supersedes -
+    rec-p2-c2-batch                    v1 sdd-batch  project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 17f9fbd7-fa54-4b65-9a5e-6669b01bfd2c supersedes -
+    rec-p2-c2-design                   v1 design     project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting p2-c2-business cause 05eb1d49-c5b0-49af-83d5-1cb2c0fcd6b7 supersedes -
+    rec-p2-sdd-1                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 39e03f56-135e-4ee7-8539-db61a3c76aa9 supersedes -
+    rec-p2-sdd-1                       v2 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause c33c930a-c064-42b6-92cc-f5cd85f96fb2 supersedes 1
+    rec-p2-sdd-2                       v1 sdd        project p2 chain chn-3cf066c1-7a49-359e-9777-521518daf3c2 meeting - cause 8cd0754a-bef5-4b12-a82b-b6fa22aa8932 supersedes -

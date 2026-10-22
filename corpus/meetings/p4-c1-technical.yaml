@@ -1,0 +1,52 @@
+# SDD S.5, corpus v2: synthetic meeting. Every SYNTH-PII marker is planted; no real person.
+id: p4-c1-technical
+project: p4
+cycle: 1
+stage: technical
+language: en
+label: restricted
+speakers:
+- id: s1
+  voice: af_bella
+- id: s2
+  voice: bm_george
+script:
+- speaker: s1
+  text: Refinement for book reviews. I am SYNTH-PII-2081 Rivera.
+- speaker: s2
+  text: 'Three parts: store a review with a rating, compute the average rating, and hide reviews flagged by moderators.'
+- speaker: s1
+  text: All clear. Three SDDs. Call +55 11 98082-4082 (SYNTH-PII-2082) for access to the test data.
+expected:
+  meetingType: technical-refinement
+  outcome: sdds
+  blockingQuestion: false
+  priority: 0.4
+  review: false
+  sddCount: 3
+  sdds:
+  - id: p4-sdd-1
+    title: Store a review with a rating
+    covers:
+    - rating from one to five
+  - id: p4-sdd-2
+    title: Average rating of a book
+    covers:
+    - average of the ratings
+  - id: p4-sdd-3
+    title: Hide flagged reviews
+    covers:
+    - flagged reviews hidden
+pii:
+- marker: SYNTH-PII-2081
+  kind: name
+  written: SYNTH-PII-2081 Rivera
+  spoken:
+  - synth p i i two zero eight one rivera
+  - Sinthe P I I 2081 Rivera
+- marker: SYNTH-PII-2082
+  kind: phone
+  written: +55 11 98082-4082
+  spoken:
+  - plus five five one one nine eight zero eight two four zero eight two
+  - plus 5511 98082 4082

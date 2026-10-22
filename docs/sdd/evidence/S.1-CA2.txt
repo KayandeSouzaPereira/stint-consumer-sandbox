@@ -1,0 +1,3 @@
+MailHog /api/v2/messages total = 2
+- someone@example.com | URGENT: Monthly sales report | ['attachment; filename="final.csv"']
+- someone@example.com | Monthly sales report | ['attachment; filename="final.csv"']

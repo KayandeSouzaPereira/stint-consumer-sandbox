@@ -1,0 +1,17 @@
+SDD S.2, CA1: a manual invoice-requested -> one instance and invoice-issued in the spy, with the request lineage.
+Sandbox phase-2-validation at 988b1fc (retry delay 2 s); Stint d455dc0; floci + MailHog on localhost.
+Command: mvn verify -Pfloci -pl sandbox-billing (FlociBillingIT, the whole app started by @QuarkusTest).
+
+Test: FlociBillingIT.ca1_a_request_issues_an_invoice_with_the_request_lineage -- OK
+
+CA1 request id=req-e2cfb417-fb28-4511-8456-1e3552cc40c7 chainid=chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f -> invoice-issued id=6cd0e192-1617-37ee-a864-45c644643a3f chainid=chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f causationid=c762cf43-63c2-49e4-a0b1-621c8bb3ea24 data={"orderId":"o-ca1-194e5ad6-b1a2-43c7-bb29-f6a2eebf4174","invoiceId":"inv-2416d159ae25823a","amount":150.75,"currency":"BRL","issuedAt":"2026-10-10T23:59:00.449Z","invoiceDocument":"s3://sandbox-facts/billing/invoices/inv-2416d159ae25823a.html"}
+
+Sec. 8f, the causation chain in the worker's JSON log (MDC of each handler):
+  Rendered invoice inv-2416d159ae25823a to s3://sandbox-facts/billing/invoices/inv-2416d159ae25823a.html (attempt 1)
+    stint.chainId=chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f stint.instanceId=evt-b2663956-aff1-3fb0-9a6c-0c1fdbecf4e9 stint.taskId=/do/3/render stint.correlationId=8fa1cc2e-7220-4b74-9d90-77ef4306bdb3 stint.causationId=8fa1cc2e-7220-4b74-9d90-77ef4306bdb3
+  Recorded invoice inv-2416d159ae25823a issued at 2026-10-10T23:59:00.449Z
+    stint.chainId=chn-ca1-ea4757b9-ec3d-47fe-aab0-4bee9c29ee8f stint.instanceId=evt-b2663956-aff1-3fb0-9a6c-0c1fdbecf4e9 stint.taskId=/do/4/record stint.correlationId=c762cf43-63c2-49e4-a0b1-621c8bb3ea24 stint.causationId=c762cf43-63c2-49e4-a0b1-621c8bb3ea24
+
+invoice-issued.causationid = c762cf43-63c2-49e4-a0b1-621c8bb3ea24
+record-invoice correlationId = c762cf43-63c2-49e4-a0b1-621c8bb3ea24  -> EQUAL
+invoice-issued.chainid = the request's chainid; the instance's first activation was caused by the request id (asserted in memory by IssueInvoiceWorkflowTest.valid_request_issues_the_invoice_on_the_request_chain).

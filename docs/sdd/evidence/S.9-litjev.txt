@@ -1,0 +1,9 @@
+S.9 8e: the local LitJev (Qwen3.5-2B) over the seven technical scripts, as Whisper wrote them and the S.6 filter redacted them
+  a2-c1-technical  type technical-refinement ok   outcome questions ok   blocking true  ok
+  o2-c1-technical  type business-design      NO   outcome -         -    blocking -     -
+  p1-c1-technical  type technical-refinement ok   outcome questions NO   blocking true  NO
+  p2-c1-technical  type business-design      NO   outcome questions ok   blocking true  ok
+  p2-c2-technical  type technical-refinement ok   outcome questions NO   blocking false ok
+  p4-c1-technical  type technical-refinement ok   outcome questions NO   blocking false ok
+  p5-c1-technical  type technical-refinement ok   outcome questions NO   blocking true  NO
+  type 5 of 7, outcome 3 of 7, blocking question 5 of 7

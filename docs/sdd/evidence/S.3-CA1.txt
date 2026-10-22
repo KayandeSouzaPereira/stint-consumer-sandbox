@@ -1,0 +1,14 @@
+SDD S.3, CA1: POST /orders -> order-placed, invoice-requested, invoice-issued and order-confirmed in the spy, all
+with the order's chainid; the confirmation e-mail's attachment is byte for byte the published invoice document.
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca1_an_invoiced_order_is_confirmed_with_the_published_document_attached_on_one_chain -- OK
+
+CA1 order o-ca1-9913427f-02e9-4fb8-a280-00de29d71329: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]; chainid chn-83dc768f-98fe-35f7-a562-3b85d6fdd898 on all 4; attachment 366 bytes == s3://sandbox-facts/billing/invoices/inv-d0e9bce343668146.html; GET {"orderId":"o-ca1-9913427f-02e9-4fb8-a280-00de29d71329","instanceId":"evt-d7ce159e-1019-3c5a-b388-f204fc76f0e4","status":"confirmed","invoiceId":"inv-d0e9bce343668146"}
+(first run) CA1 order o-ca1-d6852ba6-1060-42ea-85a8-a075dbe8ac0e: [io.sandbox.orders.order-placed.v1, io.sandbox.billing.invoice-requested.v1, io.sandbox.billing.invoice-issued.v1, io.sandbox.orders.order-confirmed.v1]; chainid chn-cb8c7bc5-dfba-3a20-806e-59fa6a97b4bf on all 4; attachment 366 bytes == s3://sandbox-facts/billing/invoices/inv-b591f3ed61062f93.html; GET {"orderId":"o-ca1-d6852ba6-1060-42ea-85a8-a075dbe8ac0e","instanceId":"evt-a922b8e8-f7d6-314d-bb61-5472c4c14d23","status":"confirmed","invoiceId":"inv-b591f3ed61062f93"}
+
+The attachment is compared with s3:GetObject of the invoiceDocument cited by the invoice-issued in the spy;
+the e-mail is read from MailHog (/api/v2/search, MIME parts, base64 decoded).

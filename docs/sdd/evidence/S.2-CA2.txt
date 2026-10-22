@@ -1,0 +1,11 @@
+SDD S.2, CA2: the same request published twice at once (CyclicBarrier) -> one instance, one invoice-issued.
+Sandbox phase-2-validation at 988b1fc (retry delay 2 s); Stint d455dc0; floci + MailHog on localhost.
+Command: mvn verify -Pfloci -pl sandbox-billing (FlociBillingIT, the whole app started by @QuarkusTest).
+
+Test: FlociBillingIT.ca2_a_duplicated_request_issues_one_invoice -- OK
+
+CA2 order o-ca2-81c9a753-3ea4-40b7-84b5-3ec3c4dc1121: 2 invoice-requested on the bus, 1 invoice-issued
+
+The spy is drained until an empty long poll after both requests were seen, so a second invoice-issued would
+have been caught. In memory: IssueInvoiceWorkflowTest.a_duplicated_request_starts_one_instance_and_issues_one_invoice
+(state store creates == 1, one render, one fact).

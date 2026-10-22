@@ -1,0 +1,254 @@
+# SDD S.5, 8h: the Business domain's skeleton. A business meeting's recording (by pointer) becomes an approved design:
+# transcription -> the PII filter (sandbox-privacy) -> LitJev: meeting type and priority -> the design document ->
+# the register (sandbox-records) -> LitJev: the channel -> the channel (sandbox-channels) -> the business
+# representative's approval -> design-published. Events carry ids and pointers only, and correlate by extensions
+# (contracts/pipeline-events.md). The raw audio and transcript are restricted (Stint 3a.5): only 'transcribe' and
+# 'redactor' see them, and the redaction's export drops the raw transcript's pointer. The domain logic is S.8.
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: business-design
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.label }'
+      routes:
+        restricted: [transcribe, redactor]
+        confidential: [redactor, decide-meeting-type, decide-priority, write-design, register-document, decide-channel,
+                       publish-page, send-email, write-timeout-report]
+        internal: ['*']
+      retention:
+        restricted: { days: 7 }
+        raw-audio: { days: 7 }
+        raw-transcript: { days: 7 }
+      review:
+        sources: [https://portal.sandbox.example]
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.channels.meeting-recorded.v1, sandboxstage: business }
+do:
+  - meeting:
+      set: '${ .[0] | {meetingId: .data.meetingId, audioRef: .data.audioRef, language: .data.language, projectId: .sandboxproject, cycle: .sandboxcycle} }'
+      export: { as: '${ . }' }
+  - transcribe:
+      try:
+        - run:
+            call: remote
+            with:
+              task: transcribe
+              input: '${ {audioRef: $context.audioRef, language: $context.language} }'
+            timeout: { after: { minutes: 30 } }
+            export: { as: '${ $context + {transcriptRef: .transcriptRef} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 5 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 3 }
+  - redact:
+      call: redact
+      with:
+        task: redactor
+        input: '${ $context.transcriptRef }'
+        lowersTo: confidential
+      onDoubt: doubt
+      export: { as: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, redacted: .output} }' }
+  - meetingType:
+      call: decision
+      with:
+        task: decide-meeting-type
+        kind: choice
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+        options:
+          - business-design: { description: "A business meeting that designs a product or feature" }
+          - technical-refinement: { description: "A technical meeting that refines a design into work" }
+          - out-of-scope: { description: "Anything else: social, another project" }
+      onUncertain:
+        review:
+          role: business-rep
+          material: '${ "stint-review://meetings/" + $context.meetingId }'
+          deadline: { hours: 24 }
+          remind: { hours: 20 }
+          onTimeout: { value: out-of-scope }
+      export: { as: '${ $context + {meetingType: .value} }' }
+  - inScope:
+      switch:
+        - design:
+            when: '$context.meetingType == "business-design"'
+            then: priority
+        - other:
+            then: end
+  - priority:
+      call: decision
+      with:
+        task: decide-priority
+        kind: score
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+      export: { as: '${ $context + {priority: .value, round: 1} }' }
+  - write:
+      call: remote
+      with:
+        task: write-design
+        input: '${ {meetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle, text: $context.redacted, round: $context.round, previousRef: $context.designRef, noteRef: $context.noteRef} }'
+      timeout: { after: { minutes: 15 } }
+      export: { as: '${ $context + {documentId: .documentId, designRef: .designRef} }' }
+  - register:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.documentId, documentRef: $context.designRef, kind: "design", readers: ["engineering", "delivery"], ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, priority: $context.priority, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {recordId: .recordId, version: .version, sha256: .sha256, supersedes: .supersedes} }' }
+  - registered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":design-registered" + (if $context.version > 1 then ":v" + ($context.version | tostring) else "" end) }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.recordId, version: $context.version, sha256: $context.sha256, kind: "design", sensitivity: "confidential", ownerRole: "business-rep"} + (if $context.supersedes != null then {supersedes: $context.supersedes} else {} end) }'
+  - channelKnown:
+      switch:
+        - known:
+            when: '$context.channel != null'
+            then: deliver
+        - decide:
+            then: channel
+  - channel:
+      call: decision
+      with:
+        task: decide-channel
+        kind: choice
+        input: '${ {text: $context.redacted, meetingId: $context.meetingId} }'
+        options:
+          - email: { description: "Send the design by e-mail", then: mailDesign }
+          - confluence: { description: "Publish the design on Confluence", then: publish }
+          - meeting: { description: "Not ready: ask for a new meeting", then: mailMeeting }
+      onUncertain:
+        review:
+          role: business-rep
+          material: '${ $context.designRef }'
+          deadline: { hours: 24 }
+          remind: { hours: 20 }
+          onTimeout: { value: email }
+      export: { as: '${ $context + {channel: .value} }' }
+  - deliver:
+      switch:
+        - confluence:
+            when: '$context.channel == "confluence"'
+            then: publish
+        - email:
+            when: '$context.channel == "email"'
+            then: mailDesign
+        - meeting:
+            then: mailMeeting
+  - publish:
+      call: remote
+      with:
+        task: publish-page
+        input: '${ {space: "DESIGN", key: $context.documentId, documentRef: $context.designRef, title: ("Design " + $context.documentId), labels: ["design", ("project-" + $context.projectId)]} }'
+      export: { as: '${ $context + {pageId: .id} }' }
+      then: approve
+  - mailDesign:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "design", toRole: "business-rep", projectId: $context.projectId, cycle: $context.cycle, documentRef: $context.designRef} }'
+      then: approve
+  - mailMeeting:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "meeting", toRole: "business-rep", projectId: $context.projectId, cycle: $context.cycle} }'
+      then: end
+  - approve:
+      call: review
+      with:
+        kind: approval
+        role: business-rep
+        material: '${ $context.designRef }'
+        deadline: { hours: 48 }
+        remind: { hours: 40 }
+        escalate: { role: business-lead, after: { hours: 24 } }
+        onTimeout: { value: rejected }
+      export: { as: '${ $context + {verdict: .verdict, defaulted: .defaulted, noteRef: .noteRef} }' }
+  - verdictRoute:
+      switch:
+        - approved:
+            when: '$context.verdict == "approved"'
+            then: published
+        - overdue:
+            when: '$context.defaulted == true'
+            then: stuck
+        - rework:
+            when: '$context.round < 3'
+            then: reworkRound
+        - rejected:
+            then: rejected
+  - published:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":design-published" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.business.design-published.v1
+            subject: '${ $context.documentId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {documentId: $context.documentId, recordId: $context.recordId, version: $context.version, designRef: $context.designRef, channel: $context.channel, priority: $context.priority} }'
+      then: end
+  - reworkRound:
+      set: '${ $context + {round: ($context.round + 1)} }'
+      export: { as: '${ . }' }
+      then: write
+  - rejected:
+      set: '${ $context + {outcome: "rejected"} }'
+      export: { as: '${ . }' }
+      then: end
+  - stuck:
+      call: remote
+      with:
+        task: write-timeout-report
+        input: '${ {projectId: $context.projectId, cycle: $context.cycle, documentId: $context.documentId, version: $context.version, round: $context.round} }'
+      export: { as: '${ $context + {reportId: .documentId, reportRef: .reportRef} }' }
+  - registerReport:
+      call: remote
+      with:
+        task: register-document
+        input: '${ {documentId: $context.reportId, documentRef: $context.reportRef, kind: "report", ownerRole: "business-rep", sensitivity: "confidential", sourceMeetingId: $context.meetingId, projectId: $context.projectId, cycle: $context.cycle} }'
+      export: { as: '${ $context + {reportRecord: {recordId: .recordId, version: .version, sha256: .sha256}} }' }
+  - reportRegistered:
+      emit:
+        event:
+          with:
+            id: '${ $context.projectId + ":" + $context.cycle + ":approval-timeout-registered" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.records.document-registered.v1
+            subject: '${ $context.reportRecord.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.reportRecord.recordId, version: $context.reportRecord.version, sha256: $context.reportRecord.sha256, kind: "report", sensitivity: "confidential", ownerRole: "business-rep"} }'
+  - tellBusinessLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "business-lead", projectId: $context.projectId, cycle: $context.cycle} }'
+  - tellTechLead:
+      call: remote
+      with:
+        task: send-email
+        input: '${ {template: "approval-timeout", toRole: "tech-rep", projectId: $context.projectId, cycle: $context.cycle} }'
+  - timedOut:
+      set: '${ $context + {outcome: "approval-timeout"} }'
+      export: { as: '${ . }' }
+      then: end
+  - doubt:
+      set: '${ {meetingId: $context.meetingId, outcome: "redaction-doubt"} }'
+      export: { as: '${ . }' }
+      then: end

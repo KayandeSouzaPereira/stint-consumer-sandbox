@@ -1,0 +1,13 @@
+SDD S.3, CA7: an order whose id starts with 'fail503-' is confirmed after the counterpart's retries; Orders has
+no special handling (OrdersIndependenceTest forbids the prefix anywhere in src/main).
+Sandbox phase-2-validation at 0380a84; Stint d455dc0; floci + MailHog; the counterpart (sandbox-billing jar of
+S.2) running as its own process. Command: mvn verify -Pfloci -pl sandbox-orders (FlociOrdersIT, @QuarkusTest).
+Final run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 552.2 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+First run: [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 553.5 s -- in io.stintflow.sandbox.orders.floci.FlociOrdersIT
+
+Test: FlociOrdersIT.ca7_an_order_the_counterpart_retries_is_confirmed_like_any_other -- OK
+
+CA7 order fail503-o-ca7-d81f387f-46b4-4c4c-9dbb-c1579388ea0a: requested 2026-10-11T01:15:40.377064900Z, issued 2026-10-11T01:15:45.646675700Z (5,3 s later), confirmed
+(first run) CA7 order fail503-o-ca7-c8892462-35fa-4863-8819-15c50c9adbc7: requested 2026-10-11T00:54:37.382646600Z, issued 2026-10-11T00:54:42.780656600Z (5,4 s later), confirmed
+
+The ~5 s between invoice-requested and invoice-issued are the counterpart's two 503s and retries (2 s, 4 s).
