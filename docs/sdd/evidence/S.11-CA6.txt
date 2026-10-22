@@ -13,3 +13,13 @@ S.11 RF6 (CA6, 8e): native builds of the 3a domains (infra/gate.sh --native3a, S
 
 sandbox-business, why the build failed (first lines of its log):
 Fatal error: com.oracle.graal.pointsto.constraints.UnsupportedFeatureException: Detected an instance of Random/SplittableRandom class in the image heap. Instances created during image generation have cached seed values and don't behave as expected. If these objects should not be stored in the image heap, you can use 
+
+Runs of p1's cycle with native images (the others on the JVM), each with the counts of an undisturbed cycle, the bus inside
+the v1 contract, no planted marker found (bus, spans, process logs, stores) and nothing left over:
+  sandbox-privacy                       native, started in 0.054 s  -> S.11-CA6-privacy.txt
+  sandbox-records + sandbox-channels    native, records in 0.197 s  -> S.11-CA6-records-channels.txt
+The first attempts stopped at start (finding S11-2): the corpus reader of sandbox-contracts builds its records with Jackson
+by reflection, and the contracts module may not depend on Quarkus. Fixed in the services that read the corpus
+(privacy and channels) with a NativeReflection class (@RegisterForReflection). Records does not read the corpus.
+sandbox-business: not built (finding S11-3, the Random instance of the build above); not run natively.
+sandbox-engineering, sandbox-delivery, sandbox-target: not tried (8e: the JVM; target calls Docker).
