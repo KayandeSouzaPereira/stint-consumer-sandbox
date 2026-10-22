@@ -129,4 +129,26 @@ Na análise o sandbox estava em `500dfd1`, e a branch `phase-3a/ai-decision-work
 **Consequências:** a regressão S.1–S.10 roda primeiro no SHA novo; os artefatos que o sandbox copia do Stint (esquemas das tabelas e filas, o esquema do `meeting-recorded`, o servidor do Whisper) não mudaram entre os dois SHAs (conferido por `git diff`). Os workarounds dos achados do S.5 que o Stint corrigiu (`stintreplyto`, cancelamento externo, reabertura da espera) **não** são removidos aqui: entram como achados com estado "corrigido no Stint, ainda não usado" no relatório, e a remoção é um SDD próprio.
 
 ## 9. Registro de validação
-(preencher na etapa 2)
+
+**Resultado (22/10/2026).** CA1 a CA8 fechados; evidências em `docs/sdd/evidence/S.11-*.txt` e o relatório em `docs/evidence/phase-3a-gate.md`.
+
+| CA | Resultado |
+|---|---|
+| CA1 | Verde: Billing 5/5, Orders 6/6, `RegressionIT` 3/3, `PortalRolesIT`, `PiiSweepIT`, esqueleto x3 (`S.11-CA1.txt`) |
+| CA2 | Verde, caos a–g |
+| CA3 | Verde via `PipelineChaosIT.g` |
+| CA4 | Verde, 6 projetos, 28,3 s |
+| CA5 | Verde |
+| CA6 | privacy, records e channels nativos verdes; business não compila |
+| CA7 | Medido (`S.11-models.txt`) |
+| CA8 | Relatório entregue |
+
+**Desvios.**
+- RF2f: a spec dizia que a dúvida de redação vai ao humano do domínio; o comportamento real (S.6) encerra com `redaction-doubt`. O cenário prova fail-closed (achado S11-1).
+- `DecisionReplayTest` (8c) não foi escrito; o CA3 foi coberto pelo cenário g.
+- Nativo: engineering, delivery e target não foram tentados.
+- `Scenario.reset` passou de 5 para 10 min (o reset leva 4–5 min).
+
+**Achados.** S11-1 (dúvida sem revisão humana), S11-2 (registro Jackson no nativo, corrigido em privacy e channels), S11-3 (business não compila em nativo).
+
+**Pendências.** Aprovação (Validado) é do Kayan; commits locais após `8483c4c` não foram enviados.

@@ -141,7 +141,7 @@ Se você não quiser mudar essas asserções, a alternativa é registrar sem pub
 | CA6 | **Verde.** Os três SDDs de um lote têm a implementação em andamento ao mesmo tempo (barreira de 3, sem sleep) | `DeliveryConcurrencyTest` |
 | CA7 | **Verde.** No esqueleto, o `p1` tem os patches `rec-p1-sdd-1-a1-patch`, `rec-p1-sdd-2-a1-patch` e `rec-p1-sdd-2-a2-patch` e os relatórios correspondentes no catálogo, e o `document-registered` de cada um publicado; `DOCUMENT_REGISTERED` do `p1` = 10 | `PipelineSkeletonIT`; `S.10-CA7.txt` |
 | CA8 | **Verde.** A guarda recusa caminho fora da lista, arquivo acima de 64 KiB e segredo literal (a razão nomeia arquivo e regra, não o texto), e a recusa vira desfecho `invalid`, não falha de tarefa; a linha de comando do contêiner não tem rede, `-e`, volume, privilégio, e a imagem é por digest. Com `-Dtarget.docker=true`, o contêiner não abre socket e o ambiente é o da imagem | `ChangesetGuardTest` (13), `DockerIsolationTest` (com Docker) |
-| CA9 | **Pendente por decisão do Kayan.** A regressão (`gate.sh --regression-only`) roda depois da última implementação da fase. Uma execução foi interrompida por falta de memória e não deu resultado | — |
+| CA9 | **Fechado pelo S.11 (CA1, 22/10/2026).** A regressão completa passou no Stint `a52b20a` | `S.11-CA1.txt` |
 | 8i | **Medido.** O Qwen3-4B (llama.cpp) implementou dois SDDs sintéticos (`t-year` e `t-authors`) e o contêiner sem rede validou os dois **na primeira tentativa** (2 de 2), com a cobertura de `CA<n>` completa | `S.10-llm.txt` |
 
 **Contagens.** Records, channels e delivery verdes (delivery 21/21); target 30 testes, 1 pulado sem Docker (o `DockerIsolationTest` do contêiner e o `ImplementerLlmTest` rodaram à parte, com os sinalizadores); esqueleto 271,7 s, `SKELETON-DONE 0`.
@@ -165,6 +165,6 @@ Se você não quiser mudar essas asserções, a alternativa é registrar sem pub
 | S10-4 | A regressão completa é lenta e o `mvn clean install` do gate apaga o `target` (a evidência do esqueleto se perdeu uma vez e foi regerada) | Rodar o gate uma só vez, no fim da fase, e copiar as evidências para `docs/sdd/evidence/` antes dele |
 
 ### 9.4 Pendências
-- CA9: a regressão, depois da última implementação da fase (decisão do Kayan).
+- CA9: fechado pelo CA1 do S.11.
 - Validado e Mergeado são seus. O push, com o seu pedido.
 - Notion: a página do S.10 e o Log.
