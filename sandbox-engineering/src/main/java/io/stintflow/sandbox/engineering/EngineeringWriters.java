@@ -149,6 +149,12 @@ public final class EngineeringWriters {
     }
 
     public static TaskHandler questions(Corpus corpus, BlobStore documents) {
+        return questions(corpus, documents, null);
+    }
+
+    /** SDD S.12, RF5: the same writer, ending its document with the earlier documents of the base that bear on it. */
+    public static TaskHandler questions(Corpus corpus, BlobStore documents,
+            io.stintflow.sandbox.engineering.knowledge.DomainKnowledge.Context context) {
         return ctx -> {
             JsonNode in = ctx.input();
             Corpus.Meeting meeting = corpus.meeting(in.path("meetingId").asText());
@@ -158,6 +164,10 @@ public final class EngineeringWriters {
             StringBuilder md = new StringBuilder("# Questions from engineering (").append(documentId).append(")\n\n");
             for (int i = 0; i < questions.size(); i++) {
                 md.append(i + 1).append(". ").append(questions.get(i)).append('\n');
+            }
+            if (context != null) {
+                md.append(io.stintflow.sandbox.engineering.knowledge.DomainKnowledge.contextSection(
+                        context.of(ctx, String.join(" ", questions), "rec-" + documentId)));
             }
             return documents.put(md.toString().getBytes(StandardCharsets.UTF_8), "questions/" + documentId + ".md")
                     .thenApply(uri -> (JsonNode) Json.obj().put("documentId", documentId)

@@ -71,6 +71,16 @@ class KnowledgeIngestIT extends PipelineScenario {
         // the rewritten design is a second version of the same record
         assertThat(registered.stream().filter(e -> data(e, "recordId").equals("rec-p2-c1-design"))).hasSize(2);
 
+        // --- recovery with origin (RF5, CA4): the second cycle's design cites the first cycle's, which the first one cannot ---
+        String second = stored("rec-p2-c2-design", 1);
+        String first = stored("rec-p2-c1-design", 1);
+        assertThat(second).as("the second design ends with the documents the base found").contains(
+                "## Context from earlier documents").contains("rec-p2-c1-design");
+        assertThat(second).as("a design does not cite itself").doesNotContain("- rec-p2-c2-design");
+        assertThat(first).as("the first design, over an empty base, cites nothing").doesNotContain("## Context");
+        bus.append("  p2's second design cites: ").append(second.lines().skip(second.lines().toList().indexOf(
+                "## Context from earlier documents") + 1).toList()).append('\n');
+
         // --- the inspectors: closed to everybody else, open to the operator, the base grows, nothing restricted ---
         List<String> shown = new ArrayList<>();
         StringBuilder look = new StringBuilder();
@@ -107,6 +117,17 @@ class KnowledgeIngestIT extends PipelineScenario {
         String closing = verify(List.of(chain), true);
         Scenario.evidence("S.12-CA1-5.txt", "S.12 CA1 to CA5 and CA7: p2's two cycles with both bases learning\n"
                 + timeline() + bus + look + closing);
+    }
+
+    /** The text of a version of a registered document, read from the register's copy. */
+    private String stored(String recordId, int version) {
+        var item = floci.ddb.getItem(r -> r.tableName("records-catalog").consistentRead(true).key(Map.of(
+                "recordId", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(recordId).build(),
+                "version", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().n(
+                        String.valueOf(version)).build()))).item();
+        URI ref = URI.create(item.get("storedRef").s());
+        return floci.s3.getObjectAsBytes(r -> r.bucket(ref.getHost()).key(ref.getPath().substring(1)))
+                .asUtf8String();
     }
 
     private HttpResponse<String> inspect(int port, String path, String operator) throws Exception {

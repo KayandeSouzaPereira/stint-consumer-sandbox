@@ -182,9 +182,9 @@ public class EngineeringEngine {
         Corpus corpus = Corpus.load(Path.of(corpusDir));
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, handlers(corpus,
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, context -> handlers(corpus,
                         EngineeringModels.fakes(corpus), new S3BlobStore(s3, rawBucket),
-                        new S3BlobStore(s3, documentsBucket))), haltInTask, ChaosPoints.HALT), blobs, tracer),
+                        new S3BlobStore(s3, documentsBucket), context)), haltInTask, ChaosPoints.HALT), blobs, tracer),
                         concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
@@ -192,6 +192,12 @@ public class EngineeringEngine {
     /** The domain's own routes: transcription, the four decisions and the two writers. */
     public static TaskHandlerRegistry handlers(Corpus corpus, EngineeringModels stack, BlobStore raw,
             BlobStore documents) {
+        return handlers(corpus, stack, raw, documents, null);
+    }
+
+    /** As above, with the base the questions writer cites its earlier documents from (SDD S.12, RF5). */
+    public static TaskHandlerRegistry handlers(Corpus corpus, EngineeringModels stack, BlobStore raw,
+            BlobStore documents, DomainKnowledge.Context context) {
         Map<String, String> config = new HashMap<>();
         stack.adapterOf().forEach((route, adapter) -> config.put("stint.decision.routes." + route + ".adapter",
                 adapter));
@@ -213,11 +219,12 @@ public class EngineeringEngine {
                 .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents))
                 .register("finalize-batch", EngineeringWriters.finalizeBatch(corpus, documents))
                 .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents))
-                .register("write-questions", EngineeringWriters.questions(corpus, documents));
+                .register("write-questions", EngineeringWriters.questions(corpus, documents, context));
     }
 
     /** SDD S.12: the domain's knowledge base and its (read-only) inspector, on the domain's worker. */
-    private TaskHandlerRegistry withKnowledge(BlobStore blobs, TaskHandlerRegistry registry) {
+    private TaskHandlerRegistry withKnowledge(BlobStore blobs,
+            java.util.function.Function<DomainKnowledge.Context, TaskHandlerRegistry> handlers) {
         knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "engineering-kb"), Glossaries.engineering(), blobs, null, null,
                 InstantSource.system());
         try {
@@ -227,7 +234,7 @@ public class EngineeringEngine {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
-        return knowledge.register(registry, new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
+        return knowledge.register(handlers.apply(knowledge::contextFor), new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
                 InstantSource.system()));
     }
 

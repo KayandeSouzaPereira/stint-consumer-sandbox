@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.InstantSource;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,10 +22,13 @@ import io.stintflow.knowledge.inspector.InspectorService;
 import io.stintflow.spi.AuditLog;
 import io.stintflow.spi.BlobStore;
 import io.stintflow.spi.RetentionClass;
+import io.stintflow.spi.Sensitivity;
+import io.stintflow.worker.TaskContext;
 import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.decision.SensitivityPolicy;
 import io.stintflow.worker.knowledge.KnowledgeWorkers;
 import io.stintflow.worker.knowledge.ScopeAllowList;
+import io.stintflow.worker.langchain4j.KnowledgeContentRetriever;
 import io.stintflow.worker.langchain4j.KnowledgeExtractionWorker;
 import io.stintflow.worker.redaction.Pseudonyms;
 
@@ -51,6 +56,7 @@ public final class DomainKnowledge implements AutoCloseable {
     private final ChatModel model;
     private final Embedder reindexTarget;
     private final InstantSource clock;
+    private volatile AuditLog audit;
     private InspectorServer inspector;
 
     public DomainKnowledge(KnowledgeScope scope, Glossary glossary, BlobStore blobs, ChatModel model,
@@ -78,6 +84,7 @@ public final class DomainKnowledge implements AutoCloseable {
 
     /** Adds the knowledge routes to the domain worker's registry. */
     public TaskHandlerRegistry register(TaskHandlerRegistry registry, AuditLog audit) {
+        this.audit = audit;
         ScopeAllowList scopes = new ScopeAllowList(Set.of(scope));
         registry.register("extract-knowledge", KnowledgeExtractionWorker.builder().chatModel(model)
                 .provider("sandbox", false).policy(SensitivityPolicy.fromProperties(Map.of()))
@@ -86,6 +93,48 @@ public final class DomainKnowledge implements AutoCloseable {
         KnowledgeWorkers.register(registry, store, blobs, scopes, audit, clock);
         return KnowledgeWorkers.registerErasure(registry, store, blobs, scopes, audit, clock, reindexTarget,
                 new Pseudonyms(SYNTHETIC_SECRET));
+    }
+
+    /**
+     * SDD S.12, RF5: the documents the base holds that bear on {@code query}, found as an agent would (the content
+     * retriever of Stint 3b.4, with the ceiling of the instance asking and the read audited). {@code ownRecordId} is left
+     * out: a document does not cite itself. Returns ids of records, in the order of relevance, never content.
+     */
+    public List<String> contextFor(TaskContext task, String query, String ownRecordId) {
+        KnowledgeContentRetriever retriever = KnowledgeContentRetriever.builder(store, scope)
+                .instanceLevel(task.sensitivity() == null ? Sensitivity.RESTRICTED : task.sensitivity())
+                .topK(5).hops(2).excludeDocuments(ownRecordId == null ? List.of() : List.of("meeting:" + ownRecordId))
+                .audit(audit, task, clock).build();
+        LinkedHashSet<String> documents = new LinkedHashSet<>();
+        retriever.retrieve(dev.langchain4j.rag.query.Query.from(query)).forEach(content -> {
+            var metadata = content.textSegment().metadata();
+            List<String> cited = new ArrayList<>();
+            if (metadata.getString("documentId") != null) {
+                cited.add(metadata.getString("documentId"));
+            }
+            if (metadata.getString("evidence") != null) {
+                cited.addAll(List.of(metadata.getString("evidence").split(",")));
+            }
+            cited.stream().filter(c -> !c.isBlank())
+                    .forEach(c -> documents.add(c.startsWith("meeting:") ? c.substring("meeting:".length()) : c));
+        });
+        return new ArrayList<>(documents);
+    }
+
+    /** The section a writer ends its document with, written here and never by the model; empty when nothing bears on it. */
+    public static String contextSection(List<String> documents) {
+        if (documents.isEmpty()) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder("\n## Context from earlier documents\n");
+        documents.forEach(d -> out.append("- ").append(d).append('\n'));
+        return out.toString();
+    }
+
+    /** What a writer asks of the base: the documents that bear on a text, leaving out its own record. */
+    @FunctionalInterface
+    public interface Context {
+        List<String> of(TaskContext task, String query, String ownRecordId);
     }
 
     /**

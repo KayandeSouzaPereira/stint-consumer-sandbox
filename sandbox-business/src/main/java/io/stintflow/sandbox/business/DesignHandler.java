@@ -27,27 +27,40 @@ public final class DesignHandler implements TaskHandler {
 
     private final TaskHandler model;
     private final BlobStore documents;
+    private final io.stintflow.sandbox.business.knowledge.DomainKnowledge.Context context;
 
-    private DesignHandler(TaskHandler model, BlobStore documents) {
+    private DesignHandler(TaskHandler model, BlobStore documents,
+            io.stintflow.sandbox.business.knowledge.DomainKnowledge.Context context) {
         this.model = model;
         this.documents = Objects.requireNonNull(documents);
+        this.context = context;
     }
 
     /** The CI's writer: the redacted lines, as the design's notes. */
     public static DesignHandler fake(BlobStore documents) {
+        return fake(documents, null);
+    }
+
+    /** SDD S.12, RF5: the same writer, ending its document with the earlier documents of the base that bear on it. */
+    public static DesignHandler fake(BlobStore documents, io.stintflow.sandbox.business.knowledge.DomainKnowledge.Context context) {
         return new DesignHandler(ctx -> {
             List<String> lines = ctx.input().path("text").asText().lines().map(String::strip)
                     .filter(l -> !l.isEmpty()).toList();
             return CompletableFuture.completedFuture(Json.MAPPER.valueToTree(new DesignWriter.Design(
                     "Design from meeting " + ctx.input().path("meetingId").asText() + ".", List.of(), lines,
                     List.of())));
-        }, documents);
+        }, documents, context);
     }
 
     /** The manual run's writer, through Stint's LangChain4j worker. */
     public static DesignHandler llm(LangChain4jWorker worker, BlobStore documents) {
+        return llm(worker, documents, null);
+    }
+
+    public static DesignHandler llm(LangChain4jWorker worker, BlobStore documents,
+            io.stintflow.sandbox.business.knowledge.DomainKnowledge.Context context) {
         return new DesignHandler(worker.handler(DesignWriter.class, (ai, task) -> ai.write(String.format(
-                DesignWriter.PROMPT, task.input().path("text").asText()))), documents);
+                DesignWriter.PROMPT, task.input().path("text").asText()))), documents, context);
     }
 
     @Override
@@ -60,7 +73,9 @@ public final class DesignHandler implements TaskHandler {
         }
         return model.execute(ctx).thenCompose(structured -> {
             DesignWriter.Design design = Json.MAPPER.convertValue(structured, DesignWriter.Design.class);
-            byte[] markdown = design.markdown("Design " + documentId).getBytes(StandardCharsets.UTF_8);
+            String cited = context == null ? "" : io.stintflow.sandbox.business.knowledge.DomainKnowledge.contextSection(
+                    context.of(ctx, ctx.input().path("text").asText(), "rec-" + documentId));
+            byte[] markdown = (design.markdown("Design " + documentId) + cited).getBytes(StandardCharsets.UTF_8);
             return documents.put(markdown, "design/" + documentId + ".md").thenApply(uri -> {
                 ObjectNode out = Json.obj().put("documentId", documentId).put("designRef", uri.toString());
                 return (JsonNode) out;

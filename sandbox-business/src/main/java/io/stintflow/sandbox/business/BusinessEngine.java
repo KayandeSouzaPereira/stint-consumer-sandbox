@@ -187,8 +187,8 @@ public class BusinessEngine {
         BusinessModels stack = "local".equals(models) ? BusinessModels.local(settings()) : BusinessModels.fakes(corpus);
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, handlers(stack,
-                        new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer)),
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, context -> handlers(stack,
+                        new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer, context)),
                         haltInTask, ChaosPoints.HALT), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
@@ -196,6 +196,12 @@ public class BusinessEngine {
     /** The domain's own routes: transcription, the three decisions and the design writer. */
     public static TaskHandlerRegistry handlers(BusinessModels stack, BlobStore raw, BlobStore documents,
             ExecutionTracer tracer) {
+        return handlers(stack, raw, documents, tracer, null);
+    }
+
+    /** As above, with the base the design writer cites its earlier documents from (SDD S.12, RF5). */
+    public static TaskHandlerRegistry handlers(BusinessModels stack, BlobStore raw, BlobStore documents,
+            ExecutionTracer tracer, DomainKnowledge.Context context) {
         Map<String, String> config = new HashMap<>();
         stack.adapterOf().forEach((route, adapter) -> config.put("stint.decision.routes." + route + ".adapter",
                 adapter));
@@ -213,11 +219,11 @@ public class BusinessEngine {
                 .register("transcribe", new TranscriptionHandler(stack.transcriber(), raw))
                 .register(TimeoutReportHandler.ROUTE, new TimeoutReportHandler(documents));
         if (stack.writer() == null) {
-            return registry.register(DesignHandler.ROUTE, DesignHandler.fake(documents));
+            return registry.register(DesignHandler.ROUTE, DesignHandler.fake(documents, context));
         }
         LangChain4jWorker writer = LangChain4jWorker.builder().chatModel(stack.writer())
                 .provider(stack.writerProvider(), stack.writerModel(), false).policy(policy).tracer(tracer).build();
-        return registry.register(DesignHandler.ROUTE, DesignHandler.llm(writer, documents));
+        return registry.register(DesignHandler.ROUTE, DesignHandler.llm(writer, documents, context));
     }
 
     private static Map<String, String> settings() {
@@ -232,7 +238,8 @@ public class BusinessEngine {
     }
 
     /** SDD S.12: the domain's knowledge base and its (read-only) inspector, on the domain's worker. */
-    private TaskHandlerRegistry withKnowledge(BlobStore blobs, TaskHandlerRegistry registry) {
+    private TaskHandlerRegistry withKnowledge(BlobStore blobs,
+            java.util.function.Function<DomainKnowledge.Context, TaskHandlerRegistry> handlers) {
         knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "business-kb"), Glossaries.business(), blobs, null, null,
                 InstantSource.system());
         try {
@@ -242,7 +249,7 @@ public class BusinessEngine {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
-        return knowledge.register(registry, new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
+        return knowledge.register(handlers.apply(knowledge::contextFor), new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
                 InstantSource.system()));
     }
 
