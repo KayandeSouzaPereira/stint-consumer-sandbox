@@ -1,0 +1,25 @@
+S.13 RF9 / CA9: extraction with llama.cpp (Qwen3-4B-Instruct-2507 Q4_K_M), temperature 0, 23/10/2026
+Summary: valid batches (accepted by the schema meetings@1): Business meetings 4 of 6 in this run (0 of 6 in the S.12 run: the same texts, the same settings); Engineering SDDs (title and what each covers) 1 of 4.
+
+--- Business: the business meetings of the corpus, personal-data lines left out ---
+  a1-c1-business   named by the text 0, found 0, added 0, 8893 ms
+  p1-c1-business   named by the text 1, found 1, added 0, 50148 ms
+  p2-c1-business   named by the text 4, found 3, added 0, 34894 ms
+  p2-c2-business   refused (TaskFailure: The extraction is out of the schema meetings@1.0.0 (8 violation(s)): $.entities[4].properties: a property that the model does not set (the key is the mention); $.relations[0].from: a affects does not start at that type of node; $.relations[1].from: a affects does not start at that type of node; $.relations[2].from: a affects does not start at that type of node; $.relations[3].from: a motivated-by does not start at that type of node; $.relations[3].to: a motivated-by does not end at that type of node; $.relations[4].from: a motivated-by does not start at that type of node; $.relations[4].to: a motivated-by does not end at that type of node)
+  p3-c1-business   refused (TaskFailure: The extraction is out of the schema meetings@1.0.0 (2 violation(s)): $.entities[0].ref: already used (or reserved); $.entities[0].type: the meeting is created by the worker, not by the model)
+  p6-c1-business   named by the text 1, found 1, added 0, 9387 ms
+  question "what is the limit per member": the answer's term is in the context
+  question "late return blocks loans": not found
+  glossary terms named by the texts: 6, found by the model: 5 (83%), added: 0
+  batches the schema or the model refused: 2 of 6; mean time 25830 ms
+  questions whose answer was in the context: 1 of 2
+
+--- Engineering: the SDDs of the technical meetings (title and what each covers) ---
+  p1-c1-technical  refused (TaskFailure: The extraction is out of the schema meetings@1.0.0 (6 violation(s)): $.relations[0].from: a mentions does not start at that type of node; $.relations[1].from: a mentions does not start at that type of node; $.relations[2].from: a mentions does not start at that type of node; $.relations[3].from: a mentions does not start at that type of node; $.relations[4].from: a mentions does not start at that type of node; $.relations[5].from: a mentions does not start at that type of node)
+  p2-c2-technical  refused (TaskFailure: The extraction is out of the schema meetings@1.0.0 (12 violation(s)): $.entities[2].passages[0]: not the ordinal of a passage of the window; $.entities[3]: a field that is not part of an entity; $.entities[3]: a field that is not part of an entity; $.entities[3].properties.summary: required for Decision; $.entities[4]: a field that is not part of an entity; $.entities[4]: a field that is not part of an entity; $.entities[4].passages[0]: not the ordinal of a passage of the window; $.entities[4].properties.summary: required for Decision; $.relations[0].to: a motivated-by does not end at that type of node; $.relations[1].to: a motivated-by does not end at that type of node)
+  p4-c1-technical  refused (TaskFailure: The extraction is out of the schema meetings@1.0.0 (2 violation(s)): $.relations[0].from: a mentions does not start at that type of node; $.relations[1].from: a mentions does not start at that type of node)
+  p5-c1-technical  named by the text 1, found 0, added 0, 9237 ms
+  question "borrow with a limit of three": not found
+  glossary terms named by the texts: 1, found by the model: 0 (0%), added: 0
+  batches the schema or the model refused: 3 of 4; mean time 9237 ms
+  questions whose answer was in the context: 0 of 1
