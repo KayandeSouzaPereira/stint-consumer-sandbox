@@ -18,6 +18,8 @@
         <!-- SDD S.5: the meeting pipeline. Domains talk only through contracts (events and schemas). -->
         <module>sandbox-contracts</module>
         <module>sandbox-privacy</module>
+        <!-- SDD S.12: the knowledge base each of Business and Engineering keeps (a library both use; it holds no state of its own) -->
+        <module>sandbox-knowledge</module>
         <module>sandbox-records</module>
         <module>sandbox-channels</module>
         <module>sandbox-target</module>
@@ -128,8 +130,28 @@
                 <version>${stint.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-knowledge</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-worker-knowledge</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.stintflow</groupId>
+                <artifactId>stint-knowledge-inspector</artifactId>
+                <version>${stint.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.stintflow.sandbox</groupId>
                 <artifactId>sandbox-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.stintflow.sandbox</groupId>
+                <artifactId>sandbox-knowledge</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
