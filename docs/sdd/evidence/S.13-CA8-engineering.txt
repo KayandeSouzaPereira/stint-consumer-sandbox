@@ -1,0 +1,101 @@
+S.11 RF6: p1's cycle with these domains as native images: {sandbox-privacy=jvm, sandbox-records=jvm, sandbox-channels=jvm, sandbox-target=jvm, sandbox-business=jvm, sandbox-engineering=native, sandbox-delivery=jvm}
+  t+   1.6s  started privacy (PRIVACY, pid 249708, :8093) 
+  t+   3.1s  started records (RECORDS, pid 530780, :8094) 
+  t+   4.9s  started channels (CHANNELS, pid 39380, :8095) 
+  t+   6.4s  started target (TARGET, pid 388212, :8096) 
+  t+   8.3s  started business (BUSINESS, pid 19296, :8090) 
+  t+   8.8s  started engineering (ENGINEERING, pid 72828, :8091) 
+  t+  11.2s  started delivery (DELIVERY, pid 259960, :8092) 
+  t+  11.2s  privacy: sandbox-privacy 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 1.485s. Listening on: http://0.0.0.0:8093
+  t+  11.2s  records: sandbox-records 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 1.369s. Listening on: http://0.0.0.0:8094
+  t+  11.2s  channels: sandbox-channels 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 1.778s. Listening on: http://0.0.0.0:8095
+  t+  11.2s  target: sandbox-target 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 1.349s. Listening on: http://0.0.0.0:8096
+  t+  11.2s  business: sandbox-business 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 1.772s. Listening on: http://0.0.0.0:8090
+  t+  11.2s  engineering: sandbox-engineering 1.0.0-SNAPSHOT native (powered by Quarkus 3.33.2) started in 0.087s. Listening on: http://0.0.0.0:8091
+  t+  11.2s  delivery: sandbox-delivery 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.33.2) started in 2.267s. Listening on: http://0.0.0.0:8092
+  t+  11.7s  recorded p1-c1-business
+  t+  13.7s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
+  t+  14.3s  answered tech-rep approval evt-5cb76c16-0d7a-3192-955b-166d980332e9:/do/20/approve:1
+  t+  16.5s  p1 cycle 1 closed
+  bus, p1 (chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252):
+    io.sandbox.channels.meeting-recorded.v1          subject p1-c1-business         chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-c1-design       chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.document-indexed.v1       subject rec-p1-c1-design       chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.business.document-indexed.v1          subject rec-p1-c1-design       chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.business.design-published.v1          subject p1-c1-design           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.refinement-requested.v1   subject p1-c1-design           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.channels.meeting-recorded.v1          subject p1-c1-technical        chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-c1-batch        chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-1           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-2           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.document-indexed.v1       subject rec-p1-c1-batch        chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.sdd-batch-approved.v1     subject p1-c1-batch            chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.document-indexed.v1       subject rec-p1-sdd-1           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.engineering.document-indexed.v1       subject rec-p1-sdd-2           chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-ready.v1                 subject p1-sdd-1               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-ready.v1                 subject p1-sdd-2               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-1-a1-patch  chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-implemented.v1           subject p1-sdd-1               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-2-a1-patch  chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-implemented.v1           subject p1-sdd-2               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-2-a1-report chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-1-a1-report chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-validated.v1             subject p1-sdd-1               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-2-a2-patch  chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-implemented.v1           subject p1-sdd-2               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.records.document-registered.v1        subject rec-p1-sdd-2-a2-report chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.sdd-validated.v1             subject p1-sdd-2               chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+    io.sandbox.delivery.cycle-closed.v1              subject p1                     chain chn-5de9f7e4-41fb-38a4-ade7-fab4b9f71252
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=21, sandbox-channels=1, sandbox-delivery=38, sandbox-engineering=43, sandbox-privacy=2, sandbox-records=19, sandbox-target=3}
+  items the sweeper looked at, by kind of store: {bus=32, confluence=1, dynamodb=104, log=76, mailhog=3, s3=40, span=127}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 2   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 10
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 2   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 21
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 19
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
