@@ -1,0 +1,9 @@
+S.13 CA4: the Business base moves model while 30 questions arrive
+  t+   1.3s  started privacy (PRIVACY, pid 259608, :8093) 
+  t+   2.5s  started records (RECORDS, pid 48828, :8094) 
+  t+   4.1s  started channels (CHANNELS, pid 111480, :8095) 
+  t+   5.4s  started target (TARGET, pid 529652, :8096) 
+  t+   7.1s  started business (BUSINESS, pid 156960, :8090) {business.knowledge.operators=ops}
+  t+   8.7s  started engineering (ENGINEERING, pid 267036, :8091) 
+  t+  10.7s  started delivery (DELIVERY, pid 362016, :8092) 
+  baseline documents [rec-rx-1, rec-rx-2]; all 30 answers named the same; the move was APPLIED once and then UNCHANGED

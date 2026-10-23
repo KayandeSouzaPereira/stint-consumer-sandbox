@@ -78,4 +78,17 @@ public final class KnowledgePlant {
                 .source("https://sandbox.stintflow.io/" + domain).detailType("io.sandbox." + domain + ".question-asked.v1")
                 .detail(detail).build()));
     }
+
+    /** The fact that moves the Business base to another embedding model. */
+    public void move(String requestId, String model) throws Exception {
+        ObjectNode event = Spy.JSON.createObjectNode().put("specversion", "1.0").put("id", requestId + ":fact")
+                .put("type", "io.stintflow.knowledge.embedding-changed.v1")
+                .put("source", "https://sandbox.stintflow.io/data-protection").put("datacontenttype", "application/json");
+        event.putObject("data").put("requestId", requestId).put("namespace", "sandbox").put("base", "business-kb")
+                .put("targetModel", model).put("label", "internal");
+        String detail = Spy.JSON.writeValueAsString(event);
+        floci.eventBridge.putEvents(r -> r.entries(PutEventsRequestEntry.builder().eventBusName("sandbox-domain")
+                .source("https://sandbox.stintflow.io/data-protection").detailType(
+                        "io.stintflow.knowledge.embedding-changed.v1").detail(detail).build()));
+    }
 }
