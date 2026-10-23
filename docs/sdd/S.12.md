@@ -138,7 +138,7 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 - **8i, SHA do Stint.** **`05fb70e`**, a ponta da 3b. A 3c contém a 3b, mas é outra fase.
 - **8j, ordem de execução.** Regressão curta na subida do Stint; a regressão completa só depois da última implementação, como no S.11.
 
-## 9. Registro de validação (parcial, 23/10/2026; falta a medição com modelos reais, CA11, e a comparação da recuperação antes e depois da troca de modelo, CA8)
+## 9. Registro de validação (parcial, 23/10/2026; falta a medição com modelos reais, CA11,)
 
 | CA | Estado | Evidência |
 |---|---|---|
@@ -149,7 +149,7 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 | CA5 | Verde: Negócio 9 nós/2 arestas/40 mudanças, Engenharia 13 nós/2 arestas/78 mudanças; a cadeia de `p2` fez todas as mudanças | `S.12-CA1-5.txt` |
 | CA6 | Parcial: documento apagado e verificado nas duas bases, repetido sem apagar mais; pessoa: só o caminho de lápide e verificação (S12-2) | `S.12-CA6-8.txt` |
 | CA7 | Verde: sem operador, 403 e lista vazia; com operador, a base e o export; nenhum marcador | `S.12-CA1-5.txt` |
-| CA8 | Parcial: troca de modelo aplicada uma vez, a segunda não muda, uma entrada `REINDEX`; **não** comparei a recuperação antes e depois | `S.12-CA6-8.txt` |
+| CA8 | Verde: troca aplicada uma vez, a segunda não muda, uma entrada `REINDEX` (cenário); as mesmas perguntas acham os mesmos documentos, na mesma ordem, antes e depois (teste unitário `a_move_to_another_model_finds_the_same_documents_for_the_same_questions`) | `S.12-CA6-8.txt`, `DomainKnowledgeTest` |
 | CA9 | Verde: worker morto em `knowledge-write` e em `knowledge-erase`; o trabalho volta, conclui uma vez | `S.12-CA9-write.txt`, `S.12-CA9-erase.txt` |
 | CA10 | Verde em todos os cenários (`Leftovers`) | as evidências acima |
 | CA11 | Pendente | |

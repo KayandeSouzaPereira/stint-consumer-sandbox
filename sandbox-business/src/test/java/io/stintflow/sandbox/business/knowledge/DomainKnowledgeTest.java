@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.InstantSource;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -78,5 +79,46 @@ class DomainKnowledgeTest {
         ask.put("query", "anything");
         assertThatThrownBy(() -> run(registry, "knowledge-retrieve", ask)).hasCauseInstanceOf(TaskFailure.class)
                 .cause().satisfies(e -> assertThat(((TaskFailure) e).toErrorInfo().status()).isEqualTo(403));
+    }
+
+    @Test
+    void a_move_to_another_model_finds_the_same_documents_for_the_same_questions() throws Exception {
+        BlobStore blobs = new FilesystemBlobStore(dir);
+        DomainKnowledge kb = new DomainKnowledge(SCOPE, Glossaries.business(), blobs, null,
+                new RenamedEmbedder(new io.stintflow.knowledge.DeterministicEmbedder(), "sandbox-embed-2"),
+                InstantSource.system());
+        TaskHandlerRegistry registry = kb.register(new TaskHandlerRegistry(), new InMemoryAuditLog());
+        for (String id : new String[] {"d1", "d2"}) {
+            var text = blobs.put(("Members may borrow books. A late return blocks new loans. " + id)
+                    .getBytes(StandardCharsets.UTF_8), "docs/" + id).toCompletableFuture().join();
+            ObjectNode extract = scoped(SCOPE);
+            extract.putObject("meeting").put("meetingId", id);
+            extract.put("textRef", text.toString()).put("schema", DomainKnowledge.SCHEMA).put("glossary", "business@1")
+                    .put("revision", 1);
+            ObjectNode write = scoped(SCOPE);
+            write.put("batchRef", run(registry, "extract-knowledge", extract).path("batchRef").asText());
+            run(registry, "knowledge-write", write);
+        }
+        List<String> questions = List.of("late return", "borrow books", "members");
+        List<String> before = questions.stream().map(q -> found(registry, q)).toList();
+        assertThat(before).allMatch(f -> !f.isEmpty());
+
+        ObjectNode move = scoped(SCOPE);
+        move.put("requestId", "m1").put("targetModel", "sandbox-embed-2");
+        assertThat(run(registry, "knowledge-reindex", move).path("status").asText()).isEqualTo("APPLIED");
+        assertThat(questions.stream().map(q -> found(registry, q)).toList()).as("the same documents, in the same order")
+                .isEqualTo(before);
+
+        move.put("requestId", "m2");
+        assertThat(run(registry, "knowledge-reindex", move).path("status").asText()).isEqualTo("UNCHANGED");
+    }
+
+    private String found(TaskHandlerRegistry registry, String question) {
+        ObjectNode ask = scoped(SCOPE);
+        ask.put("query", question).put("topK", 5);
+        StringBuilder out = new StringBuilder();
+        run(registry, "knowledge-retrieve", ask).path("items").forEach(i -> out.append(i.path("kind").asText()).append(':')
+                .append(i.path("origin").toString()).append(';'));
+        return out.toString();
     }
 }
