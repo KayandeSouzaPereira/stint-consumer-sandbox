@@ -48,8 +48,13 @@ public final class KnowledgePlant {
 
     /** The fact again, as the bus may deliver it twice (the same id). */
     public void announce(String recordId, int version, String sha, String project) throws Exception {
+        announce(recordId, version, sha, project, project + ":plant:" + recordId + ":v" + version);
+    }
+
+    /** The fact under an id of the caller's choosing: the same id is a redelivery, another id is a second announcement. */
+    public void announce(String recordId, int version, String sha, String project, String factId) throws Exception {
         ObjectNode event = Spy.JSON.createObjectNode().put("specversion", "1.0")
-                .put("id", project + ":plant:" + recordId + ":v" + version)
+                .put("id", factId)
                 .put("type", "io.sandbox.records.document-registered.v1")
                 .put("source", "https://sandbox.stintflow.io/records").put("subject", recordId)
                 .put("datacontenttype", "application/json").put("sandboxproject", project).put("sandboxcycle", "1");

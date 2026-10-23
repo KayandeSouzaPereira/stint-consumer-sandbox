@@ -1,0 +1,9 @@
+S.13 CA3: the fact delivered again
+  t+   1.4s  started privacy (PRIVACY, pid 159332, :8093) 
+  t+   2.7s  started records (RECORDS, pid 547200, :8094) 
+  t+   4.4s  started channels (CHANNELS, pid 66256, :8095) 
+  t+   5.7s  started target (TARGET, pid 507336, :8096) 
+  t+   7.3s  started business (BUSINESS, pid 365004, :8090) {business.knowledge.operators=ops}
+  t+   8.9s  started engineering (ENGINEERING, pid 254812, :8091) 
+  t+  11.4s  started delivery (DELIVERY, pid 250840, :8092) 
+  nodes 5, changes 10 before and after; answers [APPLIED, UNCHANGED]
