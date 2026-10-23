@@ -138,5 +138,32 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 - **8i, SHA do Stint.** **`05fb70e`**, a ponta da 3b. A 3c contém a 3b, mas é outra fase.
 - **8j, ordem de execução.** Regressão curta na subida do Stint; a regressão completa só depois da última implementação, como no S.11.
 
-## 9. Registro de validação
-(preencher na etapa 2)
+## 9. Registro de validação (parcial, 23/10/2026; a regressão completa e a medição com modelos reais ainda não rodaram)
+
+| CA | Estado | Evidência |
+|---|---|---|
+| CA1 | Verde: o escopo do outro domínio é recusado (teste unitário `DomainKnowledgeTest` em cada domínio) | testes unitários |
+| CA2 | Verde: reentrega e nova versão não duplicam; o worker morto dentro de `knowledge-write` indexa uma vez | `S.12-CA1-5.txt`, `S.12-CA9-write.txt` |
+| CA3 | Verde: zero marcador no barramento, logs, stores, spans e no que o inspetor mostra | `S.12-CA1-5.txt` |
+| CA4 | Verde: o design do ciclo 2 de `p2` cita o do ciclo 1; o primeiro não cita nada | `S.12-CA1-5.txt` |
+| CA5 | Verde: Negócio 9 nós/2 arestas/40 mudanças, Engenharia 13 nós/2 arestas/78 mudanças; a cadeia de `p2` fez todas as mudanças | `S.12-CA1-5.txt` |
+| CA6 | Parcial: documento apagado e verificado nas duas bases, repetido sem apagar mais; pessoa: só o caminho de lápide e verificação (S12-2) | `S.12-CA6-8.txt` |
+| CA7 | Verde: sem operador, 403 e lista vazia; com operador, a base e o export; nenhum marcador | `S.12-CA1-5.txt` |
+| CA8 | Parcial: troca de modelo aplicada uma vez, a segunda não muda, uma entrada `REINDEX`; **não** comparei a recuperação antes e depois | `S.12-CA6-8.txt` |
+| CA9 | Verde: worker morto em `knowledge-write` e em `knowledge-erase`; o trabalho volta, conclui uma vez | `S.12-CA9-write.txt`, `S.12-CA9-erase.txt` |
+| CA10 | Verde em todos os cenários (`Leftovers`) | as evidências acima |
+| CA11 | Pendente | |
+| CA12 | Pendente | |
+
+**Desvios da spec.**
+- **Módulo compartilhado:** o plano previa código comum; o guarda `sovereign-domain` do S.4 proíbe dependência entre módulos `sandbox-*`, então o código foi copiado por domínio (como os pontos de caos).
+- **8b:** Negócio ingere só `design`. As `questions` são da Engenharia e não têm Negócio como leitor (`read-record` devolve 403). `transcript-redacted` não é registrado neste fluxo.
+- **Portas do inspetor:** 8197 e 8198 em vez de 8097 e 8098, que colidem com os workers de cenários de caos do S.11.
+- **RF5:** a seção de contexto está no design (Negócio) e nas perguntas (Engenharia), não nos SDDs: o formato de SDD é validado pela Entrega e uma seção extra o quebraria.
+- **RF7:** o pseudônimo estável na ingestão, aprovado por Kayan, não é alcançável (S12-2).
+
+**Achados (nada alterado no Stint).**
+- **S12-1:** a 3b só tem a base em memória; um processo morto perde a base. O caos prova que nada duplica, nada fica pela metade e nada vaza, não que a base sobrevive.
+- **S12-2:** o redator do S.6 troca o nome por um rótulo por instância (`PERSON_<hash>`) antes de o documento existir; a base só vê rótulos que não se resolvem pelo nome. Excluir uma pessoa pelo nome só funciona com pseudônimo estável por escopo, o que muda o S.6.
+- **S12-3:** o grafo com `meetings@1` e glossário de 5 a 6 termos é pobre (2 arestas por base). Um esquema próprio do sandbox (8a) fica para quando a medição mostrar a necessidade.
+- **S12-4:** um fato de instância restrita sai pelo barramento só com `dataref`; quem observa de fora precisa casar por `subject`, não por dados.
