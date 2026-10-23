@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.12 |
-| Status | **Em implementação** (spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8j) |
+| Status | **Implementado** (aguarda a validação do Kayan; spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8j) |
 | Depende de | S.5 a S.11 (3a). Stint `05fb70e` (`phase-3b/knowledge-base`, SDDs 3b.1–3b.6; contém a 3a em `a52b20a`) |
 | Bloqueia | S.13 (gate da 3b) |
 | Branch | `phase-3b-validation`, criada de `phase-3a-validation` (o PR da 3a ainda não foi mergeado, então os PRs são empilhados) |
@@ -149,10 +149,10 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 | CA5 | Verde: Negócio 9 nós/2 arestas/40 mudanças, Engenharia 13 nós/2 arestas/78 mudanças; a cadeia de `p2` fez todas as mudanças | `S.12-CA1-5.txt` |
 | CA6 | Parcial: documento apagado e verificado nas duas bases, repetido sem apagar mais; pessoa: só o caminho de lápide e verificação (S12-2) | `S.12-CA6-8.txt` |
 | CA7 | Verde: sem operador, 403 e lista vazia; com operador, a base e o export; nenhum marcador | `S.12-CA1-5.txt` |
-| CA8 | Verde: troca aplicada uma vez, a segunda não muda, uma entrada `REINDEX` (cenário); as mesmas perguntas acham os mesmos documentos, na mesma ordem, antes e depois (teste unitário `a_move_to_another_model_finds_the_same_documents_for_the_same_questions`) | `S.12-CA6-8.txt`, `DomainKnowledgeTest` |
+| CA8 | Verde, exceto que a recusa do modelo antigo não foi exercitada aqui (é do Stint, 3b.5): troca aplicada uma vez, a segunda não muda, uma entrada `REINDEX` (cenário); as mesmas perguntas acham os mesmos documentos, na mesma ordem, antes e depois (teste unitário `a_move_to_another_model_finds_the_same_documents_for_the_same_questions`) | `S.12-CA6-8.txt`, `DomainKnowledgeTest` |
 | CA9 | Verde: worker morto em `knowledge-write` e em `knowledge-erase`; o trabalho volta, conclui uma vez | `S.12-CA9-write.txt`, `S.12-CA9-erase.txt` |
 | CA10 | Verde em todos os cenários (`Leftovers`) | as evidências acima |
-| CA11 | Pendente | |
+| CA11 | Medido (RF11, só medida): llama.cpp Qwen3-4B Q4_K_M, os 6 textos de reunião de negócio com as linhas de dados pessoais retiradas: **6 de 6 lotes recusados pelo esquema `meetings@1`** (tipos fora do esquema, `summary` ausente em Decision/Requirement, relações com extremos errados, o modelo criando o Meeting); nada chegou à base, as 2 perguntas ficaram sem contexto. Teste manual `KnowledgeModelsTest` (`-Dsandbox.knowledge.models=true`) | `S.12-models.txt` |
 | CA12 | Verde (23/10/2026, 14:11–15:16): Billing 5/5, Orders 6/6, `RegressionIT` 3/3, `PortalRolesIT`, `PiiSweepIT`, esqueleto x3 no Stint `05fb70e` | `S.12-CA12.txt` |
 
 **Desvios da spec.**
@@ -167,3 +167,6 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 - **S12-2:** o redator do S.6 troca o nome por um rótulo por instância (`PERSON_<hash>`) antes de o documento existir; a base só vê rótulos que não se resolvem pelo nome. Excluir uma pessoa pelo nome só funciona com pseudônimo estável por escopo, o que muda o S.6.
 - **S12-3:** o grafo com `meetings@1` e glossário de 5 a 6 termos é pobre (2 arestas por base). Um esquema próprio do sandbox (8a) fica para quando a medição mostrar a necessidade.
 - **S12-4:** um fato de instância restrita sai pelo barramento só com `dataref`; quem observa de fora precisa casar por `subject`, não por dados.
+- **S12-5:** com o modelo local (Qwen3-4B), a extração de `meetings@1` não produz lote válido em textos curtos de negócio: 6 de 6 recusados pelo esquema (a recusa é do Stint, que não aceita lote parcial nem repara). Com o modelo de teste (roteirizado) o fluxo passa; com o modelo real a base ficaria vazia. Propostas: um esquema próprio mais enxuto para os documentos do sandbox (decisão 8a), um modelo maior na extração, ou passar ao Stint o pedido de uma chamada de reparo.
+
+**Pendências.** Validado e Mergeado são do Kayan; o push dos commits locais desde `ba21a08` e o PR da fase 3b-validation (empilhado sobre `phase-3a-validation`) só a pedido.
