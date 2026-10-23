@@ -1,0 +1,60 @@
+S.13 CA7: a text with a planted marker is refused by the base; the sweeper finds it where it was planted
+  t+   1.3s  started privacy (PRIVACY, pid 146904, :8093) 
+  t+   2.6s  started records (RECORDS, pid 535284, :8094) 
+  t+   4.2s  started channels (CHANNELS, pid 201560, :8095) 
+  t+   5.4s  started target (TARGET, pid 249268, :8096) 
+  t+   7.0s  started business (BUSINESS, pid 53104, :8090) {business.knowledge.operators=ops}
+  t+   8.6s  started engineering (ENGINEERING, pid 308720, :8091) {engineering.knowledge.operators=ops}
+  t+  10.6s  started delivery (DELIVERY, pid 80200, :8092) 
+  not indexed; base changes for the document: 0
+  found in stores: [s3 s3://sandbox-records-docs/plant/rec-lk-1/v1: SYNTH-PII-2032 as synthpii2032; fragment 'SYNTH', s3 s3://sandbox-business-blobs/retention/knowledge-batch/knowledge/evt-ecd263cf-c87d-3ac0-8f4e-d3ec4d94ede8-_do_2_extract.json: SYNTH-PII-2032 as synthpii2032; fragment 'SYNTH', s3 s3://sandbox-engineering-blobs/retention/knowledge-batch/knowledge/evt-6f50055e-50a6-3e49-a553-43ea9899343a-_do_2_extract.json: SYNTH-PII-2032 as synthpii2032; fragment 'SYNTH']
+  found in bus, logs, inspector: []
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 2   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 6
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 6
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 0
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
