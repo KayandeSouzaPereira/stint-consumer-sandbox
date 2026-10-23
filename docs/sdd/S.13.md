@@ -108,5 +108,21 @@ Antes e depois da exclusão, o cenário lista os objetos dos buckets `sandbox-bu
 - **8g, SHA do Stint.** **`05fb70e`** (o mesmo do S.12).
 - **8h, ordem.** Regressão curta no início; regressão completa só depois da última implementação (como no S.11 e no S.12).
 
-## 9. Registro de validação
-(preencher na etapa 2)
+## 9. Registro de validação (parcial, 23/10/2026; faltam CA8 nativo, CA9 modelos reais, CA10 regressão completa e CA11 relatório)
+
+| CA | Estado | Evidência |
+|---|---|---|
+| CA1 | Verde: a pergunta de fora (`question-asked` → `question-answered`) devolve os ids dos documentos, modo relacional, contagens por nível; nem a pergunta nem conteúdo no barramento | `S.13-CA1-2.txt` |
+| CA2 | Verde: nove maneiras de escrever cinco termos (caixa, plural, dentro de frase) dão cinco nós, zero candidato a duplicata | `S.13-CA1-2.txt` |
+| CA3 | Verde: o mesmo fato (mesmo id) e o mesmo documento sob outro id deixam nós, arestas e log iguais; a segunda resposta é `UNCHANGED` | `S.13-CA3.txt` |
+| CA4 | Verde: 30 perguntas soltas junto do pedido de troca de modelo, todas respondidas, todas com os mesmos documentos; a troca é `APPLIED` uma vez e depois `UNCHANGED`. A recusa do modelo antigo é do Stint e não é observável de fora | `S.13-CA4.txt` |
+| CA5 | Verde: exclusão conferida no floci (blobs do lote somem, nós somem, o log guarda `ERASE`); a lápide recusa a reingestão (`REJECTED_ERASED`); **a cópia do registro de Records sobrevive** depois da mudança 8a | `S.13-CA5.txt` |
+| CA6 | Verde: 6 projetos, as duas bases indexam cada documento uma vez; da publicação do fato à resposta, p50 1,5 s e p95 1,6 s (Negócio), p50 1,5 s e p95 2,0 s (Engenharia); Negócio 13 nós, Engenharia 31 | `S.13-CA6.txt` |
+| CA7 | Verde: o texto com marcador plantado não entra em nenhuma base nem no barramento, logs e inspetor; o varredor o acha onde foi plantado (bucket do registro e os blobs de lote das duas extrações) | `S.13-CA7.txt` |
+
+**Mudança 8a aplicada (aprovada por Kayan).** A hipótese S13-1 se confirmou: com `derivedFrom` listando a cópia do registro (como no S.12), a exclusão de um design na base de Negócio apagou a cópia do registro de documentos (Records). O cenário `KnowledgeErasureOutsideIT` falhou nesse ponto antes da correção. A ingestão deixou de listar `derivedFrom` e passou a deixar só o lote da própria base (o Stint o adiciona sozinho). Isso muda o registro do S.12 (RF2/4.2 falava em `derivedFrom` = ponteiros do lote e do texto); nenhuma asserção de teste mudou.
+
+**Achados (nada alterado no Stint).**
+- **S13-1:** a exclusão remove os blobs de `derivedFrom`, inclusive os de outro domínio, se o chamador os listar. A defesa é do chamador; o worker não limita os buckets que o `derivedFrom` pode apontar. Proposta ao Stint: o worker de conhecimento aceitar `derivedFrom` só do bucket do seu blob store.
+- **S13-2:** a heurística de duplicatas do inspetor (`word-overlap`) sinaliza documentos diferentes de um mesmo projeto (`rec-l1-c1-batch` e `rec-l1-c1-design`), porque o nó de documento se chama pelo id do registro. Nenhum termo do glossário foi sinalizado. Proposta: o inspetor ignorar nós `Meeting` (ou comparar por conteúdo).
+- **S13-3:** a extração escreve o texto num blob de lote (retenção `knowledge-batch`, 7 dias) **antes** de a escrita recusar um texto com dado pessoal. O marcador plantado ficou nos blobs de lote das duas áreas, fora de qualquer base. O limite é a retenção; não há apagamento imediato do lote recusado. Proposta: o worker apagar o lote que o `knowledge-write` recusou.
