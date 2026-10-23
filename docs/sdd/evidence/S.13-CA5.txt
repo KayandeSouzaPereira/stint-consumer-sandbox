@@ -1,0 +1,16 @@
+S.13 CA5: the design erased from the Business base, checked on floci
+  t+   1.9s  started privacy (PRIVACY, pid 164396, :8093) 
+  t+   3.1s  started records (RECORDS, pid 241316, :8094) 
+  t+   4.9s  started channels (CHANNELS, pid 58832, :8095) 
+  t+   6.2s  started target (TARGET, pid 1964, :8096) 
+  t+   8.8s  started business (BUSINESS, pid 38624, :8090) {business.knowledge.operators=ops}
+  t+  11.4s  started engineering (ENGINEERING, pid 526408, :8091) 
+  t+  13.5s  started delivery (DELIVERY, pid 17296, :8092) 
+  t+  15.7s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
+  t+  16.8s  answered tech-rep approval evt-5cb76c16-0d7a-3192-955b-166d980332e9:/do/20/approve:1
+  t+  18.8s  p1 cycle 1 closed
+  t+  24.2s  business blobs: 7 before, 6 after, 1 gone
+  t+  24.2s  the register's copy after the erasure: still there
+  business blobs gone: 1 of 7
+  the register's copy: still there
+  replay after the erasure: REJECTED_ERASED

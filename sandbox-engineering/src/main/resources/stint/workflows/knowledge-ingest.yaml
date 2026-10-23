@@ -55,7 +55,7 @@ do:
             call: remote
             with:
               task: knowledge-write
-              input: '${ {batchRef: $context.batchRef, derivedFrom: [$context.contentRef], scope: {namespace: "sandbox", base: "engineering-kb"}} }'
+              input: '${ {batchRef: $context.batchRef, scope: {namespace: "sandbox", base: "engineering-kb"}} }'
             timeout: { after: { minutes: 5 } }
             export: { as: '${ $context + {status: .status, lastSequence: .lastSequence, changes: .counts} }' }
       catch:

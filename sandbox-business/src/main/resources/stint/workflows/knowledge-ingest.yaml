@@ -1,6 +1,6 @@
 # SDD S.12, RF2: the business domain's knowledge base learns from a registered document. The fact document-registered (S.7)
 # starts it (never a direct call); the text is read by pointer from the register, extracted against the glossary,
-# written in one atomic step and announced with ids and counts only. A redelivered fact is the same instance; a new
+# written in one atomic step (it lists only the batch the base itself keeps as what the document came from: the register's copy is another domain's, S.13 8a) and announced with ids and counts only. A redelivered fact is the same instance; a new
 # version of a document is a new revision of the same record. Nothing but pointers travels between the steps.
 document:
   dsl: '1.0.0'
@@ -55,7 +55,7 @@ do:
             call: remote
             with:
               task: knowledge-write
-              input: '${ {batchRef: $context.batchRef, derivedFrom: [$context.contentRef], scope: {namespace: "sandbox", base: "business-kb"}} }'
+              input: '${ {batchRef: $context.batchRef, scope: {namespace: "sandbox", base: "business-kb"}} }'
             timeout: { after: { minutes: 5 } }
             export: { as: '${ $context + {status: .status, lastSequence: .lastSequence, changes: .counts} }' }
       catch:
