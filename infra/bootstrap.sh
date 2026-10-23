@@ -222,6 +222,9 @@ ensure_rule document-registered-to-engineering  '{"detail-type":["io.sandbox.rec
 ensure_rule erasure-requested-business     '{"detail-type":["io.stintflow.knowledge.erasure-requested.v1"],"detail":{"data":{"base":["business-kb"]}}}' business-domain-events
 ensure_rule erasure-requested-engineering  '{"detail-type":["io.stintflow.knowledge.erasure-requested.v1"],"detail":{"data":{"base":["engineering-kb"]}}}' engineering-domain-events
 ensure_rule embedding-changed-business     '{"detail-type":["io.stintflow.knowledge.embedding-changed.v1"],"detail":{"data":{"base":["business-kb"]}}}' business-domain-events
+# SDD S.13, RF1: a question asked of a domain's knowledge base reaches that domain.
+ensure_rule question-asked-business     '{"detail-type":["io.sandbox.business.question-asked.v1"]}' business-domain-events
+ensure_rule question-asked-engineering  '{"detail-type":["io.sandbox.engineering.question-asked.v1"]}' engineering-domain-events
 ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
 ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
 # Delivery's own events back to Delivery: sdd-ready starts an SDD's instance, the ends resume the coordinator.

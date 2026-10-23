@@ -1,0 +1,47 @@
+# SDD S.13, RF1: a question asked of the business domain's knowledge base from outside. The fact question-asked (an id, a question
+# and optionally a mode) starts it; the base answers through the knowledge-retrieve task; only the ids of the documents that
+# hold the answer, the mode and the counts by level go out, never a question or a content.
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: knowledge-recall
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.label }'
+      routes:
+        restricted: [knowledge-retrieve]
+        confidential: [knowledge-retrieve]
+        internal: ['*']
+    x-stint-knowledge:
+      base: business-kb
+      schema: meetings@1
+      glossary: business@1
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.business.question-asked.v1 }
+do:
+  - fact:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, questionId: .data.questionId, question: .data.question, mode: (.data.mode // "auto")} }'
+      export: { as: '${ . }' }
+  - recall:
+      call: remote
+      with:
+        task: knowledge-retrieve
+        input: '${ {query: $context.question, mode: $context.mode, topK: 10, scope: {namespace: "sandbox", base: "business-kb"}} }'
+      timeout: { after: { minutes: 2 } }
+      export: { as: '${ $context + {answeredMode: .mode, counts: .counts, trimmed: .trimmed, documents: ([.items[].origin | (.documentId // empty), ((.evidence // [])[])] | map(sub("^meeting:"; "")) | unique)} }' }
+  - answered:
+      emit:
+        event:
+          with:
+            id: '${ $context.questionId + ":business-answered" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.business.question-answered.v1
+            subject: '${ $context.questionId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {questionId: $context.questionId, mode: $context.answeredMode, counts: $context.counts, trimmed: $context.trimmed, documents: $context.documents} }'
+      then: end

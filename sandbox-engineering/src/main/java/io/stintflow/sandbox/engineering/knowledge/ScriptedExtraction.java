@@ -44,10 +44,12 @@ public final class ScriptedExtraction implements ChatModel {
             List<String> names = new ArrayList<>(term.aliases());
             names.add(term.canonicalName());
             for (String name : names) {
-                if (lower.contains(name.toLowerCase()) && !seen.contains(term.id())) {
+                int at = lower.indexOf(name.toLowerCase());
+                if (at >= 0 && !seen.contains(term.id())) {
                     seen.add(term.id());
+                    // the mention as the text wrote it (case and all): the base resolves it to the glossary term (S.13, RF2)
                     ObjectNode e = entities.addObject().put("ref", "t" + (++n)).put("type", term.type())
-                            .put("mention", name);
+                            .put("mention", text.substring(at, at + name.length()));
                     e.set("passages", Json.MAPPER.createArrayNode().add(0));
                 }
             }
