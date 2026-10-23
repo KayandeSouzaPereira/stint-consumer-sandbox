@@ -48,7 +48,7 @@
 | CA7 zero vazamento | Verde: o texto com marcador não entra; o varredor o acha onde foi plantado |
 | CA8 nativo | Observação: Engenharia compila e corre o ciclo; Negócio não compila (`Random` no heap da imagem, S11-3) |
 | CA9 modelos reais | Medido; a taxa de lotes válidos varia entre rodadas (seção 1) |
-| CA10 regressão S.1–S.12 | PREENCHER |
+| CA10 regressão S.1–S.12 | Verde (23/10/2026, 18:51–19:58): Billing 5/5, Orders 6/6, `RegressionIT` 3/3, `PortalRolesIT`, `PiiSweepIT`, esqueleto x3 |
 | CA11 este relatório | Entregue |
 
 ## 5. Achados consolidados

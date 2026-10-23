@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.13 |
-| Status | **Em implementação** (spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8h) |
+| Status | **Implementado** (aguarda a validação do Kayan; spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8h) |
 | Depende de | S.12 (Implementado). Stint `05fb70e` (`phase-3b/knowledge-base`, SDDs 3b.1–3b.6), o mesmo do S.12 |
 | Bloqueia | O PR de fase da 3b (e o início da 3c, S.14 em diante) |
 | Branch | `phase-3b-validation` (empilhada sobre `phase-3a-validation`; o PR da 3a ainda não foi mergeado) |
@@ -79,6 +79,8 @@ Antes e depois da exclusão, o cenário lista os objetos dos buckets `sandbox-bu
 | CA7 | Zero marcador em tudo, incluindo inspetor, export, lotes e log; controle positivo | varredor estendido |
 | CA8 | Nativo de Negócio e de Engenharia tentado, resultado registrado | `KnowledgeNativeIT` |
 | CA9 | Medição com modelos reais registrada (inclui a taxa de lotes válidos) | `S.13-models.txt` |
+| CA10 | Verde (18:51–19:58): Billing 5/5, Orders 6/6, `RegressionIT` 3/3, `PortalRolesIT`, `PiiSweepIT`, esqueleto x3 no Stint `05fb70e` | `S.13-CA10.txt` |
+| CA11 | Entregue | `docs/evidence/phase-3b-gate.md` |
 | CA10 | Regressão S.1–S.12 verde | `gate.sh --regression-only`, depois da última implementação |
 | CA11 | Relatório do gate da 3b entregue | `docs/evidence/phase-3b-gate.md` |
 
@@ -108,7 +110,7 @@ Antes e depois da exclusão, o cenário lista os objetos dos buckets `sandbox-bu
 - **8g, SHA do Stint.** **`05fb70e`** (o mesmo do S.12).
 - **8h, ordem.** Regressão curta no início; regressão completa só depois da última implementação (como no S.11 e no S.12).
 
-## 9. Registro de validação (parcial, 23/10/2026; faltam CA10 regressão completa e CA11 relatório)
+## 9. Registro de validação (23/10/2026)
 
 | CA | Estado | Evidência |
 |---|---|---|
@@ -129,3 +131,5 @@ Antes e depois da exclusão, o cenário lista os objetos dos buckets `sandbox-bu
 - **S13-2:** a heurística de duplicatas do inspetor (`word-overlap`) sinaliza documentos diferentes de um mesmo projeto (`rec-l1-c1-batch` e `rec-l1-c1-design`), porque o nó de documento se chama pelo id do registro. Nenhum termo do glossário foi sinalizado. Proposta: o inspetor ignorar nós `Meeting` (ou comparar por conteúdo).
 - **S13-3:** a extração escreve o texto num blob de lote (retenção `knowledge-batch`, 7 dias) **antes** de a escrita recusar um texto com dado pessoal. O marcador plantado ficou nos blobs de lote das duas áreas, fora de qualquer base. O limite é a retenção; não há apagamento imediato do lote recusado. Proposta: o worker apagar o lote que o `knowledge-write` recusou.
 - **S13-4:** o resultado da extração do modelo local varia entre rodadas com os mesmos textos e a temperatura 0 (0 de 6 lotes válidos no S.12, 4 de 6 aqui). Qualquer taxa medida é uma amostra, não uma propriedade do modelo.
+
+**Pendências.** Validado e Mergeado são do Kayan. Push dos commits locais desde `ba21a08` e os PRs só a pedido. Decisões que ficam com o Kayan: o S12-2 (pseudônimo estável no S.6) e o S12-5/S13-4 (modelo e esquema de extração).
