@@ -1,0 +1,83 @@
+S.13 CA6: 6 simultaneous projects, both bases learning
+  t+   1.4s  started privacy (PRIVACY, pid 141508, :8093) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   2.6s  started records (RECORDS, pid 184032, :8094) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   4.3s  started channels (CHANNELS, pid 498484, :8095) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   5.5s  started target (TARGET, pid 358020, :8096) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+   7.1s  started business (BUSINESS, pid 294512, :8090) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus, business.knowledge.operators=ops}
+  t+   8.8s  started engineering (ENGINEERING, pid 427736, :8091) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus, engineering.knowledge.operators=ops}
+  t+  10.8s  started delivery (DELIVERY, pid 454556, :8092) {sandbox.corpus-dir=C:\dev\stint-consumer-sandbox\sandbox-scenarios\target\scenarios\load-corpus}
+  t+  14.7s  answered business-rep approval evt-4aee4d3e-82b2-3bd9-a70b-3e9893280bf6:/do/15/approve:1
+  t+  14.7s  answered business-rep approval evt-ac3d8dc8-a99a-3ea2-aae3-8a38139a38fe:/do/15/approve:1
+  t+  14.9s  answered business-rep approval evt-785bcf4e-c79a-320a-8e3d-e055455997f7:/do/15/approve:1
+  t+  14.9s  answered business-rep approval evt-14fbbbed-ca43-30bc-8d6c-5e1262b4cfdb:/do/15/approve:1
+  t+  15.0s  answered business-rep approval evt-d72c86e4-1802-34d1-a6ec-73cdeffd7131:/do/15/approve:1
+  t+  15.1s  answered business-rep approval evt-449e4379-620d-39a6-850d-048bacaf2a70:/do/15/approve:1
+  t+  17.2s  answered tech-rep approval evt-363489ee-08b2-356f-8ae3-8b2a79941ff3:/do/20/approve:1
+  t+  17.4s  answered tech-rep approval evt-13837d9c-f944-3d49-9ae0-514e7788aa72:/do/20/approve:1
+  t+  18.0s  answered tech-rep approval evt-b799e277-8ad5-381f-a842-d42aac34a05d:/do/20/approve:1
+  t+  18.4s  answered tech-rep approval evt-3f08ac95-f1ee-3f49-8d99-b09711708186:/do/20/approve:1
+  t+  18.6s  answered tech-rep approval evt-1191e0b6-ccc7-39ff-9b16-cfd64201de56:/do/20/approve:1
+  t+  18.9s  answered tech-rep approval evt-c45868b7-08e2-3130-b4ef-7fb43baa1552:/do/20/approve:1
+  t+  22.9s  l1 cycle 1 closed
+  t+  22.9s  l2 cycle 1 closed
+  t+  23.4s  l3 cycle 1 closed
+  t+  23.5s  l4 cycle 1 closed
+  t+  23.5s  l5 cycle 1 closed
+  t+  23.5s  l6 cycle 1 closed
+  business candidates for duplicate: []
+  business     6 documents indexed once; fact to answer p50 1,5 s, p95 1,6 s; 13 nodes, 6 edges
+  engineering candidates for duplicate: [{"type":"Meeting","aId":"e-108f58a4f85150f7bf4efdbf63cb24cf","aLabel":"rec-l1-c1-batch","aEvidence":1,"bId":"e-e084ec7ff47096ac8a215cbf17207ff5","bLabel":"rec-l1-c1-design","bEvidence":1,"criterion":"word-overlap"},{"type":"Meeting","aId":"e-679ce96e8261278d5034b8cd2b05e4e8","aLabel":"rec-l5-c1-batch","aEvidence":1,"bId":"e-8a1ff9a38e60616a0ab1debfd9f03909","bLabel":"rec-l5-c1-design","bEvidence":1,"criterion":"word-overlap"},{"type":"Meeting","aId":"e-738e1cb83adb4b83a1d3ca2b9860c2ea","aLabel":"rec-l4-c1-design","aEvidence":1,"bId":"e-975753d0cb7058ffb11a1accba01ef1c","bLabel":"rec-l4-c1-batch","bEvidence":1,"criterion":"word-overlap"},{"type":"Meeting","aId":"e-aeb928ac7149e22fbd91e3c39c7dcf59","aLabel":"rec-l2-c1-batch","aEvidence":1,"bId":"e-b1d8bcd26372e61246def2336fdcd901","bLabel":"rec-l2-c1-design","bEvidence":1,"criterion":"word-overlap"},{"type":"Meeting","aId":"e-d21c09bfc779b7f2dfc6adc790c65645","aLabel":"rec-l3-c1-batch","aEvidence":1,"bId":"e-e91b724325303c96420e4c1efdca3b6e","bLabel":"rec-l3-c1-design","bEvidence":1,"criterion":"word-overlap"},{"type":"Meeting","aId":"e-e37fca0082811b69b032672e5fac6ddc","aLabel":"rec-l6-c1-batch","aEvidence":1,"bId":"e-ef86e0a7136ab0a7002c305c3b8e5361","bLabel":"rec-l6-c1-design","bEvidence":1,"criterion":"word-overlap"}]
+  engineering  24 documents indexed once; fact to answer p50 1,5 s, p95 2,0 s; 31 nodes, 6 edges
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=252, sandbox-channels=12, sandbox-delivery=456, sandbox-engineering=516, sandbox-privacy=24, sandbox-records=228, sandbox-target=36}
+  items the sweeper looked at, by kind of store: {bus=192, confluence=6, dynamodb=624, log=236, mailhog=18, s3=240, span=1524}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                12   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 60
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                12   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 126
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 114
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
