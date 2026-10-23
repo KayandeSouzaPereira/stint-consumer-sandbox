@@ -1,29 +1,29 @@
 S.12 CA6 and CA8: erasure of a document and of a person, and the change of model
-  t+   1.3s  started privacy (PRIVACY, pid 200052, :8093) 
-  t+   2.5s  started records (RECORDS, pid 162860, :8094) 
-  t+   4.1s  started channels (CHANNELS, pid 96076, :8095) 
-  t+   5.3s  started target (TARGET, pid 42992, :8096) 
-  t+   7.0s  started business (BUSINESS, pid 387044, :8090) {business.knowledge.operators=ops}
-  t+   8.6s  started engineering (ENGINEERING, pid 304964, :8091) {engineering.knowledge.operators=ops}
-  t+  10.7s  started delivery (DELIVERY, pid 537584, :8092) 
-  t+  12.9s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
-  t+  13.9s  answered tech-rep approval evt-5cb76c16-0d7a-3192-955b-166d980332e9:/do/20/approve:1
-  t+  15.8s  p1 cycle 1 closed
-  t+  20.9s  fact erasure-requested.v1 er-doc-business-1
-  t+  21.1s  fact erasure-requested.v1 er-doc-business-2
-  t+  21.3s  fact erasure-requested.v1 er-doc-engineering-1
-  t+  21.5s  fact erasure-requested.v1 er-doc-engineering-2
-  t+  21.7s  fact erasure-requested.v1 er-person-1
-  t+  22.0s  fact embedding-changed.v1 em-1
-  t+  22.1s  fact embedding-changed.v1 em-2
+  t+   1.3s  started privacy (PRIVACY, pid 477200, :8093) 
+  t+   3.0s  started records (RECORDS, pid 514924, :8094) 
+  t+   5.1s  started channels (CHANNELS, pid 492172, :8095) 
+  t+   6.8s  started target (TARGET, pid 509504, :8096) 
+  t+   8.5s  started business (BUSINESS, pid 131484, :8090) {business.knowledge.operators=ops}
+  t+  10.2s  started engineering (ENGINEERING, pid 451084, :8091) {engineering.knowledge.operators=ops}
+  t+  12.3s  started delivery (DELIVERY, pid 549880, :8092) 
+  t+  14.7s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
+  t+  15.7s  answered tech-rep approval evt-5cb76c16-0d7a-3192-955b-166d980332e9:/do/20/approve:1
+  t+  17.8s  p1 cycle 1 closed
+  t+  22.9s  fact erasure-requested.v1 er-doc-business-1
+  t+  23.1s  fact erasure-requested.v1 er-doc-business-2
+  t+  23.3s  fact erasure-requested.v1 er-doc-engineering-1
+  t+  23.5s  fact erasure-requested.v1 er-doc-engineering-2
+  t+  23.7s  fact erasure-requested.v1 er-person-1
+  t+  24.0s  fact embedding-changed.v1 em-1
+  t+  24.1s  fact embedding-changed.v1 em-2
   business     document meeting:rec-p1-c1-design: nodes 3 -> 0, people 1 -> 0, erasure logged 7 time(s)
   engineering  document meeting:rec-p1-c1-design: nodes 6 -> 3, people 1 -> 0, erasure logged 7 time(s)
   person erased: tombstone and verification clean, blob forgotten, business nodes 0 -> 0
   business model moved: APPLIED then UNCHANGED; REINDEX logged 1 time(s)
   events out of the contract: []
   markers found (bus, spans, 7 process logs, stores): []
-  Jaeger spans of the chain(s) by service: {sandbox-business=99, sandbox-channels=5, sandbox-delivery=190, sandbox-engineering=191, sandbox-privacy=10, sandbox-records=90, sandbox-target=15}
-  items the sweeper looked at, by kind of store: {bus=46, confluence=1, dynamodb=136, log=83, mailhog=3, s3=52, span=600}
+  Jaeger spans of the chain(s) by service: {sandbox-business=21, sandbox-channels=1, sandbox-delivery=38, sandbox-engineering=43, sandbox-privacy=2, sandbox-records=19, sandbox-target=3}
+  items the sweeper looked at, by kind of store: {bus=46, confluence=1, dynamodb=136, log=83, mailhog=3, s3=52, span=127}
 Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
   [business]
     waits                 0   dynamodb scan --table-name business-waits --select COUNT
