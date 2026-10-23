@@ -31,8 +31,8 @@ import io.stintflow.sandbox.scenarios.support.Sweeper;
 class KnowledgeIngestIT extends PipelineScenario {
 
     static final String OPERATOR = "ops";
-    static final int BUSINESS_INSPECTOR = 8097;
-    static final int ENGINEERING_INSPECTOR = 8098;
+    static final int BUSINESS_INSPECTOR = 8197;
+    static final int ENGINEERING_INSPECTOR = 8198;
     static final String BUSINESS_KB = "sandbox/business-kb";
     static final String ENGINEERING_KB = "sandbox/engineering-kb";
 

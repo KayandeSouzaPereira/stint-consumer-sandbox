@@ -56,7 +56,7 @@ class KnowledgeErasureIT extends PipelineScenario {
         List<String> shown = new ArrayList<>();
 
         // --- a document, from each base ---
-        for (String[] base : new String[][] {{"business", "8097", "business-kb"}, {"engineering", "8098", "engineering-kb"}}) {
+        for (String[] base : new String[][] {{"business", "8197", "business-kb"}, {"engineering", "8198", "engineering-kb"}}) {
             int port = Integer.parseInt(base[1]);
             String kb = "sandbox/" + base[2];
             JsonNode before = json(port, "/graph/" + kb + "/view");
@@ -94,7 +94,7 @@ class KnowledgeErasureIT extends PipelineScenario {
                 CORPUS.meeting("p1-c1-business").pii().stream().filter(p -> p.kind().equals("name")).findFirst().orElseThrow()
                         .written(),
                 StandardCharsets.UTF_8));
-        JsonNode beforePerson = json(8097, "/graph/sandbox/business-kb/view");
+        JsonNode beforePerson = json(8197, "/graph/sandbox/business-kb/view");
         fact("er-person-1", ERASED.replace("completed", "requested"), erasure("er-person", "person", "business-kb")
                 .put("personRef", "s3://sandbox-business-blobs/" + subject).put("passages", "LINKED")
                 .put("label", "restricted"));
@@ -108,7 +108,7 @@ class KnowledgeErasureIT extends PipelineScenario {
         assertThat(answered).contains("\"verified\":true").contains("\"tombstone\":true").doesNotContain("SYNTH-PII");
         assertThatThrownBy(() -> floci.s3.getObject(r -> r.bucket("sandbox-business-blobs").key(subject)))
                 .as("the subject's blob is forgotten").isInstanceOf(NoSuchKeyException.class);
-        JsonNode afterPerson = json(8097, "/graph/sandbox/business-kb/view");
+        JsonNode afterPerson = json(8197, "/graph/sandbox/business-kb/view");
         assertThat(afterPerson.path("nodes").size()).as("the others stay").isEqualTo(beforePerson.path("nodes").size());
         look.append(String.format("  person erased: tombstone and verification clean, blob forgotten, business nodes %d -> %d%n",
                 beforePerson.path("nodes").size(), afterPerson.path("nodes").size()));
@@ -123,9 +123,9 @@ class KnowledgeErasureIT extends PipelineScenario {
                 .put("requestId", "em-2").put("namespace", "sandbox").put("base", "business-kb")
                 .put("targetModel", "sandbox-embed-2").put("label", "internal"));
         assertThat(data(awaitFact(REINDEXED, "em-2", 1), "status")).isEqualTo("UNCHANGED");
-        JsonNode changes = json(8097, "/graph/sandbox/business-kb/changes?after=0&limit=500");
+        JsonNode changes = json(8197, "/graph/sandbox/business-kb/changes?after=0&limit=500");
         assertThat(op(changes, "REINDEX")).as("one entry for the move").isEqualTo(1);
-        assertThat(json(8097, "/graph/sandbox/business-kb/view").path("nodes").size()).isEqualTo(
+        assertThat(json(8197, "/graph/sandbox/business-kb/view").path("nodes").size()).isEqualTo(
                 afterPerson.path("nodes").size());
         shown.add(changes.toString());
         look.append(String.format("  business model moved: %s then %s; REINDEX logged %d time(s)%n", data(moved, "status"),

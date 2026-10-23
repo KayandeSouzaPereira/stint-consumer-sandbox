@@ -130,7 +130,7 @@ public class BusinessEngine {
     Optional<String> haltBeforePublish;
     @ConfigProperty(name = "business.chaos.halt-in-task")
     Optional<String> haltInTask;
-    @ConfigProperty(name = "business.knowledge.inspector-port", defaultValue = "8097")
+    @ConfigProperty(name = "business.knowledge.inspector-port", defaultValue = "8197")
     int inspectorPort;
     @ConfigProperty(name = "business.knowledge.operators")
     Optional<List<String>> operators;

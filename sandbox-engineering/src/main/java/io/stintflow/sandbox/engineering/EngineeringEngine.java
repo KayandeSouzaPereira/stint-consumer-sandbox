@@ -126,7 +126,7 @@ public class EngineeringEngine {
     Optional<String> haltBeforePublish;
     @ConfigProperty(name = "engineering.chaos.halt-in-task")
     Optional<String> haltInTask;
-    @ConfigProperty(name = "engineering.knowledge.inspector-port", defaultValue = "8098")
+    @ConfigProperty(name = "engineering.knowledge.inspector-port", defaultValue = "8198")
     int inspectorPort;
     @ConfigProperty(name = "engineering.knowledge.operators")
     Optional<List<String>> operators;
