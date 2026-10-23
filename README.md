@@ -27,8 +27,8 @@ runs them together under failures and load. The specs live in [`docs/sdd`](docs/
 
 ## Stint version
 
-The sandbox is pinned to **Stint `a52b20a`** (branch `phase-3a/ai-decision-workers`, Phase 3a: SDDs 3a.1–3a.11, PR #5),
-since S.11 (S.5 to S.10 ran on `500dfd1`, SDDs 3a.1–3a.7). Phases 1 and 2 were validated on `9be0898` (`main`).
+The sandbox is pinned to **Stint `05fb70e`** (branch `phase-3b/knowledge-base`, Phase 3b: SDDs 3b.1–3b.6 on top of 3a.1–3a.11),
+since S.12 (S.11 ran on `a52b20a`; S.5 to S.10 on `500dfd1`). Phases 1 and 2 were validated on `9be0898` (`main`).
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ since S.11 (S.5 to S.10 ran on `500dfd1`, SDDs 3a.1–3a.7). Phases 1 and 2 were
 ## 1. Install Stint at the pinned SHA
 
 Stint isn't published to a remote repository yet, so install it locally. The script clones it, checks out the pinned
-SHA and installs it under the version `0.1.0-3a-a52b20a`, so that installing Stint's own working tree (`0.1.0-SNAPSHOT`,
+SHA and installs it under the version `0.1.0-3b-05fb70e`, so that installing Stint's own working tree (`0.1.0-SNAPSHOT`,
 for other phases) never changes what the sandbox builds and runs:
 
 ```bash

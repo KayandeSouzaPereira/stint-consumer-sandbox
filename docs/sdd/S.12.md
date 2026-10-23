@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.12 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Em implementação** (spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8j) |
 | Depende de | S.5 a S.11 (3a). Stint `05fb70e` (`phase-3b/knowledge-base`, SDDs 3b.1–3b.6; contém a 3a em `a52b20a`) |
 | Bloqueia | S.13 (gate da 3b) |
 | Branch | `phase-3b-validation`, criada de `phase-3a-validation` (o PR da 3a ainda não foi mergeado, então os PRs são empilhados) |
