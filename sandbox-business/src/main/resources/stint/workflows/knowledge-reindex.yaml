@@ -1,0 +1,52 @@
+# SDD S.12, 8f: the Business knowledge base moves to another embedding model. The fact embedding-changed (a request id and a model name) starts it; the worker that holds the target model decides (Stint 3b.5).
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: knowledge-reindex
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.label }'
+      routes:
+        restricted: [knowledge-reindex]
+        confidential: [knowledge-reindex]
+        internal: ['*']
+    x-stint-knowledge:
+      base: business-kb
+      schema: meetings@1
+      glossary: business@1
+schedule:
+  on:
+    one:
+      with: { type: io.stintflow.knowledge.embedding-changed.v1 }
+do:
+  - request:
+      set: '${ .[0].data | {requestId: .requestId, targetModel: .targetModel} }'
+      export: { as: '${ . }' }
+  - reindex:
+      try:
+        - run:
+            call: remote
+            with:
+              task: knowledge-reindex
+              input: '${ {requestId: $context.requestId, targetModel: $context.targetModel, scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 30 } }
+            export: { as: '${ $context + {status: .status, from: .from, to: .to, passages: .passages, skipped: .skipped} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 30 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - reindexed:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/business
+            type: io.stintflow.knowledge.reindexed.v1
+            subject: '${ $context.requestId }'
+            data: '${ {requestId: $context.requestId, status: $context.status, from: $context.from, to: $context.to, passages: $context.passages, skipped: $context.skipped} }'
+      then: end

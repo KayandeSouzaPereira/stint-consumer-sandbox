@@ -218,6 +218,10 @@ ensure_rule meeting-recorded-technical   '{"detail-type":["io.sandbox.channels.m
 # Engineering the design it reads, its questions, SDDs and batches. The register's read-record refuses any other pair (403).
 ensure_rule document-registered-to-business     '{"detail-type":["io.sandbox.records.document-registered.v1"],"detail":{"data":{"kind":["design"]}}}' business-domain-events
 ensure_rule document-registered-to-engineering  '{"detail-type":["io.sandbox.records.document-registered.v1"],"detail":{"data":{"kind":["design","questions","sdd-batch","sdd"]}}}' engineering-domain-events
+# SDD S.12, RF7 and 8f: a request to erase (from a document or from a person) and the move to another embedding model reach the domain whose base they name.
+ensure_rule erasure-requested-business     '{"detail-type":["io.stintflow.knowledge.erasure-requested.v1"],"detail":{"data":{"base":["business-kb"]}}}' business-domain-events
+ensure_rule erasure-requested-engineering  '{"detail-type":["io.stintflow.knowledge.erasure-requested.v1"],"detail":{"data":{"base":["engineering-kb"]}}}' engineering-domain-events
+ensure_rule embedding-changed-business     '{"detail-type":["io.stintflow.knowledge.embedding-changed.v1"],"detail":{"data":{"base":["business-kb"]}}}' business-domain-events
 ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
 ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
 # Delivery's own events back to Delivery: sdd-ready starts an SDD's instance, the ends resume the coordinator.

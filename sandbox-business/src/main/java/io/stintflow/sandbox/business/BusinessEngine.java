@@ -240,7 +240,9 @@ public class BusinessEngine {
     /** SDD S.12: the domain's knowledge base and its (read-only) inspector, on the domain's worker. */
     private TaskHandlerRegistry withKnowledge(BlobStore blobs,
             java.util.function.Function<DomainKnowledge.Context, TaskHandlerRegistry> handlers) {
-        knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "business-kb"), Glossaries.business(), blobs, null, null,
+        knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "business-kb"), Glossaries.business(), blobs, null,
+                new io.stintflow.sandbox.business.knowledge.RenamedEmbedder(new io.stintflow.knowledge.DeterministicEmbedder(),
+                        "sandbox-embed-2"),
                 InstantSource.system());
         try {
             if (inspectorPort > 0) {

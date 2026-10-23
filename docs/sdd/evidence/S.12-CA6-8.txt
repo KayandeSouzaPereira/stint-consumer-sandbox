@@ -1,0 +1,75 @@
+S.12 CA6 and CA8: erasure of a document and of a person, and the change of model
+  t+   1.3s  started privacy (PRIVACY, pid 200052, :8093) 
+  t+   2.5s  started records (RECORDS, pid 162860, :8094) 
+  t+   4.1s  started channels (CHANNELS, pid 96076, :8095) 
+  t+   5.3s  started target (TARGET, pid 42992, :8096) 
+  t+   7.0s  started business (BUSINESS, pid 387044, :8090) {business.knowledge.operators=ops}
+  t+   8.6s  started engineering (ENGINEERING, pid 304964, :8091) {engineering.knowledge.operators=ops}
+  t+  10.7s  started delivery (DELIVERY, pid 537584, :8092) 
+  t+  12.9s  answered business-rep approval evt-2604cc20-78ba-397f-bf15-84ea9d10512a:/do/15/approve:1
+  t+  13.9s  answered tech-rep approval evt-5cb76c16-0d7a-3192-955b-166d980332e9:/do/20/approve:1
+  t+  15.8s  p1 cycle 1 closed
+  t+  20.9s  fact erasure-requested.v1 er-doc-business-1
+  t+  21.1s  fact erasure-requested.v1 er-doc-business-2
+  t+  21.3s  fact erasure-requested.v1 er-doc-engineering-1
+  t+  21.5s  fact erasure-requested.v1 er-doc-engineering-2
+  t+  21.7s  fact erasure-requested.v1 er-person-1
+  t+  22.0s  fact embedding-changed.v1 em-1
+  t+  22.1s  fact embedding-changed.v1 em-2
+  business     document meeting:rec-p1-c1-design: nodes 3 -> 0, people 1 -> 0, erasure logged 7 time(s)
+  engineering  document meeting:rec-p1-c1-design: nodes 6 -> 3, people 1 -> 0, erasure logged 7 time(s)
+  person erased: tombstone and verification clean, blob forgotten, business nodes 0 -> 0
+  business model moved: APPLIED then UNCHANGED; REINDEX logged 1 time(s)
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=99, sandbox-channels=5, sandbox-delivery=190, sandbox-engineering=191, sandbox-privacy=10, sandbox-records=90, sandbox-target=15}
+  items the sweeper looked at, by kind of store: {bus=46, confluence=1, dynamodb=136, log=83, mailhog=3, s3=52, span=600}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 2   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 20
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 2   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 27
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 0   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 19
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

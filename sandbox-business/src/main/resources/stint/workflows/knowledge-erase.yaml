@@ -1,0 +1,119 @@
+# SDD S.12, RF7: erasure of a document or a person from the business domain's knowledge base. The fact erasure-requested (ids and a pointer, never a name) starts it; Stint 3b.5's definition, with this domain's scope. Repeating the request id changes nothing.
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: knowledge-erase
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.label }'
+      routes:
+        restricted: [resolve-person, knowledge-erase, knowledge-verify, forget-subject]
+        confidential: [knowledge-erase, knowledge-verify, forget-subject]
+        internal: ['*']
+    x-stint-knowledge:
+      base: business-kb
+      schema: meetings@1
+      glossary: business@1
+schedule:
+  on:
+    one:
+      with: { type: io.stintflow.knowledge.erasure-requested.v1 }
+do:
+  - request:
+      set: '${ .[0].data | {requestId: .requestId, kind: .kind, documentId: (.documentId // ""), personRef: (.personRef // null), passages: (.passages // "LINKED")} }'
+      export: { as: '${ . }' }
+  - route:
+      switch:
+        - person: { when: '${ $context.kind == "person" }', then: resolve }
+        - document: { then: erase }
+  - resolve:
+      try:
+        - run:
+            call: remote
+            with:
+              task: resolve-person
+              input: '${ {personRef: $context.personRef, scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 2 } }
+            export: { as: '${ $context + {entityId: .entityId} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - erase:
+      try:
+        - run:
+            call: remote
+            with:
+              task: knowledge-erase
+              input: '${ {requestId: $context.requestId, kind: $context.kind, documentId: $context.documentId, entityId: ($context.entityId // ""), passages: $context.passages, scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 5 } }
+            export: { as: '${ $context + {counts: .counts} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - verify:
+      try:
+        - run:
+            call: remote
+            with:
+              task: knowledge-verify
+              input: '${ {requestId: $context.requestId, kind: $context.kind, documentId: $context.documentId, entityId: ($context.entityId // ""), passages: $context.passages, scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 2 } }
+            export: { as: '${ $context + {verified: .verified, tombstone: .tombstone, remaining: .remaining} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - check:
+      switch:
+        - left: { when: '${ $context.verified == false }', then: incomplete }
+        - clean: { then: forget }
+  - forget:
+      try:
+        - run:
+            call: remote
+            with:
+              task: forget-subject
+              input: '${ {personRef: $context.personRef} }'
+            timeout: { after: { minutes: 1 } }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - completed:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/business
+            type: io.stintflow.knowledge.erasure-completed.v1
+            subject: '${ $context.requestId }'
+            data: '${ {requestId: $context.requestId, kind: $context.kind, documentId: $context.documentId, counts: $context.counts, verified: true, tombstone: $context.tombstone} }'
+      then: end
+  - incomplete:
+      emit:
+        event:
+          with:
+            source: https://sandbox.stintflow.io/business
+            type: io.stintflow.knowledge.erasure-incomplete.v1
+            subject: '${ $context.requestId }'
+            data: '${ {requestId: $context.requestId, kind: $context.kind, documentId: $context.documentId, remaining: $context.remaining, tombstone: $context.tombstone} }'
+      then: end
