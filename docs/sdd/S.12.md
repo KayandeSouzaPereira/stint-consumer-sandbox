@@ -138,7 +138,7 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 - **8i, SHA do Stint.** **`05fb70e`**, a ponta da 3b. A 3c contém a 3b, mas é outra fase.
 - **8j, ordem de execução.** Regressão curta na subida do Stint; a regressão completa só depois da última implementação, como no S.11.
 
-## 9. Registro de validação (parcial, 23/10/2026; a regressão completa e a medição com modelos reais ainda não rodaram)
+## 9. Registro de validação (parcial, 23/10/2026; falta a medição com modelos reais, CA11, e a comparação da recuperação antes e depois da troca de modelo, CA8)
 
 | CA | Estado | Evidência |
 |---|---|---|
@@ -153,7 +153,7 @@ Usam as definições `knowledge-erase` e `knowledge-reindex` do Stint, adaptadas
 | CA9 | Verde: worker morto em `knowledge-write` e em `knowledge-erase`; o trabalho volta, conclui uma vez | `S.12-CA9-write.txt`, `S.12-CA9-erase.txt` |
 | CA10 | Verde em todos os cenários (`Leftovers`) | as evidências acima |
 | CA11 | Pendente | |
-| CA12 | Pendente | |
+| CA12 | Verde (23/10/2026, 14:11–15:16): Billing 5/5, Orders 6/6, `RegressionIT` 3/3, `PortalRolesIT`, `PiiSweepIT`, esqueleto x3 no Stint `05fb70e` | `S.12-CA12.txt` |
 
 **Desvios da spec.**
 - **Módulo compartilhado:** o plano previa código comum; o guarda `sovereign-domain` do S.4 proíbe dependência entre módulos `sandbox-*`, então o código foi copiado por domínio (como os pontos de caos).
