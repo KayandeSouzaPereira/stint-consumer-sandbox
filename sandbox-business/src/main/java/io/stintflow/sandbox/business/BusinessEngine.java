@@ -16,6 +16,9 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.stintflow.aws.DynamoDbAuditLog;
+import io.stintflow.knowledge.KnowledgeScope;
+import io.stintflow.sandbox.business.knowledge.DomainKnowledge;
+import io.stintflow.sandbox.business.knowledge.Glossaries;
 import io.stintflow.aws.DynamoDbCorrectionLog;
 import io.stintflow.aws.DynamoDbStateStore;
 import io.stintflow.aws.EventBridgeEventPublisher;
@@ -127,6 +130,11 @@ public class BusinessEngine {
     Optional<String> haltBeforePublish;
     @ConfigProperty(name = "business.chaos.halt-in-task")
     Optional<String> haltInTask;
+    @ConfigProperty(name = "business.knowledge.inspector-port", defaultValue = "8097")
+    int inspectorPort;
+    @ConfigProperty(name = "business.knowledge.operators")
+    Optional<List<String>> operators;
+    private volatile DomainKnowledge knowledge;
 
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
@@ -179,8 +187,8 @@ public class BusinessEngine {
         BusinessModels stack = "local".equals(models) ? BusinessModels.local(settings()) : BusinessModels.fakes(corpus);
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(handlers(stack,
-                        new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer),
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, handlers(stack,
+                        new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer)),
                         haltInTask, ChaosPoints.HALT), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
@@ -223,7 +231,25 @@ public class BusinessEngine {
         return out;
     }
 
+    /** SDD S.12: the domain's knowledge base and its (read-only) inspector, on the domain's worker. */
+    private TaskHandlerRegistry withKnowledge(BlobStore blobs, TaskHandlerRegistry registry) {
+        knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "business-kb"), Glossaries.business(), blobs, null, null,
+                InstantSource.system());
+        try {
+            if (inspectorPort > 0) {
+                knowledge.startInspector(inspectorPort, operators.orElse(List.of()));
+            }
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        return knowledge.register(registry, new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
+                InstantSource.system()));
+    }
+
     void onStop(@Observes ShutdownEvent event) {
+        if (knowledge != null) {
+            knowledge.close();
+        }
         if (worker != null) {
             worker.close();
         }

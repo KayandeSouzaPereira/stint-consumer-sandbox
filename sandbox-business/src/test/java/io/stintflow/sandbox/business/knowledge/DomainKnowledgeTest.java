@@ -1,4 +1,4 @@
-package io.stintflow.sandbox.knowledge;
+package io.stintflow.sandbox.business.knowledge;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

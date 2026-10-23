@@ -1,4 +1,4 @@
-package io.stintflow.sandbox.knowledge;
+package io.stintflow.sandbox.engineering.knowledge;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

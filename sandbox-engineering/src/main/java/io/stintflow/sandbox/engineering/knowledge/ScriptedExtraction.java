@@ -1,4 +1,4 @@
-package io.stintflow.sandbox.knowledge;
+package io.stintflow.sandbox.engineering.knowledge;
 
 import java.util.ArrayList;
 import java.util.List;

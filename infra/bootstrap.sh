@@ -214,6 +214,10 @@ ensure_rule order-placed-to-orders \
 # Engineering (by the sandboxstage extension inside the detail, the CloudEvent).
 ensure_rule meeting-recorded-business   '{"detail-type":["io.sandbox.channels.meeting-recorded.v1"],"detail":{"sandboxstage":["business"]}}' business-domain-events
 ensure_rule meeting-recorded-technical   '{"detail-type":["io.sandbox.channels.meeting-recorded.v1"],"detail":{"sandboxstage":["technical"]}}' engineering-domain-events
+# SDD S.12, RF2: a registered document starts the knowledge ingestion of the domains that may read it (8b): Business its own design;
+# Engineering the design it reads, its questions, SDDs and batches. The register's read-record refuses any other pair (403).
+ensure_rule document-registered-to-business     '{"detail-type":["io.sandbox.records.document-registered.v1"],"detail":{"data":{"kind":["design"]}}}' business-domain-events
+ensure_rule document-registered-to-engineering  '{"detail-type":["io.sandbox.records.document-registered.v1"],"detail":{"data":{"kind":["design","questions","sdd-batch","sdd"]}}}' engineering-domain-events
 ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
 ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
 # Delivery's own events back to Delivery: sdd-ready starts an SDD's instance, the ends resume the coordinator.

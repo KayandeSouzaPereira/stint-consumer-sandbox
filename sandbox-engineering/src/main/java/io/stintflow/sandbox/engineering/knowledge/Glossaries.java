@@ -1,4 +1,4 @@
-package io.stintflow.sandbox.knowledge;
+package io.stintflow.sandbox.engineering.knowledge;
 
 import java.util.List;
 
@@ -8,16 +8,6 @@ import io.stintflow.knowledge.extraction.Glossary;
 public final class Glossaries {
 
     private Glossaries() {
-    }
-
-    /** What the business conversations name: the people who borrow and what they borrow. */
-    public static Glossary business() {
-        return new Glossary("business", "1", List.of(
-                term("t-member", "Term", "member", "members"),
-                term("t-book", "Term", "book", "books"),
-                term("t-loan", "Term", "loan", "loans", "borrow"),
-                term("t-late-return", "Term", "late return", "late returns"),
-                term("t-limit", "Term", "limit", "limit per member")));
     }
 
     /** What the technical conversations name: the same terms and the pieces of the system that carry them. */

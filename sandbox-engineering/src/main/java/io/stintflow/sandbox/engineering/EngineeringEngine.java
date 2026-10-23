@@ -15,6 +15,9 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.stintflow.aws.DynamoDbAuditLog;
+import io.stintflow.knowledge.KnowledgeScope;
+import io.stintflow.sandbox.engineering.knowledge.DomainKnowledge;
+import io.stintflow.sandbox.engineering.knowledge.Glossaries;
 import io.stintflow.aws.DynamoDbCorrectionLog;
 import io.stintflow.aws.DynamoDbStateStore;
 import io.stintflow.aws.EventBridgeEventPublisher;
@@ -123,6 +126,11 @@ public class EngineeringEngine {
     Optional<String> haltBeforePublish;
     @ConfigProperty(name = "engineering.chaos.halt-in-task")
     Optional<String> haltInTask;
+    @ConfigProperty(name = "engineering.knowledge.inspector-port", defaultValue = "8098")
+    int inspectorPort;
+    @ConfigProperty(name = "engineering.knowledge.operators")
+    Optional<List<String>> operators;
+    private volatile DomainKnowledge knowledge;
 
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
@@ -174,9 +182,9 @@ public class EngineeringEngine {
         Corpus corpus = Corpus.load(Path.of(corpusDir));
         worker = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks")
                 .resultQueueUrl(queueBase + DOMAIN + "-results")
-                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(handlers(corpus,
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(withKnowledge(blobs, handlers(corpus,
                         EngineeringModels.fakes(corpus), new S3BlobStore(s3, rawBucket),
-                        new S3BlobStore(s3, documentsBucket)), haltInTask, ChaosPoints.HALT), blobs, tracer),
+                        new S3BlobStore(s3, documentsBucket))), haltInTask, ChaosPoints.HALT), blobs, tracer),
                         concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
     }
@@ -208,7 +216,25 @@ public class EngineeringEngine {
                 .register("write-questions", EngineeringWriters.questions(corpus, documents));
     }
 
+    /** SDD S.12: the domain's knowledge base and its (read-only) inspector, on the domain's worker. */
+    private TaskHandlerRegistry withKnowledge(BlobStore blobs, TaskHandlerRegistry registry) {
+        knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "engineering-kb"), Glossaries.engineering(), blobs, null, null,
+                InstantSource.system());
+        try {
+            if (inspectorPort > 0) {
+                knowledge.startInspector(inspectorPort, operators.orElse(List.of()));
+            }
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        return knowledge.register(registry, new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
+                InstantSource.system()));
+    }
+
     void onStop(@Observes ShutdownEvent event) {
+        if (knowledge != null) {
+            knowledge.close();
+        }
         if (worker != null) {
             worker.close();
         }

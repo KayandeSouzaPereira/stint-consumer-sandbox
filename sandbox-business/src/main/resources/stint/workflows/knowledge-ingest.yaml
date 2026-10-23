@@ -1,0 +1,92 @@
+# SDD S.12, RF2: the business domain's knowledge base learns from a registered document. The fact document-registered (S.7)
+# starts it (never a direct call); the text is read by pointer from the register, extracted against the glossary,
+# written in one atomic step and announced with ids and counts only. A redelivered fact is the same instance; a new
+# version of a document is a new revision of the same record. Nothing but pointers travels between the steps.
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: knowledge-ingest
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.sensitivity }'
+      routes:
+        restricted: [extract-knowledge, knowledge-write]
+        confidential: [read-record, extract-knowledge, knowledge-write]
+        internal: ['*']
+      retention:
+        knowledge-batch: { days: 7 }
+    x-stint-knowledge:
+      base: business-kb
+      schema: meetings@1
+      glossary: business@1
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.records.document-registered.v1 }
+do:
+  - fact:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, recordId: .data.recordId, version: .data.version, kind: .data.kind} }'
+      export: { as: '${ . }' }
+  - read:
+      call: remote
+      with:
+        task: read-record
+        input: '${ {recordId: $context.recordId, version: $context.version} }'
+      timeout: { after: { minutes: 2 } }
+      export: { as: '${ $context + {contentRef: .contentRef} }' }
+  - extract:
+      try:
+        - run:
+            call: remote
+            with:
+              task: extract-knowledge
+              input: '${ {meeting: {meetingId: $context.recordId}, textRef: $context.contentRef, schema: "meetings@1", glossary: "business@1", scope: {namespace: "sandbox", base: "business-kb"}, revision: $context.version} }'
+            timeout: { after: { minutes: 15 } }
+            export: { as: '${ $context + {batchRef: .batchRef, counts: .counts} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/validation }
+        then: rejected
+  - write:
+      try:
+        - run:
+            call: remote
+            with:
+              task: knowledge-write
+              input: '${ {batchRef: $context.batchRef, derivedFrom: [$context.contentRef], scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 5 } }
+            export: { as: '${ $context + {status: .status, lastSequence: .lastSequence, changes: .counts} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - indexed:
+      emit:
+        event:
+          with:
+            id: '${ $context.recordId + ":v" + ($context.version | tostring) + ":business-indexed" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.business.document-indexed.v1
+            subject: '${ $context.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.recordId, version: $context.version, kind: $context.kind, base: "business-kb", status: $context.status, lastSequence: $context.lastSequence, extracted: $context.counts, changes: $context.changes} }'
+      then: end
+  - rejected:
+      emit:
+        event:
+          with:
+            id: '${ $context.recordId + ":v" + ($context.version | tostring) + ":business-rejected" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.business.ingest-rejected.v1
+            subject: '${ $context.recordId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {recordId: $context.recordId, version: $context.version, reason: "out-of-schema"} }'
+      then: end
