@@ -1,0 +1,70 @@
+S.14 CA2, CA3 and CA8: resolution by the contract of Business
+  t+   1.4s  started privacy (PRIVACY, pid 138480, :8093) 
+  t+   2.7s  started records (RECORDS, pid 76156, :8094) 
+  t+   4.3s  started channels (CHANNELS, pid 175756, :8095) 
+  t+   5.5s  started target (TARGET, pid 303752, :8096) 
+  t+   7.2s  started business (BUSINESS, pid 66080, :8090) {business.knowledge.operators=ops}
+  t+   8.9s  started engineering (ENGINEERING, pid 202136, :8091) {engineering.knowledge.operators=ops}
+  t+  11.0s  started delivery (DELIVERY, pid 37692, :8092) 
+  t+  13.4s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:1
+  t+  13.7s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:2
+  t+  15.0s  answered business-rep approval evt-d92aa782-32fe-33c1-b0fd-9737a6556af8:/do/15/approve:1
+  t+  15.8s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:1
+  t+  16.2s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:2
+  t+  17.9s  p2 cycle 2 closed
+  resolved 3 pointer(s) through the view; summaries in the view: none
+  a pointer to a Term (not granted): DENIED, nothing of it in the answer
+  after the erasure in Business: REMOVED 3; the register's copy of the design is still there
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=400, sandbox-channels=21, sandbox-delivery=196, sandbox-engineering=609, sandbox-privacy=28, sandbox-records=187, sandbox-target=14}
+  items the sweeper looked at, by kind of store: {bus=59, dynamodb=220, log=111, mailhog=8, s3=98, span=1455}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 6   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 32
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 4   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 46
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 1   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 14
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
