@@ -83,7 +83,7 @@ public class EngineeringEngine {
     public static final String DOMAIN = "engineering";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
     static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records", "approve-record", "records", "read-record", "records",
-            "send-email", "channels", "resolve-pointers", "business");
+            "send-email", "channels", "publish-page", "channels", "resolve-pointers", "business");
 
     @Inject
     SqsClient sqs;
@@ -248,7 +248,10 @@ public class EngineeringEngine {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
-        return architecture.register(knowledge.register(handlers.apply(knowledge::contextFor), audit), audit);
+        TaskHandlerRegistry registry = architecture.register(knowledge.register(handlers.apply(knowledge::contextFor), audit),
+                audit);
+        return io.stintflow.sandbox.engineering.knowledge.BridgeAdr.register(registry, architecture, blobs,
+                io.stintflow.sandbox.contracts.KnowledgeCorpus.load(Path.of(corpusDir)), audit, InstantSource.system());
     }
 
     void onStop(@Observes ShutdownEvent event) {

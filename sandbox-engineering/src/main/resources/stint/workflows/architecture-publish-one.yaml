@@ -1,0 +1,29 @@
+# SDD S.14, RF7: one ADR on its page. The page is Confluence's (here the fake one the channels domain runs); the title and
+# the labels carry the decision id and the status, the document rests in the blob write-adrs wrote.
+document:
+  dsl: '1.0.0'
+  namespace: engineering
+  name: architecture-publish-one
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .label // "confidential" }'
+      routes:
+        restricted: [publish-page]
+        confidential: [publish-page]
+        internal: ['*']
+do:
+  - adr:
+      set: '${ {decisionId: .decisionId, title: .title, status: .status, documentRef: .documentRef} }'
+      export: { as: '${ . }' }
+  - page:
+      call: remote
+      with:
+        task: publish-page
+        input: '${ {space: "DESIGN", key: ("adr-" + $context.decisionId), title: ("ADR " + $context.decisionId + ": " + $context.title), documentRef: $context.documentRef, labels: ["adr", ("adr-" + $context.status)]} }'
+      timeout: { after: { minutes: 2 } }
+      export: { as: '${ $context + {pageId: .id} }' }
+  - done:
+      set: '${ {decisionId: $context.decisionId, status: $context.status, pageId: $context.pageId} }'
+      export: { as: '${ . }' }

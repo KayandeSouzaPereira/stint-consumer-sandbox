@@ -1,0 +1,78 @@
+S.14 CA4 and CA5: three architecture sessions against what Business decided
+  t+   1.3s  started privacy (PRIVACY, pid 38948, :8093) 
+  t+   2.5s  started records (RECORDS, pid 297172, :8094) 
+  t+   4.2s  started channels (CHANNELS, pid 325512, :8095) 
+  t+   5.4s  started target (TARGET, pid 19240, :8096) 
+  t+   7.1s  started business (BUSINESS, pid 497404, :8090) {business.knowledge.operators=ops}
+  t+  10.1s  started engineering (ENGINEERING, pid 509592, :8091) {engineering.knowledge.operators=ops}
+  t+  12.1s  started delivery (DELIVERY, pid 19508, :8092) 
+  t+  14.3s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:1
+  t+  14.7s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:2
+  t+  16.2s  answered business-rep approval evt-d92aa782-32fe-33c1-b0fd-9737a6556af8:/do/15/approve:1
+  t+  17.1s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:1
+  t+  17.5s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:2
+  t+  19.3s  p2 cycle 2 closed
+  t+  24.4s  drafted a-001
+  t+  24.9s  drafted a-002
+  t+  25.1s  answered evt-0fb46c49-baaf-3602-b53b-b64544eabfcf:/do/3/check:0:/do/4/ask:1 with conflicts
+  t+  25.2s  answered evt-0fb46c49-baaf-3602-b53b-b64544eabfcf:/do/3/check:1:/do/4/ask:1 with conflicts
+  t+  25.6s  drafted a-003
+  t+  25.9s  answered evt-47688488-1777-3875-a977-276f5fc184bd:/do/3/check:0:/do/4/ask:1 with compatible
+  t+  26.0s  answered evt-47688488-1777-3875-a977-276f5fc184bd:/do/3/check:1:/do/4/ask:1 with compatible
+  a-001 (compatible): one ADR, proposed, published
+  a-002 (conflicts, kept): ADR published as conflicting; questions registered and sent, next cycle 3; e-mail to Business
+  a-003 (conflict settled as compatible): ADR proposed; nothing asked of Business
+  ADR documents: 3, each with its pointers and its verdict
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=466, sandbox-channels=27, sandbox-delivery=224, sandbox-engineering=625, sandbox-privacy=32, sandbox-records=192, sandbox-target=16}
+  items the sweeper looked at, by kind of store: {bus=70, confluence=3, dynamodb=282, log=133, mailhog=9, s3=114, span=1582}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 6   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 29
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                12   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 71
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 1   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 14
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.

@@ -230,6 +230,7 @@ ensure_rule question-asked-engineering  '{"detail-type":["io.sandbox.engineering
 # SDD S.14, RF3: the nodes Business announces reach Engineering, which holds pointers to them and nothing else.
 ensure_rule document-indexed-to-business  '{"detail-type":["io.sandbox.business.document-indexed.v1"]}' business-domain-events
 ensure_rule references-linked-to-engineering  '{"detail-type":["io.sandbox.engineering.references-linked.v1"]}' engineering-domain-events
+ensure_rule decisions-drafted-to-engineering  '{"detail-type":["io.sandbox.engineering.architecture-decisions-drafted.v1"]}' engineering-domain-events
 ensure_rule nodes-published-to-engineering  '{"detail-type":["io.sandbox.business.nodes-published.v1"]}' engineering-domain-events
 ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
 ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
