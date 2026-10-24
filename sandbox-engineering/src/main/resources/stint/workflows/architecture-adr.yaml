@@ -4,7 +4,7 @@
 # (and a conflict, or an uncertain verdict, goes to a person); the ADRs are written, one per decision, with their "motivated
 # by" and the verdict; each is published on its page. An ADR still in conflict is the questions Engineering sends Business:
 # the questions are written and registered, and questions-sent restarts the cycle with the next business meeting.
-# When Business does not answer, the author chooses here: 'follow' judges without the context (the pair goes to a person,
+# When Business does not answer (its queue is not served: the call times out), the author chooses here: 'follow' judges without the context (the pair goes to a person,
 # never to compatible), 'suspend' lets the failure end the instance.
 document:
   dsl: '1.0.0'
@@ -51,7 +51,7 @@ do:
             export: { as: '${ $context + {resolution: "resolved", viewRef: .viewRef} }' }
       catch:
         errors:
-          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/timeout }
         when: '$context.onUnavailable == "follow"'
         then: unavailable
   - check:

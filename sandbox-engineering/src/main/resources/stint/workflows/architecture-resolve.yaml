@@ -39,7 +39,7 @@ do:
             export: { as: '${ $context + {resolution: "resolved", viewRef: .viewRef, counts: .counts} }' }
       catch:
         errors:
-          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/timeout }
         when: '$context.onUnavailable == "follow"'
         then: unavailable
   - report:
