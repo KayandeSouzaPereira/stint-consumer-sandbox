@@ -1,0 +1,17 @@
+S.14 CA6: Business stops answering the pointers
+  t+   8.6s  started privacy (PRIVACY, pid 552928, :8093) 
+  t+  17.0s  started records (RECORDS, pid 164420, :8094) 
+  t+  25.8s  started channels (CHANNELS, pid 272432, :8095) 
+  t+  34.3s  started target (TARGET, pid 91812, :8096) 
+  t+  43.3s  started business (BUSINESS, pid 52600, :8090) {business.knowledge.operators=ops}
+  t+  52.7s  started engineering (ENGINEERING, pid 471952, :8091) 
+  t+  62.8s  started delivery (DELIVERY, pid 554604, :8092) 
+  t+  67.5s  Business killed
+  t+  67.5s  drafted ou-follow (follow)
+  t+ 100.6s  answered evt-d3daa0c3-460b-3c49-8f7d-bde628df58a5:/do/3/check:0:/do/4/ask:1 with compatible
+  t+ 101.1s  drafted ou-suspend (suspend)
+  t+ 134.9s  started business-back (BUSINESS, pid 476812, :8097) {quarkus.http.port=8097, business.knowledge.operators=ops, business.engine.enabled=false}
+  t+ 134.9s  drafted ou-suspend-2 (suspend)
+  t+ 135.8s  answered evt-e09f85d8-edcf-390e-b992-26c92cb76928:/do/3/check:0:/do/4/ask:1 with compatible
+  follow: the ADR went on without the context (resolution unavailable), the pair went to a person
+  suspend: the instance ended in a failure, nothing published; with Business back the session concluded (resolution resolved)

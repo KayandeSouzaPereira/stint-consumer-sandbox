@@ -1,0 +1,70 @@
+S.14 CA7: the trail of the chain across the two audit tables
+  t+   1.5s  started privacy (PRIVACY, pid 285268, :8093) 
+  t+   3.1s  started records (RECORDS, pid 555920, :8094) 
+  t+   4.7s  started channels (CHANNELS, pid 377076, :8095) 
+  t+   6.0s  started target (TARGET, pid 557116, :8096) 
+  t+   8.1s  started business (BUSINESS, pid 557404, :8090) 
+  t+   9.8s  started engineering (ENGINEERING, pid 557732, :8091) 
+  t+  11.9s  started delivery (DELIVERY, pid 556268, :8092) 
+  t+  14.5s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:1
+  t+  14.8s  answered business-rep approval evt-3568a275-b67c-34b4-811a-d8536fc42c01:/do/15/approve:2
+  t+  16.2s  answered business-rep approval evt-d92aa782-32fe-33c1-b0fd-9737a6556af8:/do/15/approve:1
+  t+  17.1s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:1
+  t+  17.4s  answered tech-rep approval evt-59320b31-6f23-3bb7-94d6-52b60520f9cf:/do/20/approve:2
+  t+  19.4s  p2 cycle 2 closed
+  t+  27.5s  the trail: [business::review, business:decide-channel:ai-call, business:decide-channel:policy, business:decide-meeting-type:ai-call, business:decide-meeting-type:policy, business:decide-priority:ai-call, business:decide-priority:policy, business:extract-knowledge:ai-call, business:extract-knowledge:policy, business:knowledge-announce:knowledge-announce, business:knowledge-announce:policy, business:knowledge-retriever:knowledge-read, business:knowledge-write:knowledge-write, business:knowledge-write:policy, business:read-record:policy, business:redactor:policy, business:redactor:redaction, business:register-document:policy, business:resolve-pointers:pointer-resolve, business:send-email:policy, business:transcribe:ai-call, business:transcribe:policy, business:write-design:policy, engineering::review, engineering:decide-blocking:ai-call, engineering:decide-blocking:policy, engineering:decide-meeting-type:ai-call, engineering:decide-meeting-type:policy, engineering:decide-outcome:ai-call, engineering:decide-outcome:policy, engineering:decide-priority:ai-call, engineering:decide-priority:policy, engineering:extract-knowledge:ai-call, engineering:extract-knowledge:policy, engineering:knowledge-reference:knowledge-reference, engineering:knowledge-reference:policy, engineering:knowledge-retriever:knowledge-read, engineering:knowledge-write:knowledge-write, engineering:knowledge-write:policy, engineering:read-record:policy, engineering:redactor:policy, engineering:redactor:redaction, engineering:register-document:policy, engineering:resolve-pointers:policy, engineering:transcribe:ai-call, engineering:transcribe:policy, engineering:write-questions:policy, engineering:write-sdds:policy]
+  steps on the trail (domain:route:kind): [business::review, business:decide-channel:ai-call, business:decide-channel:policy, business:decide-meeting-type:ai-call, business:decide-meeting-type:policy, business:decide-priority:ai-call, business:decide-priority:policy, business:extract-knowledge:ai-call, business:extract-knowledge:policy, business:knowledge-announce:knowledge-announce, business:knowledge-announce:policy, business:knowledge-retriever:knowledge-read, business:knowledge-write:knowledge-write, business:knowledge-write:policy, business:read-record:policy, business:redactor:policy, business:redactor:redaction, business:register-document:policy, business:resolve-pointers:pointer-resolve, business:send-email:policy, business:transcribe:ai-call, business:transcribe:policy, business:write-design:policy, engineering::review, engineering:decide-blocking:ai-call, engineering:decide-blocking:policy, engineering:decide-meeting-type:ai-call, engineering:decide-meeting-type:policy, engineering:decide-outcome:ai-call, engineering:decide-outcome:policy, engineering:decide-priority:ai-call, engineering:decide-priority:policy, engineering:extract-knowledge:ai-call, engineering:extract-knowledge:policy, engineering:knowledge-reference:knowledge-reference, engineering:knowledge-reference:policy, engineering:knowledge-retriever:knowledge-read, engineering:knowledge-write:knowledge-write, engineering:knowledge-write:policy, engineering:read-record:policy, engineering:redactor:policy, engineering:redactor:redaction, engineering:register-document:policy, engineering:resolve-pointers:policy, engineering:transcribe:ai-call, engineering:transcribe:policy, engineering:write-questions:policy, engineering:write-sdds:policy]
+  audit entries read: 139
+  events out of the contract: []
+  markers found (bus, spans, 7 process logs, stores): []
+  Jaeger spans of the chain(s) by service: {sandbox-business=529, sandbox-channels=30, sandbox-delivery=252, sandbox-engineering=661, sandbox-privacy=36, sandbox-records=210, sandbox-target=18}
+  items the sweeper looked at, by kind of store: {bus=53, dynamodb=209, log=110, mailhog=8, s3=97, span=1736}
+Leftovers (SDD S.4, 8e), aws --endpoint-url http://localhost:4566 ...
+  [business]
+    waits                 0   dynamodb scan --table-name business-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name business-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 6   dynamodb scan --table-name business-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name business-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    business-tasks             visible 0, in flight 0, delayed 0
+    business-results           visible 0, in flight 0, delayed 0
+    business-timers            visible 0, in flight 0, delayed 29
+    business-domain-events     visible 0, in flight 0, delayed 0
+    business-tasks-dlq         visible 0, in flight 0, delayed 0
+    business-results-dlq       visible 0, in flight 0, delayed 0
+    business-timers-dlq        visible 0, in flight 0, delayed 0
+    business-schedules-dlq     visible 0, in flight 0, delayed 0
+    business-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name business-timers []
+  [engineering]
+    waits                 0   dynamodb scan --table-name engineering-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name engineering-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 4   dynamodb scan --table-name engineering-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name engineering-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    engineering-tasks          visible 0, in flight 0, delayed 0
+    engineering-results        visible 0, in flight 0, delayed 0
+    engineering-timers         visible 0, in flight 0, delayed 44
+    engineering-domain-events  visible 0, in flight 0, delayed 0
+    engineering-tasks-dlq      visible 0, in flight 0, delayed 0
+    engineering-results-dlq    visible 0, in flight 0, delayed 0
+    engineering-timers-dlq     visible 0, in flight 0, delayed 0
+    engineering-schedules-dlq  visible 0, in flight 0, delayed 0
+    engineering-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name engineering-timers []
+  [delivery]
+    waits                 0   dynamodb scan --table-name delivery-waits --select COUNT
+    outbox (pending)      0   dynamodb query --table-name delivery-outbox --index-name pending-by-age --key-condition-expression "shard = :s" (shards 0-3) --select COUNT
+    inbox                 1   dynamodb scan --table-name delivery-inbox --select COUNT
+    non-terminal          0   dynamodb scan --table-name delivery-instances --filter-expression "#s <> COMPLETED|FAILED|ABORTED" []
+    delivery-tasks             visible 0, in flight 0, delayed 0
+    delivery-results           visible 0, in flight 0, delayed 0
+    delivery-timers            visible 0, in flight 0, delayed 14
+    delivery-domain-events     visible 0, in flight 0, delayed 0
+    delivery-tasks-dlq         visible 0, in flight 0, delayed 0
+    delivery-results-dlq       visible 0, in flight 0, delayed 0
+    delivery-timers-dlq        visible 0, in flight 0, delayed 0
+    delivery-schedules-dlq     visible 0, in flight 0, delayed 0
+    delivery-domain-events-dlq visible 0, in flight 0, delayed 0
+    one-time schedules    0   scheduler list-schedules --group-name delivery-timers []
+  (sqs get-queue-attributes --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed)
+  Delayed messages on <domain>-timers are timers still to fire (e.g. 5 min task timeouts). Once
+  their instance is terminal, Stint acknowledges them as 'obsolete' (SDD 2.9); they are not leftovers.
