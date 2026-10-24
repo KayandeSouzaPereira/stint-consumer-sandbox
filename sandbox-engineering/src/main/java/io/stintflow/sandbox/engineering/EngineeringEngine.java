@@ -83,7 +83,7 @@ public class EngineeringEngine {
     public static final String DOMAIN = "engineering";
     /** Routing key -> shared service (pipeline-events.md, "Tarefas remotas compartilhadas"). */
     static final Map<String, String> SHARED = Map.of("redactor", "privacy", "register-document", "records", "approve-record", "records", "read-record", "records",
-            "send-email", "channels");
+            "send-email", "channels", "resolve-pointers", "business");
 
     @Inject
     SqsClient sqs;
@@ -130,7 +130,10 @@ public class EngineeringEngine {
     int inspectorPort;
     @ConfigProperty(name = "engineering.knowledge.operators")
     Optional<List<String>> operators;
+    @ConfigProperty(name = "engineering.arch.inspector-port", defaultValue = "8199")
+    int archInspectorPort;
     private volatile DomainKnowledge knowledge;
+    private volatile io.stintflow.sandbox.engineering.knowledge.ArchitectureBase architecture;
 
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
@@ -234,13 +237,26 @@ public class EngineeringEngine {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
-        return knowledge.register(handlers.apply(knowledge::contextFor), new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
-                InstantSource.system()));
+        DynamoDbAuditLog audit = new DynamoDbAuditLog(ddb, DOMAIN + "-audit", DynamoDbAuditLog.DEFAULT_TTL,
+                InstantSource.system());
+        // SDD S.14, 8b: the architecture base, apart from the knowledge base
+        architecture = new io.stintflow.sandbox.engineering.knowledge.ArchitectureBase(blobs, InstantSource.system());
+        try {
+            if (archInspectorPort > 0) {
+                architecture.startInspector(archInspectorPort, operators.orElse(List.of()));
+            }
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        return architecture.register(knowledge.register(handlers.apply(knowledge::contextFor), audit), audit);
     }
 
     void onStop(@Observes ShutdownEvent event) {
         if (knowledge != null) {
             knowledge.close();
+        }
+        if (architecture != null) {
+            architecture.close();
         }
         if (worker != null) {
             worker.close();

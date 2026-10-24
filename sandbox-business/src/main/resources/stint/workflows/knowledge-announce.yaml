@@ -1,0 +1,62 @@
+# SDD S.14, RF3: Business announces the nodes a document added, to whoever may hold a pointer to them. The fact
+# document-indexed (S.12) starts it; knowledge-announce reads the change log of the base and answers the pointers of the
+# nodes of the types asked (id, type and level; never a name, a summary or a property; restricted never leaves). The event
+# carries only that.
+document:
+  dsl: '1.0.0'
+  namespace: business
+  name: knowledge-announce
+  version: '1.0.0'
+  metadata:
+    x-stint-policy:
+      sensitivity:
+        from: '${ .[0].data.sensitivity // "confidential" }'
+      routes:
+        restricted: [knowledge-announce]
+        confidential: [knowledge-announce]
+        internal: ['*']
+    x-stint-knowledge:
+      base: business-kb
+      schema: meetings@1
+      glossary: business@1
+schedule:
+  on:
+    one:
+      with: { type: io.sandbox.business.document-indexed.v1 }
+do:
+  - fact:
+      set: '${ .[0] | {projectId: .sandboxproject, cycle: .sandboxcycle, recordId: .data.recordId, version: .data.version, documentId: ("meeting:" + .data.recordId)} }'
+      export: { as: '${ . }' }
+  - announce:
+      try:
+        - run:
+            call: remote
+            with:
+              task: knowledge-announce
+              input: '${ {documentId: $context.documentId, types: ["Decision", "Requirement"], scope: {namespace: "sandbox", base: "business-kb"}} }'
+            timeout: { after: { minutes: 2 } }
+            export: { as: '${ $context + {items: .items, upTo: .upTo, withheld: .withheld} }' }
+      catch:
+        errors:
+          with: { type: https://serverlessworkflow.io/spec/1.0.0/errors/communication }
+        retry:
+          delay: { seconds: 15 }
+          backoff: { exponential: {} }
+          limit:
+            attempt: { count: 5 }
+  - check:
+      switch:
+        - nothing: { when: '${ ($context.items | length) == 0 }', then: end }
+        - something: { then: published }
+  - published:
+      emit:
+        event:
+          with:
+            id: '${ $context.recordId + ":v" + ($context.version | tostring) + ":nodes-published" }'
+            source: https://sandbox.stintflow.io/business
+            type: io.sandbox.business.nodes-published.v1
+            subject: '${ $context.documentId }'
+            sandboxproject: '${ $context.projectId }'
+            sandboxcycle: '${ $context.cycle }'
+            data: '${ {domain: {namespace: "sandbox", base: "business-kb"}, documentId: $context.documentId, upTo: $context.upTo, items: $context.items, schemaVersion: "1"} }'
+      then: end

@@ -17,6 +17,7 @@ import io.stintflow.knowledge.KnowledgeScope;
 import io.stintflow.knowledge.extraction.Glossary;
 import io.stintflow.knowledge.inmemory.CompositeKnowledgeStore;
 import io.stintflow.knowledge.inspector.InspectorAccess;
+import io.stintflow.sandbox.contracts.KnowledgeCorpus;
 import io.stintflow.knowledge.inspector.InspectorServer;
 import io.stintflow.knowledge.inspector.InspectorService;
 import io.stintflow.spi.AuditLog;
@@ -26,6 +27,8 @@ import io.stintflow.spi.Sensitivity;
 import io.stintflow.worker.TaskContext;
 import io.stintflow.worker.TaskHandlerRegistry;
 import io.stintflow.worker.decision.SensitivityPolicy;
+import io.stintflow.worker.knowledge.BridgeContract;
+import io.stintflow.worker.knowledge.ChannelAttestation;
 import io.stintflow.worker.knowledge.KnowledgeWorkers;
 import io.stintflow.worker.knowledge.ScopeAllowList;
 import io.stintflow.worker.langchain4j.KnowledgeContentRetriever;
@@ -61,10 +64,17 @@ public final class DomainKnowledge implements AutoCloseable {
 
     public DomainKnowledge(KnowledgeScope scope, Glossary glossary, BlobStore blobs, ChatModel model,
             Embedder reindexTarget, InstantSource clock) {
+        this(scope, glossary, blobs, model, reindexTarget, clock, null);
+    }
+
+    /** @param answerKey the decisions and requirements the scripted extraction cites (SDD S.14), or {@code null} */
+    public DomainKnowledge(KnowledgeScope scope, Glossary glossary, BlobStore blobs, ChatModel model,
+            Embedder reindexTarget, InstantSource clock, KnowledgeCorpus answerKey) {
         this.scope = scope;
         this.glossary = glossary;
         this.blobs = blobs;
-        this.model = model != null ? model : new ScriptedExtraction(glossary);
+        this.model = model != null ? model : answerKey == null ? new ScriptedExtraction(glossary)
+                : new ScriptedExtraction(glossary, answerKey.decisions(), answerKey.requirements());
         this.reindexTarget = reindexTarget;
         this.clock = clock;
         this.store = new CompositeKnowledgeStore(new DeterministicEmbedder(), blobs, RESTRICTED, clock);
@@ -91,8 +101,19 @@ public final class DomainKnowledge implements AutoCloseable {
                 .glossaries(ref -> ref.equals(glossary.id() + "@" + glossary.version()) ? glossary : null)
                 .store(store).blobs(blobs, BATCH).build());
         KnowledgeWorkers.register(registry, store, blobs, scopes, audit, clock);
+        KnowledgeWorkers.registerAnnounce(registry, store, scopes, audit, clock);   // SDD S.14, RF3
         return KnowledgeWorkers.registerErasure(registry, store, blobs, scopes, audit, clock, reindexTarget,
                 new Pseudonyms(SYNTHETIC_SECRET));
+    }
+
+    /**
+     * SDD S.14, RF5 and RF6: the registry of the one route Business serves to Engineering, {@code resolve-pointers}. It answers by
+     * the policy of the contract of exposure and only if the channel is declared as authenticated; the content goes into a blob
+     * of a day and nothing else is kept. A separate registry, because it is bound to the queue Engineering writes to.
+     */
+    public TaskHandlerRegistry resolver(BridgeContract contract, ChannelAttestation attestation) {
+        return KnowledgeWorkers.registerResolve(new TaskHandlerRegistry(), store, store, contract.policy(), blobs, null, audit,
+                clock, attestation);
     }
 
     /**

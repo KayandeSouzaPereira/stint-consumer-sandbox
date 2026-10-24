@@ -2,7 +2,7 @@
 # SDD S.1, RF5: creates every AWS resource the sandbox needs on floci. Idempotent: run it as often as you like,
 # nothing is duplicated and nothing that exists is changed.
 #
-# Schemas and settings are copied from Stint (SHA 05fb70e, phase-3b/knowledge-base; unchanged since 500dfd1):
+# Schemas and settings are copied from Stint (SHA 10266ee, phase-3c/domain-bridge; unchanged since 500dfd1):
 #   - DynamoDB tables: stint-it/.../DynamoDbTestTables.java and docs/connectors.md (outbox, inbox)
 #   - SQS: docs/connectors.md "SQS setup" (redrive maxReceiveCount 5, visibility 30 s, retention 4 d; DLQ 14 d)
 #   - EventBridge -> SQS with InputPath $.detail: docs/connectors.md; catch-all pattern from FlociEmitIT
@@ -145,6 +145,8 @@ pipeline_queues() {
     for svc in privacy records channels; do ensure_queue_with_dlq "$svc-tasks-$d"; done
   done
   ensure_queue_with_dlq target-tasks-delivery
+  # SDD S.14: Business answers the pointers Engineering asks it to resolve (a service of a domain, one queue per caller)
+  ensure_queue_with_dlq business-tasks-engineering
   ensure_queue_with_dlq channels-domain-events
 }
 
@@ -225,6 +227,9 @@ ensure_rule embedding-changed-business     '{"detail-type":["io.stintflow.knowle
 # SDD S.13, RF1: a question asked of a domain's knowledge base reaches that domain.
 ensure_rule question-asked-business     '{"detail-type":["io.sandbox.business.question-asked.v1"]}' business-domain-events
 ensure_rule question-asked-engineering  '{"detail-type":["io.sandbox.engineering.question-asked.v1"]}' engineering-domain-events
+# SDD S.14, RF3: the nodes Business announces reach Engineering, which holds pointers to them and nothing else.
+ensure_rule document-indexed-to-business  '{"detail-type":["io.sandbox.business.document-indexed.v1"]}' business-domain-events
+ensure_rule nodes-published-to-engineering  '{"detail-type":["io.sandbox.business.nodes-published.v1"]}' engineering-domain-events
 ensure_rule design-published-to-engineering   '{"detail-type":["io.sandbox.business.design-published.v1"]}' engineering-domain-events
 ensure_rule sdd-batch-approved-to-delivery   '{"detail-type":["io.sandbox.engineering.sdd-batch-approved.v1"]}' delivery-domain-events
 # Delivery's own events back to Delivery: sdd-ready starts an SDD's instance, the ends resume the coordinator.

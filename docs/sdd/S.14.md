@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | S.14 |
-| Status | **Em especificação** (aguarda a aprovação do Kayan) |
+| Status | **Em implementação** (spec aprovada por Kayan em 23/10/2026, com as recomendações 8a–8i) |
 | Depende de | S.12 e S.13 (Implementados; as duas bases). Stint `10266ee` (`phase-3c/domain-bridge`, SDDs 3c.1–3c.6; contém a 3b em `05fb70e` e a 3a em `a52b20a`) |
 | Bloqueia | S.15 (gate da 3c) |
 | Branch | `phase-3c-validation`, criada de `phase-3b-validation` (o PR da 3b ainda não foi mergeado, então os PRs são empilhados) |

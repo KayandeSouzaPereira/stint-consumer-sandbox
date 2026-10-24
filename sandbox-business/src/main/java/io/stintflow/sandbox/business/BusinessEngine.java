@@ -130,6 +130,10 @@ public class BusinessEngine {
     Optional<String> haltBeforePublish;
     @ConfigProperty(name = "business.chaos.halt-in-task")
     Optional<String> haltInTask;
+    @ConfigProperty(name = "business.bridge.channel", defaultValue = "sandbox-sqs-business-tasks-engineering")
+    String bridgeChannel;
+    @ConfigProperty(name = "business.bridge.channel-authenticated", defaultValue = "true")
+    boolean bridgeChannelAuthenticated;
     @ConfigProperty(name = "business.knowledge.inspector-port", defaultValue = "8197")
     int inspectorPort;
     @ConfigProperty(name = "business.knowledge.operators")
@@ -138,6 +142,7 @@ public class BusinessEngine {
 
     private volatile WorkflowEngine engine;
     private volatile SqsWorkerBinding worker;
+    private volatile SqsWorkerBinding bridge;
     private volatile ExecutionTracer tracer = ExecutionTracer.NOOP;
 
     void onStart(@Observes StartupEvent event) throws Exception {
@@ -191,6 +196,30 @@ public class BusinessEngine {
                         new S3BlobStore(s3, rawBucket), new S3BlobStore(s3, documentsBucket), tracer, context)),
                         haltInTask, ChaosPoints.HALT), blobs, tracer), concurrency))
                 .waitTime(Duration.ofSeconds(5)).build().start();
+        startBridge(blobs);
+    }
+
+    /**
+     * SDD S.14, RF5 and RF6: the one route Business serves to another domain. Engineering writes to
+     * {@code business-tasks-engineering} and Business answers on {@code engineering-results} (a task carries no reply
+     * address, so a service has a queue per caller). The channel is declared in configuration: it is a declaration, not a
+     * proof that the transport authenticates the caller (finding S14-1).
+     */
+    private void startBridge(BlobStore blobs) {
+        io.stintflow.worker.knowledge.BridgeContract contract;
+        try (java.io.InputStream in = BusinessEngine.class.getClassLoader().getResourceAsStream(
+                "bridge-business-kb-1.0.0.json")) {
+            contract = io.stintflow.worker.knowledge.BridgeContract.parse(in.readAllBytes(),
+                    io.stintflow.knowledge.schema.KnowledgeSchema.meetings());
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        TaskHandlerRegistry resolving = knowledge.resolver(contract, new io.stintflow.worker.knowledge.ChannelAttestation(
+                bridgeChannel, bridgeChannelAuthenticated));
+        bridge = SqsWorkerBinding.builder().sqs(sqs).invokeQueueUrl(queueBase + DOMAIN + "-tasks-engineering")
+                .resultQueueUrl(queueBase + "engineering-results")
+                .pool(new WorkerPool(new WorkerRuntime(ChaosPoints.registry(resolving, haltInTask, ChaosPoints.HALT), blobs,
+                        tracer), 2)).waitTime(Duration.ofSeconds(5)).build().start();
     }
 
     /** The domain's own routes: transcription, the three decisions and the design writer. */
@@ -243,7 +272,7 @@ public class BusinessEngine {
         knowledge = new DomainKnowledge(KnowledgeScope.named("sandbox", "business-kb"), Glossaries.business(), blobs, null,
                 new io.stintflow.sandbox.business.knowledge.RenamedEmbedder(new io.stintflow.knowledge.DeterministicEmbedder(),
                         "sandbox-embed-2"),
-                InstantSource.system());
+                InstantSource.system(), io.stintflow.sandbox.contracts.KnowledgeCorpus.load(Path.of(corpusDir)));
         try {
             if (inspectorPort > 0) {
                 knowledge.startInspector(inspectorPort, operators.orElse(List.of()));
@@ -261,6 +290,9 @@ public class BusinessEngine {
         }
         if (worker != null) {
             worker.close();
+        }
+        if (bridge != null) {
+            bridge.close();
         }
     }
 

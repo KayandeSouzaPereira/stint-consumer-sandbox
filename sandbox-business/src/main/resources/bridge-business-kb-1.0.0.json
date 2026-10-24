@@ -1,0 +1,25 @@
+{
+  "bridge": 1,
+  "base": "sandbox/business-kb",
+  "version": "1.0.0",
+  "consumers": [
+    {"definition": "engineering:architecture-resolve", "types": ["Decision", "Requirement"], "view": "business-v1", "ceiling": "confidential"},
+    {"definition": "engineering:architecture-adr", "types": ["Decision", "Requirement"], "view": "business-adr-v1", "ceiling": "confidential"}
+  ],
+  "views": {
+    "business-v1": {
+      "allowSensitive": false,
+      "types": {
+        "Decision": {"label": true, "properties": ["status"], "relations": ["supersedes", "affects"]},
+        "Requirement": {"label": true}
+      }
+    },
+    "business-adr-v1": {
+      "allowSensitive": true,
+      "types": {
+        "Decision": {"label": true, "properties": ["status", "summary"]},
+        "Requirement": {"label": true, "properties": ["summary"]}
+      }
+    }
+  }
+}

@@ -33,9 +33,9 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.33.2</quarkus.platform.version>
-        <!-- Stint at SHA 05fb70e (phase-3b/knowledge-base, SDDs 3b.1–3b.6 on top of 3a.1–3a.11; S.5 RF1, raised from a52b20a by S.12), installed under its own version so that a
+        <!-- Stint at SHA 10266ee (phase-3c/domain-bridge, SDDs 3c.1–3c.6 on top of 3b.1–3b.6 and 3a.1–3a.11; S.5 RF1, raised from 05fb70e by S.14), installed under its own version so that a
              later install of Stint's working tree (other phases) in ~/.m2 cannot change what the sandbox runs (README). -->
-        <stint.version>0.1.0-3b-05fb70e</stint.version>
+        <stint.version>0.1.0-3c-10266ee</stint.version>
         <assertj.version>3.26.3</assertj.version>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
         <exec-plugin.version>3.2.0</exec-plugin.version>

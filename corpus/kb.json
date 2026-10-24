@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "note": "SDD S.14, RF1: the answer key of the knowledge the business meetings hold and the architecture the engineering side drafts. Synthetic only. A separate file: the meetings and the manifest (and their hashes) are untouched.",
+  "decisions": [
+    {"meetingId": "p2-c2-business", "surface": "three books per member", "key": "d-limit", "label": "Limit per member",
+     "summary": "A member may hold at most three books at a time.", "status": "accepted"},
+    {"meetingId": "p2-c2-business", "surface": "late return blocks new loans", "key": "d-late", "label": "Block after a late return",
+     "summary": "A late return blocks new loans until the book is back.", "status": "accepted"}
+  ],
+  "requirements": [
+    {"meetingId": "p2-c2-business", "surface": "late return blocks new loans", "key": "r-block", "label": "Loans blocked while a book is late",
+     "summary": "No new loan is allowed to a member who holds a late book."}
+  ],
+  "architecture": [
+    {"id": "a-001", "script": [
+       "Architecture session for the loans service.",
+       "We enforce the limit of three books per member inside the loans service, checked when a loan is created."],
+     "drafts": [
+       {"id": "adr-limit", "title": "Enforce the limit in the loans service",
+        "summary": "The loans service checks the limit when a loan is created.",
+        "motivatedBy": ["d-limit"], "verdict": "compatible"}]},
+    {"id": "a-002", "script": [
+       "Architecture session for the loans service, second proposal.",
+       "To keep the queue short we let members with a late book borrow once more, then block them."],
+     "drafts": [
+       {"id": "adr-late", "title": "Allow one more loan after a late return",
+        "summary": "A member with a late book may take one more loan before the block applies.",
+        "motivatedBy": ["d-late", "r-block"], "verdict": "conflicts"}]}
+  ]
+}
