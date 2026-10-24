@@ -1,0 +1,9 @@
+S.14 CA3: Business with its channel declared as not authenticated
+  t+   1.3s  started privacy (PRIVACY, pid 14184, :8093) 
+  t+   2.6s  started records (RECORDS, pid 41404, :8094) 
+  t+   4.2s  started channels (CHANNELS, pid 171192, :8095) 
+  t+   5.5s  started target (TARGET, pid 428044, :8096) 
+  t+   7.2s  started business (BUSINESS, pid 501672, :8090) {business.bridge.channel-authenticated=false}
+  t+   8.8s  started engineering (ENGINEERING, pid 279676, :8091) 
+  t+  10.8s  started delivery (DELIVERY, pid 146200, :8092) 
+  announced and linked as before; resolutions failed: 1; resolved: none
