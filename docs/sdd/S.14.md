@@ -113,5 +113,30 @@ Fazer a Engenharia conhecer o que Negócio decidiu **sem copiar**, por ponteiros
 - **8h, a decisão `conflict-check`.** **Adaptador de teste no CI, com o gabarito do corpus;** LitJev só na rodada manual do S.15.
 - **8i, ordem de execução.** Regressão curta na subida do Stint; regressão completa só depois da última implementação.
 
-## 9. Registro de validação
-(preencher na etapa 2)
+## 9. Registro de validação (23/10/2026; a regressão completa, CA10, ainda corria quando isto foi escrito)
+
+| CA | Estado | Evidência |
+|---|---|---|
+| CA1 | Verde: Negócio anunciou 3 ponteiros (id, tipo, nível; nenhum rótulo nem resumo) e a Engenharia tem 3 `DomainReference`, uma por ponteiro, sem Decision nem Requirement próprios | `S.14-CA1.txt` |
+| CA2 | Verde: a resolução devolve rótulo e status pela visão do contrato, nunca o resumo; o conteúdo fica num blob `resolved-view` do bucket de Negócio; nada na base da Engenharia | `S.14-CA2-3-8.txt` |
+| CA3 | Verde: pointeiro de um tipo que o contrato não concede (`Term`) é `DENIED` e a resposta só tem `pointer` e `status`; nó apagado é `REMOVED`; sem atestação do canal Negócio não responde (a resolução termina em erro) | `S.14-CA2-3-8.txt`, `S.14-CA3-attestation.txt` |
+| CA4 | Verde: 3 sessões de arquitetura; um ADR por decisão, cada um com os ponteiros que o motivam e o veredito; páginas publicadas | `S.14-CA4-5.txt` |
+| CA5 | Verde: conflito mantido pelo representante técnico: ADR `conflicting`, perguntas registradas e enviadas, `nextCycle` 3, e-mail a Negócio; conflito resolvido como compatível: ADR `proposed` e nada perguntado | `S.14-CA4-5.txt` |
+| CA6 | Verde: com Negócio parado, `follow` segue sem o contexto (`unavailable`, a decisão vai à revisão) e `suspend` termina em falha sem publicar; com Negócio de volta a mesma sessão conclui (`resolved`) | `S.14-CA6.txt` |
+| CA7 | Verde: a trilha da cadeia nas duas tabelas de auditoria mostra anúncio, referências e resolução, sem uma palavra do que Negócio decidiu; zero marcador | `S.14-CA7.txt` |
+| CA8 | Verde: apagar o documento em Negócio não toca a cópia do registro de outro domínio | `S.14-CA2-3-8.txt` |
+| CA9 | Verde nos cenários que fecham pelo `verify` (esperas, outbox, DLQ, instâncias não terminais) | as evidências acima |
+| CA10 | PREENCHER | |
+
+**Desvios da spec.**
+- **8c, corpus:** em vez de alterar as reuniões e o manifesto (que o leitor v2 confere por hash), a resposta-chave nova está num arquivo à parte, `corpus/kb.json`, lido por `KnowledgeCorpus`; as reuniões e o manifesto não mudaram. As "reuniões de arquitetura" são sessões de texto no mesmo arquivo; o rascunho de cada uma é um blob escrito pelo cenário (não há um modelo de rascunho no sandbox).
+- **Porta do inspetor da base de arquitetura:** 8199.
+- **O erro de indisponibilidade** que a definição trata é `timeout` (o worker de Negócio não serve a fila), não `communication`.
+- **O reinício do ciclo (8f):** reaproveita `questions-sent` do S.9; o próximo ciclo começa só se existir reunião de negócio no corpus para ele (o canal de notícias grava a reunião se houver); aqui o ciclo 3 de `p2` não existe no corpus, e o cenário prova o fato e o e-mail, não uma terceira reunião gravada.
+
+**Achados (nada alterado no Stint).**
+- **S14-1:** a atestação do canal é uma declaração de configuração; o floci não autentica o transporte (credenciais dummy). Prova-se a falha fechada sem a declaração, não a autenticação.
+- **S14-2:** um pointeiro negado carrega só o `pointer` que o chamador mandou e o `status`; quem forja um ponteiro aprende que o par (nó, versão) foi recusado, não o que ele é. É o desenho do Stint.
+- **S14-3:** o resolvedor é o primeiro serviço entre dois domínios soberanos; ele exigiu uma fila por chamador (`business-tasks-engineering`) e a resposta na fila de resultados da Engenharia, como nos serviços compartilhados.
+
+**Pendências.** Validado e Mergeado são do Kayan. Push dos commits da `phase-3c-validation` e o PR só a pedido.
